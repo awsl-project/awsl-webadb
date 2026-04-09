@@ -3,4 +3,4 @@ set -eu
 
 adb -a start-server
 
-exec bun server/index.ts
+exec ./awsl-webadb

@@ -17,6 +17,9 @@ const webHost = process.env.HOST ?? "0.0.0.0";
 const adbHost = process.env.ADB_SERVER_HOST ?? "127.0.0.1";
 const adbPort = toInteger(process.env.ADB_SERVER_PORT, 5037);
 const adbTarget = `${adbHost}:${adbPort}`;
+const distDir =
+  process.env.STATIC_DIR ??
+  resolve(fileURLToPath(new URL("../dist", import.meta.url)));
 
 const connector = new AdbServerNodeTcpConnector({
   host: adbHost,
@@ -157,7 +160,6 @@ server.on("upgrade", (request, socket, head) => {
   });
 });
 
-const distDir = resolve(fileURLToPath(new URL("../dist", import.meta.url)));
 if (existsSync(distDir)) {
   app.use(express.static(distDir));
   app.get(/^(?!\/api\/).*/, (_request, response) => {

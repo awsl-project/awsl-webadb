@@ -88,6 +88,8 @@ docker run --rm -p 3000:3000 -p 5037:5037 ghcr.io/awsl-project/awsl-webadb:v0.1.
 说明：
 
 - 当前 `Dockerfile` 会安装 `adb`
+- 容器内 Web 服务会先编译成单个可执行文件再运行
+- 容器运行层不再依赖 Bun 和 `node_modules`
 - 容器启动会自动执行 `adb -a start-server`
 - 后端 bridge 默认连容器内的 `127.0.0.1:5037`
 - 容器会同时暴露 `3000` 和 `5037`
