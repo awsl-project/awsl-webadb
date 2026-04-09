@@ -306,7 +306,6 @@ button:disabled {
 }
 
 .mirror-status span,
-.page-status,
 .device-chip,
 .path-bar span {
   display: inline-flex;
@@ -318,10 +317,67 @@ button:disabled {
 }
 
 .mirror-status span,
-.page-status {
+.toast-card {
   background: rgba(12, 20, 31, 0.74);
   color: rgba(255, 255, 255, 0.94);
   backdrop-filter: blur(10px);
+}
+
+.toast-layer {
+  position: fixed;
+  left: 50%;
+  bottom: 20px;
+  z-index: 50;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.toast-card {
+  min-width: min(320px, calc(100vw - 24px));
+  max-width: min(560px, calc(100vw - 24px));
+  min-height: 48px;
+  padding: 0 12px 0 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  border-radius: 18px;
+  box-shadow: var(--shadow-2);
+  pointer-events: auto;
+}
+
+.toast-layer.success .toast-card {
+  background: rgba(18, 74, 54, 0.9);
+}
+
+.toast-layer.error .toast-card {
+  background: rgba(133, 38, 28, 0.92);
+}
+
+.toast-card > span:last-of-type {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.toast-close {
+  width: 32px;
+  min-width: 32px;
+  height: 32px;
+  min-height: 32px;
+  padding: 0;
+  margin-left: auto;
+  border-radius: 10px;
+  color: rgba(255, 255, 255, 0.92);
+  flex: 0 0 32px;
+}
+
+.toast-close:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.toast-close .material-symbols-rounded {
+  font-size: 18px;
 }
 
 .mirror-empty {
@@ -936,9 +992,16 @@ button:disabled {
     flex-wrap: nowrap;
   }
 
-  .page-status {
-    width: 100%;
-    justify-content: center;
+  .toast-layer {
+    left: auto;
+    right: 10px;
+    bottom: 10px;
+    transform: none;
+  }
+
+  .toast-card {
+    min-width: min(280px, calc(100vw - 20px));
+    max-width: calc(100vw - 20px);
   }
 
   .upload-dropzone {

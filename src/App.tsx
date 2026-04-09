@@ -63,6 +63,12 @@ interface MirrorSession {
   removeSizeListener: () => void;
 }
 
+interface ToastState {
+  message: string;
+  tone: "info" | "success" | "error";
+  visible: boolean;
+}
+
 type PanelView = "mirror" | "connect" | "files";
 type MirrorQuality = "smooth" | "balanced" | "sharp" | "ultra" | "max";
 
@@ -196,6 +202,20 @@ function formatFileTime(mtime: bigint) {
   });
 }
 
+function getToastTone(message: string): ToastState["tone"] {
+  if (
+    /失败|错误|不支持|无法|请输入|请先|未选择|不可用|aborted|closed|error/i.test(message)
+  ) {
+    return "error";
+  }
+
+  if (/^已/.test(message) || /连接。$/.test(message)) {
+    return "success";
+  }
+
+  return "info";
+}
+
 export default function App() {
   const [devices, setDevices] = useState<DeviceRecord[]>([]);
   const [panelView, setPanelView] = useState<PanelView>("mirror");
@@ -205,6 +225,11 @@ export default function App() {
   const [pairAddress, setPairAddress] = useState("");
   const [pairCode, setPairCode] = useState("");
   const [message, setMessage] = useState("正在连接后端 bridge。");
+  const [toast, setToast] = useState<ToastState>({
+    message: "",
+    tone: "info",
+    visible: false,
+  });
   const [pendingAction, setPendingAction] = useState("");
   const [mirrorPending, setMirrorPending] = useState("");
   const [mirrorRunning, setMirrorRunning] = useState(false);
@@ -245,12 +270,6 @@ export default function App() {
       : mirrorRunning && message === "Screen Mirror 已连接。"
         ? ""
         : message;
-  const pageNotice =
-    /^(已同步 |已读取 |已上传 |已下载 |Screen Mirror 已连接。|正在连接后端 bridge。)/.test(
-      message,
-    )
-      ? ""
-      : message;
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(max-width: 900px), (pointer: coarse)");
@@ -331,6 +350,39 @@ export default function App() {
 
     setMirrorQualityMenuOpen(false);
   }, [panelView]);
+
+  useEffect(() => {
+    if (!message) {
+      return;
+    }
+
+    const handledInline = panelView === "mirror" && Boolean(mirrorPending);
+    if (handledInline) {
+      return;
+    }
+
+    const nextToast: ToastState = {
+      message,
+      tone: getToastTone(message),
+      visible: true,
+    };
+
+    setToast(nextToast);
+
+    const timeout = window.setTimeout(() => {
+      setToast((current) => {
+        if (current.message !== nextToast.message) {
+          return current;
+        }
+
+        return { ...current, visible: false };
+      });
+    }, nextToast.tone === "error" ? 4200 : 2600);
+
+    return () => {
+      window.clearTimeout(timeout);
+    };
+  }, [message, mirrorPending, panelView]);
 
   useEffect(() => {
     if (!mirrorRunning) {
@@ -1499,7 +1551,6 @@ export default function App() {
                       )}
                     </section>
                   </div>
-                  {pageNotice ? <div className="page-status">{pageNotice}</div> : null}
                 </section>
               ) : null}
 
@@ -1609,11 +1660,6 @@ export default function App() {
                       })}
                     </div>
                   )}
-                  {filesPending || pageNotice ? (
-                    <div className="page-status">
-                      {filesPending ? `文件操作${filesPending}...` : pageNotice}
-                    </div>
-                  ) : null}
                 </section>
               ) : null}
 
@@ -1711,10 +1757,32 @@ export default function App() {
               <span>目标目录：{filesPath}</span>
             </button>
 
-            <div className="page-status">
-              {filesPending ? `文件操作${filesPending}...` : "选择 / 粘贴 / 拖拽三种方式都可用"}
-            </div>
           </section>
+        </div>
+      ) : null}
+
+      {toast.visible ? (
+        <div className={`toast-layer ${toast.tone}`}>
+          <div className="toast-card" role="status" aria-live="polite">
+            <span className="material-symbols-rounded">
+              {toast.tone === "error"
+                ? "error"
+                : toast.tone === "success"
+                  ? "check_circle"
+                  : "info"}
+            </span>
+            <span>{toast.message}</span>
+            <button
+              className="ghost-button toast-close"
+              onClick={() => {
+                setToast((current) => ({ ...current, visible: false }));
+              }}
+              type="button"
+              aria-label="关闭提示"
+            >
+              <span className="material-symbols-rounded">close</span>
+            </button>
+          </div>
         </div>
       ) : null}
     </main>
