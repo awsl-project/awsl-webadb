@@ -202,6 +202,8 @@ export default function App() {
   const [isCompactViewport, setIsCompactViewport] = useState(false);
   const [selectedTransportId, setSelectedTransportId] = useState("");
   const [wifiAddress, setWifiAddress] = useState("");
+  const [pairAddress, setPairAddress] = useState("");
+  const [pairCode, setPairCode] = useState("");
   const [message, setMessage] = useState("正在连接后端 bridge。");
   const [pendingAction, setPendingAction] = useState("");
   const [mirrorPending, setMirrorPending] = useState("");
@@ -1121,6 +1123,38 @@ export default function App() {
     }
   }
 
+  async function pairWirelessDevice() {
+    const address = pairAddress.trim();
+    const password = pairCode.trim();
+    if (!address) {
+      setMessage("请输入配对地址");
+      return;
+    }
+
+    if (!password) {
+      setMessage("请输入配对码");
+      return;
+    }
+
+    setPendingAction("ADB Wi-Fi 配对");
+
+    try {
+      await adbClient.wireless.pair(address, password);
+
+      const host = address.split(":")[0] ?? "";
+      if (host && !wifiAddress.trim()) {
+        setWifiAddress(`${host}:5555`);
+      }
+
+      setMessage(`已完成 adb pair ${address}`);
+      await refreshHealth();
+    } catch (error) {
+      setMessage(formatError(error));
+    } finally {
+      setPendingAction("");
+    }
+  }
+
   return (
     <main className="app-shell screen-shell">
       <section className="workspace">
@@ -1302,8 +1336,11 @@ export default function App() {
               {panelView === "connect" ? (
                 <section className="utility-page">
                   <div className="utility-head">
-                    <div>
+                    <div className="utility-title-block">
                       <strong>连接设备</strong>
+                      <span className="section-tonal-pill">
+                        {connectMode === "existing" ? "已有连接" : "新建连接"}
+                      </span>
                     </div>
                     <span className="device-chip">
                       {selectedDevice?.model ?? selectedDevice?.serial ?? "未选择设备"}
@@ -1311,22 +1348,30 @@ export default function App() {
                   </div>
 
                   <div className="utility-grid">
-                    <section className="utility-card">
-                      <div className="connect-dialog-tabs">
+                    <section className="utility-card connect-card">
+                      <div className="connect-mode-switch" role="tablist" aria-label="连接模式">
                         <button
                           className={
-                            connectMode === "existing" ? "dialog-tab active" : "dialog-tab"
+                            connectMode === "existing"
+                              ? "dialog-tab connect-switch-button active"
+                              : "dialog-tab connect-switch-button"
                           }
                           onClick={() => setConnectMode("existing")}
+                          type="button"
                         >
+                          <span className="material-symbols-rounded">devices</span>
                           已有连接
                         </button>
                         <button
                           className={
-                            connectMode === "new" ? "dialog-tab active" : "dialog-tab"
+                            connectMode === "new"
+                              ? "dialog-tab connect-switch-button active"
+                              : "dialog-tab connect-switch-button"
                           }
                           onClick={() => setConnectMode("new")}
+                          type="button"
                         >
+                          <span className="material-symbols-rounded">wifi_tethering</span>
                           新建连接
                         </button>
                       </div>
@@ -1347,18 +1392,26 @@ export default function App() {
                                   onClick={() => {
                                     selectExistingDevice(device);
                                   }}
+                                  type="button"
                                 >
-                                  <div className="device-head">
-                                    <strong>{device.model ?? device.serial}</strong>
-                                    <span
-                                      className={
-                                        device.state === "device" ? "ok" : "warn"
-                                      }
-                                    >
-                                      {device.state}
+                                  <div className="device-card-top">
+                                    <span className="device-card-icon material-symbols-rounded">
+                                      {isNetworkDevice(device.serial) ? "wifi" : "usb"}
                                     </span>
+                                    <div className="device-card-content">
+                                      <div className="device-head">
+                                        <strong>{device.model ?? device.serial}</strong>
+                                        <span
+                                          className={
+                                            device.state === "device" ? "ok" : "warn"
+                                          }
+                                        >
+                                          {device.state}
+                                        </span>
+                                      </div>
+                                      <p>{device.serial}</p>
+                                    </div>
                                   </div>
-                                  <p>{device.serial}</p>
                                   <div className="device-tags">
                                     <span>
                                       {isNetworkDevice(device.serial) ? "Wi-Fi" : "USB"}
@@ -1371,25 +1424,77 @@ export default function App() {
                           )}
                         </div>
                       ) : (
-                        <div className="connect-form">
-                          <label className="field">
-                            <span>IP:端口</span>
-                            <input
-                              value={wifiAddress}
-                              onChange={(event) => setWifiAddress(event.target.value)}
-                              placeholder="192.168.1.88:5555"
-                            />
-                          </label>
-                          <button
-                            onClick={() => {
-                              void connectNewDevice();
-                            }}
-                            disabled={Boolean(pendingAction) || Boolean(mirrorPending)}
-                          >
-                            {pendingAction === "ADB Wi-Fi 连接"
-                              ? "连接中..."
-                              : "adb connect"}
-                          </button>
+                        <div className="connect-stack">
+                          <section className="connect-surface">
+                            <div className="connect-surface-head">
+                              <span className="surface-icon material-symbols-rounded">
+                                bluetooth_searching
+                              </span>
+                              <div>
+                                <strong>ADB Pair</strong>
+                              </div>
+                            </div>
+                            <div className="connect-form connect-form-grid">
+                              <label className="field">
+                                <span>配对地址</span>
+                                <input
+                                  value={pairAddress}
+                                  onChange={(event) => setPairAddress(event.target.value)}
+                                  placeholder="192.168.1.88:37099"
+                                />
+                              </label>
+                              <label className="field">
+                                <span>配对码</span>
+                                <input
+                                  value={pairCode}
+                                  onChange={(event) => setPairCode(event.target.value)}
+                                  placeholder="123456"
+                                />
+                              </label>
+                            </div>
+                            <div className="connect-actions">
+                              <button
+                                className="tonal-button"
+                                onClick={() => {
+                                  void pairWirelessDevice();
+                                }}
+                                disabled={Boolean(pendingAction) || Boolean(mirrorPending)}
+                                type="button"
+                              >
+                                {pendingAction === "ADB Wi-Fi 配对" ? "配对中..." : "开始配对"}
+                              </button>
+                            </div>
+                          </section>
+
+                          <section className="connect-surface">
+                            <div className="connect-surface-head">
+                              <span className="surface-icon material-symbols-rounded">wifi</span>
+                              <div>
+                                <strong>ADB Connect</strong>
+                              </div>
+                            </div>
+                            <div className="connect-form">
+                              <label className="field">
+                                <span>IP:端口</span>
+                                <input
+                                  value={wifiAddress}
+                                  onChange={(event) => setWifiAddress(event.target.value)}
+                                  placeholder="192.168.1.88:5555"
+                                />
+                              </label>
+                            </div>
+                            <div className="connect-actions">
+                              <button
+                                onClick={() => {
+                                  void connectNewDevice();
+                                }}
+                                disabled={Boolean(pendingAction) || Boolean(mirrorPending)}
+                                type="button"
+                              >
+                                {pendingAction === "ADB Wi-Fi 连接" ? "连接中..." : "连接设备"}
+                              </button>
+                            </div>
+                          </section>
                         </div>
                       )}
                     </section>

@@ -1,6 +1,6 @@
 #!/bin/sh
 set -eu
 
-adb start-server
+adb -a start-server
 
 exec bun server/index.ts

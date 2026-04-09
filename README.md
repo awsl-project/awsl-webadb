@@ -57,22 +57,42 @@ bun run start
 - 容器里自动启动 `adb server`
 - 不处理 USB，只处理 ADB Wi‑Fi
 
-默认容器模式：
+镜像地址：
+
+- `ghcr.io/awsl-project/awsl-webadb:latest`
+- `ghcr.io/awsl-project/awsl-webadb:v0.1.0`
+
+从源码构建：
 
 ```bash
 docker-compose up --build
 ```
 
+直接拉镜像运行：
+
+```bash
+docker run --rm -p 3000:3000 -p 5037:5037 ghcr.io/awsl-project/awsl-webadb:latest
+```
+
+固定版本运行：
+
+```bash
+docker run --rm -p 3000:3000 -p 5037:5037 ghcr.io/awsl-project/awsl-webadb:v0.1.0
+```
+
 访问：
 
 - `http://127.0.0.1:3000`
+- `adb -H 127.0.0.1 -P 5037 devices`
 
 说明：
 
 - 当前 `Dockerfile` 会安装 `adb`
-- 容器启动会自动执行 `adb start-server`
+- 容器启动会自动执行 `adb -a start-server`
 - 后端 bridge 默认连容器内的 `127.0.0.1:5037`
+- 容器会同时暴露 `3000` 和 `5037`
 - 设备连接方式是 `adb connect <ip:port>`
+- `adb pair <ip:port> <code>` 和 `adb connect <ip:port>` 都可以在页面里完成
 - 这套方案不支持 USB 直通
 
 容器内 ADB Wi‑Fi 的链路是：
