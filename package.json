@@ -1,0 +1,37 @@
+{
+  "name": "awsl-webadb",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "postinstall": "fetch-scrcpy-server 3.3.3",
+    "dev": "concurrently -k \"bun --watch server/index.ts\" \"vite\"",
+    "build": "vite build",
+    "check": "tsc --noEmit",
+    "start": "NODE_ENV=production bun server/index.ts",
+    "fetch:scrcpy-server": "fetch-scrcpy-server 3.3.3"
+  },
+  "dependencies": {
+    "@yume-chan/adb": "^2.6.0",
+    "@yume-chan/adb-scrcpy": "^2.3.2",
+    "@yume-chan/adb-server-node-tcp": "^2.5.2",
+    "@yume-chan/fetch-scrcpy-server": "^1.0.0",
+    "@yume-chan/scrcpy": "^2.3.0",
+    "@yume-chan/scrcpy-decoder-webcodecs": "^2.5.3",
+    "express": "^5.2.1",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "ws": "^8.20.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.3",
+    "@types/node": "^24.6.1",
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.2",
+    "@types/ws": "^8.18.1",
+    "@vitejs/plugin-react-swc": "^4.1.0",
+    "concurrently": "^9.2.1",
+    "typescript": "^5.9.3",
+    "vite": "^8.0.7",
+    "vite-plugin-pwa": "^1.2.0"
+  }
+}
