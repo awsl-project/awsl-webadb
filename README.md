@@ -60,24 +60,26 @@ bun run start
 镜像地址：
 
 - `ghcr.io/awsl-project/awsl-webadb:latest`
-- `ghcr.io/awsl-project/awsl-webadb:v0.1.0`
-
-从源码构建：
-
-```bash
-docker-compose up --build
-```
+- `ghcr.io/awsl-project/awsl-webadb:v0.1.1`
 
 直接拉镜像运行：
 
 ```bash
-docker run --rm -p 3000:3000 -p 5037:5037 ghcr.io/awsl-project/awsl-webadb:latest
+docker run --rm \
+  -p 3000:3000 \
+  -p 5037:5037 \
+  -v awsl-webadb-data:/var/lib/awsl-webadb \
+  ghcr.io/awsl-project/awsl-webadb:latest
 ```
 
 固定版本运行：
 
 ```bash
-docker run --rm -p 3000:3000 -p 5037:5037 ghcr.io/awsl-project/awsl-webadb:v0.1.0
+docker run --rm \
+  -p 3000:3000 \
+  -p 5037:5037 \
+  -v awsl-webadb-data:/var/lib/awsl-webadb \
+  ghcr.io/awsl-project/awsl-webadb:v0.1.1
 ```
 
 访问：
@@ -90,6 +92,8 @@ docker run --rm -p 3000:3000 -p 5037:5037 ghcr.io/awsl-project/awsl-webadb:v0.1.
 - 当前 `Dockerfile` 会安装 `adb`
 - 容器内 Web 服务会先编译成单个可执行文件再运行
 - 容器运行层不再依赖 Bun 和 `node_modules`
+- 容器把 `HOME` 固定到 `/var/lib/awsl-webadb`
+- 请持久化 `/var/lib/awsl-webadb`，这样 `~/.android` 下的认证文件和 Wi‑Fi 配对缓存不会丢
 - 容器启动会自动执行 `adb -a start-server`
 - 后端 bridge 默认连容器内的 `127.0.0.1:5037`
 - 容器会同时暴露 `3000` 和 `5037`
