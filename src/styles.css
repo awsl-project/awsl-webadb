@@ -345,6 +345,9 @@ button:disabled {
   grid-template-rows: auto minmax(0, 1fr) auto;
   gap: 16px;
   padding: clamp(18px, 2vw, 24px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   background:
     radial-gradient(circle at top right, rgba(53, 95, 189, 0.06), transparent 24%),
     linear-gradient(180deg, #f8faff 0%, #eef3fb 100%);
