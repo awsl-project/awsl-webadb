@@ -1,0 +1,104 @@
+@media (max-width: 640px) {
+  .screen-layout {
+    grid-template-columns: minmax(0, 1fr);
+    position: relative;
+  }
+
+  .screen-sidebar {
+    position: absolute;
+    inset: 0 auto 0 0;
+    z-index: 3;
+    width: var(--screen-sidebar-overlay-width);
+    max-width: var(--screen-sidebar-overlay-width);
+    padding: 8px 0;
+  }
+
+  .screen-icon-button {
+    min-height: 44px;
+  }
+
+  .screen-sidebar-group + .screen-sidebar-group {
+    margin-top: 10px;
+    padding-top: 10px;
+  }
+
+  .screen-menu-popup {
+    left: calc(100% + 6px);
+    min-width: 108px;
+    padding: 4px;
+  }
+
+  .screen-menu-item {
+    min-height: 32px;
+    padding: 0 10px;
+    gap: 8px;
+  }
+
+  .mirror-display {
+    --screen-side-gutter: 0px;
+    padding: 0 0 0 var(--screen-sidebar-overlay-width);
+  }
+
+  .utility-page {
+    padding: 14px 14px 14px calc(var(--screen-sidebar-overlay-width) + 14px);
+    gap: 12px;
+  }
+
+  .utility-head {
+    gap: 12px;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .connect-form-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .connect-card,
+  .connect-surface {
+    padding: 14px;
+    border-radius: 22px;
+  }
+
+  .connect-actions {
+    justify-content: stretch;
+  }
+
+  .connect-actions button {
+    width: 100%;
+  }
+
+  .page-actions {
+    justify-content: flex-start;
+    flex-wrap: nowrap;
+  }
+
+  .toast-layer {
+    left: auto;
+    right: 10px;
+    bottom: 10px;
+    transform: none;
+  }
+
+  .toast-card {
+    min-width: min(280px, calc(100vw - 20px));
+    max-width: calc(100vw - 20px);
+  }
+
+  .upload-dropzone {
+    min-height: 116px;
+    border-radius: 22px;
+  }
+
+  .file-row {
+    min-height: 60px;
+    padding: 0 12px;
+    border-radius: 18px;
+  }
+
+  .mirror-empty {
+    left: 10px;
+    right: 10px;
+    bottom: 10px;
+  }
+}

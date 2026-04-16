@@ -1,0 +1,159 @@
+:root {
+  color-scheme: light dark;
+  --bg: #eef2f8;
+  --bg-tonal: #dde7f6;
+  --surface: #f8faff;
+  --surface-2: #ffffff;
+  --surface-3: #edf3ff;
+  --surface-4: #dbe8ff;
+  --surface-container: #eef3fb;
+  --surface-container-high: #e5edf9;
+  --ink: #162033;
+  --muted: #5c6678;
+  --line: rgba(22, 32, 51, 0.1);
+  --line-strong: rgba(22, 32, 51, 0.16);
+  --primary: #355fbd;
+  --primary-strong: #234a9f;
+  --primary-soft: rgba(53, 95, 189, 0.12);
+  --on-primary-container: #153a86;
+  --secondary: #0d6e70;
+  --secondary-soft: rgba(13, 110, 112, 0.12);
+  --warn: #a34a34;
+  --warn-soft: rgba(163, 74, 52, 0.12);
+  --shadow-1: 0 8px 24px rgba(49, 70, 105, 0.08);
+  --shadow-2: 0 18px 40px rgba(49, 70, 105, 0.12);
+  --screen-sidebar-width: clamp(44px, 4.4vw, 56px);
+  --screen-sidebar-overlay-width: clamp(32px, 9vw, 38px);
+  --screen-side-gutter: clamp(10px, 1vw, 16px);
+
+  --sidebar-bg: rgba(244, 247, 252, 0.92);
+  --sidebar-border: rgba(53, 95, 189, 0.08);
+  --card-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.88) 0%, rgba(237, 243, 255, 0.92) 100%);
+  --card-selected-bg: linear-gradient(180deg, rgba(218, 231, 255, 0.95) 0%, rgba(232, 240, 255, 1) 100%);
+  --input-bg: rgba(255, 255, 255, 0.92);
+  --input-focus-bg: #fff;
+  --overlay-bg: rgba(12, 20, 31, 0.74);
+  --connect-surface-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(241, 246, 255, 0.94) 100%);
+  --connect-card-bg: linear-gradient(180deg, rgba(248, 250, 255, 0.98) 0%, rgba(235, 241, 251, 0.98) 100%);
+  --utility-page-bg: linear-gradient(180deg, #f8faff 0%, #eef3fb 100%);
+  --file-row-bg: rgba(255, 255, 255, 0.72);
+  --file-row-hover: rgba(53, 95, 189, 0.08);
+  --upload-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.86) 0%, rgba(229, 237, 249, 0.96) 100%);
+  --upload-active-bg: linear-gradient(180deg, rgba(224, 234, 255, 0.98) 0%, rgba(238, 244, 255, 1) 100%);
+  --dialog-bg: rgba(248, 250, 255, 0.96);
+  --dialog-backdrop: rgba(15, 24, 38, 0.24);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f1318;
+    --bg-tonal: #161c24;
+    --surface: #1a2028;
+    --surface-2: #1e2530;
+    --surface-3: #222a36;
+    --surface-4: #283240;
+    --surface-container: #1c2330;
+    --surface-container-high: #232b38;
+    --ink: #e0e4ec;
+    --muted: #8e95a4;
+    --line: rgba(200, 210, 230, 0.12);
+    --line-strong: rgba(200, 210, 230, 0.18);
+    --primary: #7da4e8;
+    --primary-strong: #a0bff0;
+    --primary-soft: rgba(125, 164, 232, 0.16);
+    --on-primary-container: #b8d0f8;
+    --secondary: #4ec9cb;
+    --secondary-soft: rgba(78, 201, 203, 0.14);
+    --warn: #e88a74;
+    --warn-soft: rgba(232, 138, 116, 0.14);
+    --shadow-1: 0 8px 24px rgba(0, 0, 0, 0.24);
+    --shadow-2: 0 18px 40px rgba(0, 0, 0, 0.32);
+
+    --sidebar-bg: rgba(22, 28, 36, 0.95);
+    --sidebar-border: rgba(125, 164, 232, 0.1);
+    --card-bg: linear-gradient(180deg, rgba(30, 37, 48, 0.92) 0%, rgba(26, 32, 40, 0.95) 100%);
+    --card-selected-bg: linear-gradient(180deg, rgba(40, 52, 72, 0.95) 0%, rgba(34, 44, 62, 1) 100%);
+    --input-bg: rgba(26, 32, 40, 0.92);
+    --input-focus-bg: #1e2530;
+    --overlay-bg: rgba(0, 0, 0, 0.78);
+    --connect-surface-bg: linear-gradient(180deg, rgba(26, 32, 40, 0.96) 0%, rgba(22, 28, 36, 0.94) 100%);
+    --connect-card-bg: linear-gradient(180deg, rgba(26, 32, 40, 0.98) 0%, rgba(22, 28, 36, 0.98) 100%);
+    --utility-page-bg: linear-gradient(180deg, #1a2028 0%, #161c24 100%);
+    --file-row-bg: rgba(30, 37, 48, 0.72);
+    --file-row-hover: rgba(125, 164, 232, 0.1);
+    --upload-bg: linear-gradient(180deg, rgba(26, 32, 40, 0.86) 0%, rgba(22, 28, 36, 0.96) 100%);
+    --upload-active-bg: linear-gradient(180deg, rgba(40, 52, 72, 0.98) 0%, rgba(34, 44, 62, 1) 100%);
+    --dialog-bg: rgba(26, 32, 40, 0.96);
+    --dialog-backdrop: rgba(0, 0, 0, 0.4);
+  }
+
+  body {
+    background:
+      radial-gradient(circle at top left, rgba(125, 164, 232, 0.08), transparent 28%),
+      radial-gradient(circle at top right, rgba(78, 201, 203, 0.06), transparent 24%),
+      linear-gradient(180deg, var(--bg-tonal) 0%, var(--bg) 30%, #0c1016 100%);
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  min-height: 100%;
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+body {
+  margin: 0;
+  color: var(--ink);
+  font-family: "Noto Sans SC", sans-serif;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  background:
+    radial-gradient(circle at top left, rgba(53, 95, 189, 0.18), transparent 28%),
+    radial-gradient(circle at top right, rgba(13, 110, 112, 0.14), transparent 24%),
+    linear-gradient(180deg, var(--bg-tonal) 0%, var(--bg) 30%, #f4f7fc 100%);
+}
+
+.material-symbols-rounded {
+  font-family: "Material Symbols Rounded";
+  font-weight: normal;
+  font-style: normal;
+  font-size: 20px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+  border: 0;
+}
+
+.ok {
+  color: var(--secondary);
+}
+
+.warn {
+  color: var(--warn);
+}
+
+.hidden-input {
+  display: none;
+}
