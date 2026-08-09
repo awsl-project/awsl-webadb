@@ -2,7 +2,6 @@ import {
   useEffect,
   useRef,
   useState,
-  type CSSProperties,
   type ClipboardEvent as ReactClipboardEvent,
   type KeyboardEvent as ReactKeyboardEvent,
   type RefObject,
@@ -257,7 +256,6 @@ interface MirrorDisplayProps {
   pendingLabel?: string;
   emptyLabel?: string;
   connectedMessage?: string;
-  cropTop?: number;
 }
 
 export function MirrorDisplay({
@@ -275,7 +273,6 @@ export function MirrorDisplay({
   pendingLabel = "正在启动 Screen Mirror…",
   emptyLabel = "Screen Mirror 未启动",
   connectedMessage = "Screen Mirror 已连接。",
-  cropTop = 0,
 }: MirrorDisplayProps) {
   const displayRef = useRef<HTMLDivElement | null>(null);
   const [containerSize, setContainerSize] = useState<{
@@ -377,33 +374,12 @@ export function MirrorDisplay({
     containerSize.width > 0 &&
     containerSize.height > 0
       ? (() => {
-          const safeCropTop = Math.min(
-            Math.max(cropTop, 0),
-            activeMirrorViewport.height - 1,
-          );
-          const visibleHeight = activeMirrorViewport.height - safeCropTop;
           const scale = Math.min(
             containerSize.width / activeMirrorViewport.width,
-            containerSize.height / visibleHeight,
+            containerSize.height / activeMirrorViewport.height,
           );
           const width = Math.floor(activeMirrorViewport.width * scale);
           const height = Math.floor(activeMirrorViewport.height * scale);
-
-          if (safeCropTop > 0) {
-            const visibleScaledHeight = visibleHeight * scale;
-            return {
-              position: "absolute",
-              left: `${Math.floor((containerSize.width - width) / 2)}px`,
-              top: `${Math.floor((containerSize.height - visibleScaledHeight) / 2 - safeCropTop * scale)}px`,
-              width: `${width}px`,
-              height: `${height}px`,
-              maxWidth: "none",
-              maxHeight: "none",
-              margin: 0,
-              clipPath: `inset(${Math.floor(safeCropTop * scale)}px 0 0)`,
-            } satisfies CSSProperties;
-          }
-
           return {
             width: `${width}px`,
             height: `${height}px`,

@@ -172,7 +172,7 @@ export function useApps(
 
         const mappedApps = nextApps.map((app) => ({
           ...app,
-          iconUrl: `/api/app-icon?package=${encodeURIComponent(app.packageName)}&transportId=${encodeURIComponent(selectedTransportId)}&v=2`,
+          iconUrl: `/api/app-icon?package=${encodeURIComponent(app.packageName)}&transportId=${encodeURIComponent(selectedTransportId)}&v=3`,
         }));
         appsRef.current = mappedApps;
         setApps(mappedApps);

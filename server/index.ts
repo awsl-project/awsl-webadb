@@ -163,7 +163,9 @@ app.get("/api/app-icon", async (request, response) => {
     deviceIconRequests.set(cacheKey, requestIcon);
     try {
       deviceIcon = await requestIcon;
-      setBoundedCache(deviceIconCache, cacheKey, deviceIcon, 160);
+      if (deviceIcon) {
+        setBoundedCache(deviceIconCache, cacheKey, deviceIcon, 160);
+      }
     } finally {
       deviceIconRequests.delete(cacheKey);
     }

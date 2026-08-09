@@ -1,4 +1,5 @@
 import { useEffect, useRef, type CSSProperties, type PointerEvent, type ReactNode } from "react";
+import { AppIconImage } from "./AppIconImage";
 
 export interface DesktopWindowState {
   id: string;
@@ -149,9 +150,8 @@ export function DesktopWindow({
       >
         <div className="window-title">
           <span className="window-title-icon">
-            {iconUrl ? <img src={iconUrl} alt="" /> : (
-              <span className="material-symbols-rounded">{icon}</span>
-            )}
+            <span className="material-symbols-rounded">{icon}</span>
+            <AppIconImage src={iconUrl} />
           </span>
           <span>{title}</span>
         </div>

@@ -1,6 +1,7 @@
 import { useMemo, useState, type CSSProperties } from "react";
 
 import type { InstalledApp } from "../types";
+import { AppIconImage } from "./AppIconImage";
 
 interface AppsViewProps {
   apps: InstalledApp[];
@@ -37,14 +38,7 @@ function AppGrid({
           >
             <span className="android-app-icon">
               <span className="android-app-fallback">{app.name.trim().slice(0, 1)}</span>
-              {app.iconUrl ? (
-                <img
-                  src={app.iconUrl}
-                  alt=""
-                  loading="lazy"
-                  onError={(event) => event.currentTarget.remove()}
-                />
-              ) : null}
+              <AppIconImage src={app.iconUrl} loading="lazy" />
             </span>
             <span className="android-app-name">{app.name}</span>
             {runningPackages.has(app.packageName) ? (

@@ -311,8 +311,15 @@ body,
 }
 
 .mobile-shell {
+  --mobile-dock-height: calc(60px + env(safe-area-inset-bottom));
   grid-template-rows: minmax(0, 1fr);
+  height: 100dvh;
+  min-height: 0;
   background: linear-gradient(155deg, #345f77, #17384c);
+}
+
+.mobile-shell[data-dock-size="compact"] {
+  --mobile-dock-height: calc(54px + env(safe-area-inset-bottom));
 }
 
 .mobile-topbar,
@@ -322,10 +329,18 @@ body,
 }
 
 @media (max-width: 640px), (pointer: coarse) {
+  .mobile-shell .desktop-window {
+    grid-template-rows: calc(38px + env(safe-area-inset-top)) minmax(0, 1fr);
+  }
+
+  .mobile-shell .window-titlebar {
+    padding-top: env(safe-area-inset-top);
+  }
+
   .mobile-shell .desktop-window.file-manager-window,
   .mobile-shell .desktop-window.mirror-manager-window {
     position: fixed;
-    inset: 0 0 calc(60px + env(safe-area-inset-bottom)) !important;
+    inset: 0 0 var(--mobile-dock-height) !important;
     width: auto !important;
     height: auto !important;
     min-width: 0;
@@ -339,15 +354,9 @@ body,
 
   .mobile-shell .desktop-window.android-app-stream-window {
     position: fixed;
-    inset: 0 auto auto 50% !important;
-    width: min(
-      100vw,
-      calc((100vh - 146px - env(safe-area-inset-bottom)) * 9 / 16)
-    ) !important;
-    height: min(
-      calc(100vh - 60px - env(safe-area-inset-bottom)),
-      calc(100vw * 16 / 9 + 86px)
-    ) !important;
+    inset: 0 0 var(--mobile-dock-height) !important;
+    width: auto !important;
+    height: auto !important;
     min-width: 0;
     min-height: 0;
     max-width: none;
@@ -355,7 +364,11 @@ body,
     border: 0;
     border-radius: 0;
     resize: none;
-    translate: -50% 0;
+    translate: none;
+  }
+
+  .mobile-shell .app-stream-layout .mirror-display {
+    place-items: start center;
   }
 
   .apps-page {
@@ -591,6 +604,7 @@ body,
 }
 
 .window-title-icon {
+  position: relative;
   width: 21px;
   height: 21px;
   display: grid;
@@ -601,6 +615,8 @@ body,
 }
 
 .window-title-icon img {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -1158,7 +1174,7 @@ body,
   }
 
   .dex-home-icons {
-    inset: max(10px, env(safe-area-inset-top)) 10px 70px;
+    inset: max(10px, env(safe-area-inset-top)) 10px calc(var(--mobile-dock-height) + 10px);
     width: auto;
     grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
     grid-auto-rows: 94px;
@@ -1167,7 +1183,7 @@ body,
   }
 
   .dex-launcher-backdrop {
-    inset: 0 0 60px;
+    inset: 0 0 var(--mobile-dock-height);
     padding: 0;
     background: transparent;
     backdrop-filter: none;
@@ -1193,7 +1209,7 @@ body,
   .dex-system-panel.mirror,
   .dex-system-panel.files {
     position: absolute;
-    inset: 0 0 60px;
+    inset: 0 0 var(--mobile-dock-height);
     width: auto;
     height: auto;
     border: 0;
@@ -1205,8 +1221,8 @@ body,
   }
 
   .dex-dock {
-    height: 60px;
-    padding: 6px 8px;
+    height: var(--mobile-dock-height);
+    padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
     grid-template-columns: auto minmax(0, 1fr) 48px auto;
     gap: 6px;
   }

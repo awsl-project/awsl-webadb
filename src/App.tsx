@@ -17,6 +17,7 @@ import { useApps } from "./hooks/useApps";
 import { useDeviceControls } from "./hooks/useDeviceControls";
 import { useAppWindows } from "./hooks/useAppWindows";
 import { AppsView } from "./components/AppsView";
+import { AppIconImage } from "./components/AppIconImage";
 import {
   DesktopSettingsView,
   type DesktopPreferences,
@@ -528,11 +529,6 @@ export default function App() {
           pendingLabel={`正在启动 ${appWindow.app.name} 的独立窗口…`}
           emptyLabel={appWindow.error || `${appWindow.app.name} 尚未启动`}
           connectedMessage="应用已连接"
-          cropTop={
-            appWindow.app.packageName === "com.tencent.mm"
-              ? Math.round(appWindow.viewport.width * 2 / 15)
-              : 0
-          }
           onPointerDown={(event) => appWindows.pointerDown(appWindow.id, event)}
           onPointerMove={(event) => appWindows.pointerMove(appWindow.id, event)}
           onPointerUp={(event) => appWindows.pointerUp(appWindow.id, event)}
@@ -675,7 +671,7 @@ export default function App() {
             <button key={app.packageName} onClick={() => handleLaunchApp(app)} type="button">
               <span className="dex-home-app-icon" style={{ "--app-hue": app.hue } as React.CSSProperties}>
                 <span>{app.name.trim().slice(0, 1)}</span>
-                {app.iconUrl ? <img src={app.iconUrl} alt="" onError={(event) => event.currentTarget.remove()} /> : null}
+                <AppIconImage src={app.iconUrl} />
               </span>
               <span>{app.name}</span>
             </button>
@@ -809,7 +805,7 @@ export default function App() {
             {appWindows.windows.map((appWindow) => (
               <button key={appWindow.id} className={appWindows.activeId === appWindow.id ? "active" : ""} onClick={() => appWindows.toggleWindow(appWindow.id)} title={appWindow.app.name} type="button">
                 <span>{appWindow.app.name.trim().slice(0, 1)}</span>
-                {appWindow.app.iconUrl ? <img src={appWindow.app.iconUrl} alt="" onError={(event) => event.currentTarget.remove()} /> : null}
+                <AppIconImage src={appWindow.app.iconUrl} />
               </button>
             ))}
           </div>
