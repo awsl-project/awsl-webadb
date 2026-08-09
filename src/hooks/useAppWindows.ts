@@ -64,13 +64,17 @@ export interface AppWindow extends DesktopWindowState {
 type AppSession = MirrorSession & {
   app: InstalledApp;
   aspect: number;
-  longEdge: number;
   audioPlayer?: ScrcpyPcmAudioPlayer;
 };
 
+type SuspendedAppSession = {
+  app: InstalledApp;
+  aspect: number;
+  nativeKeyboard: boolean;
+  audioMuted: boolean;
+};
+
 const WIDE_APP_PATTERN = /(?:browser|chrome|firefox|edge|torbrowser|mark\.via|tencent\.mm|wechat|youtube|settings|documentsui|filemanager|fileexplorer|feishu|larksuite|office|wps|telegram|challegram|discord|termux|terminal|server\.auditor|microsoft\.rdc|google\.android\.gm|bitwarden|bin\.mt\.plus|clash\.meta|twitter|calendar|camera|gallery|xayah\.databackup|com\.trim\.app|tmgp\.sgame|mihoyo\.yuanshen|lilith.*(?:rok|roc)|farlightgames|xiaoji\.egggame)/i;
-const BILI_PACKAGE = "tv.danmaku.bili";
-const BILI_TOP_INSET_RATIO = 2 / 15;
 const UNICODE_IME = "com.android.adbkeyboard/.AdbIME";
 const UNICODE_IME_PACKAGE = "com.android.adbkeyboard";
 const UNICODE_IME_APK = "/data/local/tmp/webadb-unicode-ime.apk";
@@ -198,6 +202,8 @@ export function useAppWindows(
 ) {
   const [windows, setWindows] = useState<AppWindow[]>([]);
   const [activeId, setActiveId] = useState("");
+  const windowsRef = useRef(windows);
+  windowsRef.current = windows;
   const sessionsRef = useRef(new Map<string, AppSession>());
   const canvasesRef = useRef(
     new Map<string, RefObject<HTMLCanvasElement | null>>(),
@@ -209,6 +215,8 @@ export function useAppWindows(
   const startFramesRef = useRef(new Map<string, number>());
   const windowIdsRef = useRef(new Set<string>());
   const unsupportedWideRef = useRef(new Set<string>());
+  const backgroundSessionsRef = useRef(new Map<string, SuspendedAppSession>());
+  const backgroundTimerRef = useRef(0);
   const mountedRef = useRef(true);
 
   const patchWindow = useCallback(
@@ -307,23 +315,18 @@ export function useAppWindows(
         const wideCapable = isWideCapable(app.packageName)
           && !unsupportedWideRef.current.has(app.packageName);
         const baseLongEdge = 1920;
-        const topInset = app.packageName === BILI_PACKAGE
-          ? Math.round(baseLongEdge * BILI_TOP_INSET_RATIO)
-          : 0;
         const safeAspect = requestedAspect && Number.isFinite(requestedAspect)
           ? Math.min(Math.max(requestedAspect, 0.3), 3.2)
           : 9 / 16;
-        const density = app.packageName === BILI_PACKAGE
-          ? Math.round(baseLongEdge / 4)
-          : wideCapable
-            ? safeAspect >= 1 ? 240 : Math.round(baseLongEdge / 4)
-            : Math.max(160, Math.round(baseLongEdge / 4));
+        const density = wideCapable
+          ? safeAspect >= 1 ? 240 : Math.round(baseLongEdge / 4)
+          : Math.max(160, Math.round(baseLongEdge / 4));
         const displayWidth = safeAspect >= 1
           ? baseLongEdge
           : Math.max(320, Math.round(baseLongEdge * safeAspect));
         const displayHeight = safeAspect >= 1
           ? Math.max(320, Math.round(baseLongEdge / safeAspect))
-          : baseLongEdge + topInset;
+          : baseLongEdge;
         if (!requestedAspect && !compact) {
           const windowHeight = Math.max(520, Math.min(820, window.innerHeight - 132));
           patchWindow(id, {
@@ -351,6 +354,7 @@ export function useAppWindows(
             videoBitRate: wideCapable
               ? compact ? 6_000_000 : 12_000_000
               : compact ? 5_000_000 : 8_000_000,
+            maxFps: compact ? 24 : 30,
             newDisplay: new ScrcpyNewDisplay(
               displayWidth,
               displayHeight,
@@ -401,7 +405,6 @@ export function useAppWindows(
           removeSizeListener,
           app,
           aspect: safeAspect,
-          longEdge: baseLongEdge,
           audioPlayer,
         };
         if (generationsRef.current.get(id) !== generation) {
@@ -482,8 +485,64 @@ export function useAppWindows(
     (id: string) => {
       setActiveId(id);
       patchWindow(id, { minimized: false, open: true, zIndex: nextZIndex() });
+      const appWindow = windowsRef.current.find((item) => item.id === id);
+      if (
+        !appWindow
+        || sessionsRef.current.has(id)
+        || appWindow.pending
+        || appWindow.error
+      ) {
+        return;
+      }
+      const generation = (generationsRef.current.get(id) ?? 0) + 1;
+      generationsRef.current.set(id, generation);
+      patchWindow(id, {
+        pending: "正在恢复独立显示",
+        running: false,
+        audioAvailable: false,
+      });
+      void startSession(
+        id,
+        appWindow.app,
+        generation,
+        appWindow.landscape ? 16 / 9 : 9 / 16,
+        appWindow.nativeKeyboard,
+        appWindow.audioMuted,
+      );
     },
-    [nextZIndex, patchWindow],
+    [nextZIndex, patchWindow, startSession],
+  );
+
+  const minimizeWindow = useCallback(
+    (id: string) => {
+      backgroundSessionsRef.current.delete(id);
+      generationsRef.current.set(id, (generationsRef.current.get(id) ?? 0) + 1);
+      patchWindow(id, {
+        minimized: true,
+        pending: "",
+        error: "",
+        running: false,
+        audioAvailable: false,
+      });
+      setActiveId((current) => (current === id ? "" : current));
+      void disposeSession(id);
+    },
+    [disposeSession, patchWindow],
+  );
+
+  const toggleWindow = useCallback(
+    (id: string) => {
+      const appWindow = windows.find((item) => item.id === id);
+      if (!appWindow) {
+        return;
+      }
+      if (activeId === id && !appWindow.minimized) {
+        minimizeWindow(id);
+        return;
+      }
+      focusWindow(id);
+    },
+    [activeId, focusWindow, minimizeWindow, windows],
   );
 
   const openApp = useCallback(
@@ -536,6 +595,7 @@ export function useAppWindows(
 
   const closeWindow = useCallback(
     (id: string) => {
+      backgroundSessionsRef.current.delete(id);
       generationsRef.current.set(id, (generationsRef.current.get(id) ?? 0) + 1);
       windowIdsRef.current.delete(id);
       setWindows((current) => current.filter((item) => item.id !== id));
@@ -567,9 +627,10 @@ export function useAppWindows(
   );
 
   const minimizeAll = useCallback(() => {
-    setWindows((current) => current.map((item) => ({ ...item, minimized: true })));
-    setActiveId("");
-  }, []);
+    for (const appWindow of windowsRef.current) {
+      minimizeWindow(appWindow.id);
+    }
+  }, [minimizeWindow]);
 
   const blur = useCallback(() => setActiveId(""), []);
 
@@ -585,101 +646,24 @@ export function useAppWindows(
         if (!session || width < 160 || height < 160) {
           return;
         }
-        const displayHeight = Math.max(height - 90, 160);
-        const windowAspect = width / displayHeight;
         if (
-          !isWideCapable(session.app.packageName)
-          || unsupportedWideRef.current.has(session.app.packageName)
+          isWideCapable(session.app.packageName)
+          && !unsupportedWideRef.current.has(session.app.packageName)
         ) {
-          const targetWidth = Math.max(
-            240,
-            Math.round(displayHeight * FIXED_WINDOW_ASPECT),
-          );
-          if (Math.abs(width - targetWidth) > 2) {
-            patchWindow(id, { width: targetWidth, height });
-          }
           return;
         }
-        const snappedAspect = Math.abs(windowAspect - 16 / 9) < 0.04
-          ? 16 / 9
-          : Math.abs(windowAspect - 9 / 16) < 0.04
-            ? 9 / 16
-            : windowAspect;
-        const aspect = Math.min(Math.max(snappedAspect, 0.3), 3.2);
-        if (Math.abs(aspect - session.aspect) < 0.08) {
-          return;
+        const displayHeight = Math.max(height - 90, 160);
+        const targetWidth = Math.max(
+          240,
+          Math.round(displayHeight * FIXED_WINDOW_ASPECT),
+        );
+        if (Math.abs(width - targetWidth) > 2) {
+          patchWindow(id, { width: targetWidth, height });
         }
-        const shortEdge = Math.round(session.longEdge * 9 / 16);
-        const targetWidth = aspect >= 1
-          ? Math.max(320, Math.round(shortEdge * aspect))
-          : shortEdge;
-        const targetHeight = aspect >= 1
-          ? shortEdge
-          : Math.max(320, Math.round(shortEdge / aspect));
-        const displayInset = session.app.packageName === BILI_PACKAGE && aspect < 1
-          ? Math.round(session.longEdge * BILI_TOP_INSET_RATIO)
-          : 0;
-        patchWindow(id, {
-          pending: aspect >= 1 ? "正在适应宽屏" : "正在适应竖屏",
-          error: "",
-          landscape: aspect >= 1,
-        });
-        void session.client.controller?.resizeDisplay({
-          width: Math.round(targetWidth / 8) * 8,
-          height: Math.round((targetHeight + displayInset) / 8) * 8,
-        }).then(async () => {
-          if (sessionsRef.current.get(id) !== session) {
-            return;
-          }
-          session.aspect = aspect;
-          if (aspect >= 1) {
-            for (let attempt = 0; attempt < 8; attempt += 1) {
-              await wait(300);
-              if (
-                sessionsRef.current.get(id) !== session
-                || session.aspect !== aspect
-              ) {
-                return;
-              }
-              const viewport = viewportsRef.current.get(id);
-              if (viewport && viewport.width > viewport.height) {
-                patchWindow(id, { pending: "" });
-                return;
-              }
-            }
-
-            unsupportedWideRef.current.add(session.app.packageName);
-            const portraitWidth = Math.round(session.longEdge * 9 / 16 / 8) * 8;
-            const portraitInset = session.app.packageName === BILI_PACKAGE
-              ? Math.round(session.longEdge * BILI_TOP_INSET_RATIO)
-              : 0;
-            await session.client.controller?.resizeDisplay({
-              width: portraitWidth,
-              height: Math.round((session.longEdge + portraitInset) / 8) * 8,
-            });
-            session.aspect = 9 / 16;
-            patchWindow(id, {
-              wideCapable: false,
-              landscape: false,
-              pending: "",
-              error: "",
-            });
-            onMessage(`${session.app.name} 不支持横屏，已回退竖屏`);
-            return;
-          }
-          patchWindow(id, { pending: "" });
-        }).catch((error) => {
-          if (sessionsRef.current.get(id) !== session) {
-            return;
-          }
-          const message = formatError(error);
-          patchWindow(id, { pending: "", error: message });
-          onMessage(message);
-        });
       }, 420);
       resizeTimersRef.current.set(id, timer);
     },
-    [onMessage, patchWindow],
+    [patchWindow],
   );
 
   const rotateWindow = useCallback(
@@ -990,7 +974,86 @@ export function useAppWindows(
   }, [activeId, windows]);
 
   useEffect(() => {
+    const restoreBackgroundSessions = () => {
+      const suspended = [...backgroundSessionsRef.current.entries()];
+      backgroundSessionsRef.current.clear();
+      for (const [id, state] of suspended) {
+        const appWindow = windowsRef.current.find((item) => item.id === id);
+        if (!appWindow || appWindow.minimized || !windowIdsRef.current.has(id)) {
+          continue;
+        }
+        const generation = (generationsRef.current.get(id) ?? 0) + 1;
+        generationsRef.current.set(id, generation);
+        patchWindow(id, {
+          pending: "正在恢复独立显示",
+          error: "",
+          running: false,
+          audioAvailable: false,
+        });
+        void startSession(
+          id,
+          state.app,
+          generation,
+          state.aspect,
+          state.nativeKeyboard,
+          state.audioMuted,
+        );
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        if (backgroundTimerRef.current) {
+          window.clearTimeout(backgroundTimerRef.current);
+          backgroundTimerRef.current = 0;
+        }
+        restoreBackgroundSessions();
+        return;
+      }
+      if (backgroundTimerRef.current) {
+        return;
+      }
+      backgroundTimerRef.current = window.setTimeout(() => {
+        backgroundTimerRef.current = 0;
+        if (!document.hidden) {
+          return;
+        }
+        for (const [id, session] of sessionsRef.current) {
+          const appWindow = windowsRef.current.find((item) => item.id === id);
+          backgroundSessionsRef.current.set(id, {
+            app: session.app,
+            aspect: session.aspect,
+            nativeKeyboard: Boolean(appWindow?.nativeKeyboard),
+            audioMuted: Boolean(appWindow?.audioMuted),
+          });
+          generationsRef.current.set(id, (generationsRef.current.get(id) ?? 0) + 1);
+          patchWindow(id, {
+            pending: "后台已暂停",
+            running: false,
+            audioAvailable: false,
+          });
+          void disposeSession(id);
+        }
+      }, 10_000);
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      if (backgroundTimerRef.current) {
+        window.clearTimeout(backgroundTimerRef.current);
+        backgroundTimerRef.current = 0;
+      }
+    };
+  }, [disposeSession, patchWindow, startSession]);
+
+  useEffect(() => {
     const sessions = sessionsRef.current;
+    backgroundSessionsRef.current.clear();
+    if (backgroundTimerRef.current) {
+      window.clearTimeout(backgroundTimerRef.current);
+      backgroundTimerRef.current = 0;
+    }
     for (const id of generationsRef.current.keys()) {
       generationsRef.current.set(id, (generationsRef.current.get(id) ?? 0) + 1);
     }
@@ -1020,6 +1083,10 @@ export function useAppWindows(
       for (const timer of resizeTimersRef.current.values()) {
         window.clearTimeout(timer);
       }
+      if (backgroundTimerRef.current) {
+        window.clearTimeout(backgroundTimerRef.current);
+        backgroundTimerRef.current = 0;
+      }
       for (const session of sessionsRef.current.values()) {
         session.abortController.abort();
         session.removeSizeListener();
@@ -1043,6 +1110,7 @@ export function useAppWindows(
       pointersRef.current.clear();
       generationsRef.current.clear();
       windowIdsRef.current.clear();
+      backgroundSessionsRef.current.clear();
     };
   }, []);
 
@@ -1053,6 +1121,8 @@ export function useAppWindows(
     getCanvasRef,
     openApp,
     focusWindow,
+    minimizeWindow,
+    toggleWindow,
     closeWindow,
     closePackage,
     minimizeAll,

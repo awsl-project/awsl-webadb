@@ -33,6 +33,7 @@ interface DesktopWindowProps {
   maximizeIcon?: string;
   audioMuted?: boolean;
   onToggleAudio?: () => void;
+  onStopApp?: () => void;
 }
 
 export function DesktopWindow({
@@ -56,6 +57,7 @@ export function DesktopWindow({
   maximizeIcon = "crop_square",
   audioMuted,
   onToggleAudio,
+  onStopApp,
 }: DesktopWindowProps) {
   const windowRef = useRef<HTMLElement | null>(null);
   const dragRef = useRef<{
@@ -203,11 +205,22 @@ export function DesktopWindow({
             </span>
           </button>
           <button
+            className="window-action stop-app"
+            onPointerDown={(event) => event.stopPropagation()}
+            onClick={onStopApp}
+            hidden={!onStopApp}
+            aria-label={`结束${title}应用`}
+            title="结束 Android 应用"
+            type="button"
+          >
+            <span className="material-symbols-rounded">stop_circle</span>
+          </button>
+          <button
             className="window-action close"
             onPointerDown={(event) => event.stopPropagation()}
             onClick={onClose}
-            aria-label={`关闭${title}`}
-            title="关闭"
+            aria-label={`关闭${title}窗口`}
+            title="关闭窗口"
             type="button"
           >
             <span className="material-symbols-rounded">close</span>

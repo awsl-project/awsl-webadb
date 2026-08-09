@@ -17,7 +17,10 @@ import { useApps } from "./hooks/useApps";
 import { useDeviceControls } from "./hooks/useDeviceControls";
 import { useAppWindows } from "./hooks/useAppWindows";
 import { AppsView } from "./components/AppsView";
-import { ControlsView } from "./components/ControlsView";
+import {
+  DesktopSettingsView,
+  type DesktopPreferences,
+} from "./components/DesktopSettingsView";
 import { ConnectView } from "./components/ConnectView";
 import {
   DesktopWindow,
@@ -34,7 +37,7 @@ const APP_META: Record<
 > = {
   apps: { title: "应用中心", shortTitle: "应用", icon: "apps" },
   mirror: { title: "设备屏幕", shortTitle: "屏幕", icon: "phone_android" },
-  controls: { title: "控制中心", shortTitle: "控制", icon: "tune" },
+  controls: { title: "桌面设置", shortTitle: "设置", icon: "settings" },
   files: { title: "文件管理", shortTitle: "文件", icon: "folder" },
   connect: { title: "设备连接", shortTitle: "连接", icon: "hub" },
 };
@@ -42,6 +45,13 @@ const APP_META: Record<
 const DESKTOP_APPS_STORAGE = "webadb.desktop-apps.v2";
 const LEGACY_DESKTOP_APPS_STORAGE = "webadb.desktop-apps";
 const MAX_DESKTOP_APPS = 12;
+const DESKTOP_SETTINGS_STORAGE = "webadb.desktop-settings.v1";
+const DEFAULT_DESKTOP_PREFERENCES: DesktopPreferences = {
+  wallpaper: "ocean",
+  iconSize: "standard",
+  dockSize: "standard",
+  reduceMotion: false,
+};
 const DESKTOP_APP_PRIORITY = [
   /com\.tencent\.mm/i,
   /tv\.danmaku\.bili/i,
@@ -105,6 +115,31 @@ function writeDesktopPackages(deviceId: string, packages: string[]) {
   }
 }
 
+function readDesktopPreferences() {
+  try {
+    const stored = JSON.parse(
+      localStorage.getItem(DESKTOP_SETTINGS_STORAGE) ?? "null",
+    ) as Partial<DesktopPreferences> | null;
+    if (!stored) {
+      return DEFAULT_DESKTOP_PREFERENCES;
+    }
+    return {
+      wallpaper: ["ocean", "mist", "night"].includes(stored.wallpaper ?? "")
+        ? stored.wallpaper as DesktopPreferences["wallpaper"]
+        : DEFAULT_DESKTOP_PREFERENCES.wallpaper,
+      iconSize: ["compact", "standard", "large"].includes(stored.iconSize ?? "")
+        ? stored.iconSize as DesktopPreferences["iconSize"]
+        : DEFAULT_DESKTOP_PREFERENCES.iconSize,
+      dockSize: ["compact", "standard"].includes(stored.dockSize ?? "")
+        ? stored.dockSize as DesktopPreferences["dockSize"]
+        : DEFAULT_DESKTOP_PREFERENCES.dockSize,
+      reduceMotion: Boolean(stored.reduceMotion),
+    };
+  } catch {
+    return DEFAULT_DESKTOP_PREFERENCES;
+  }
+}
+
 export default function App() {
   const [panelView, setPanelView] = useState<PanelView>("apps");
   const [isCompactViewport, setIsCompactViewport] = useState(() =>
@@ -120,6 +155,18 @@ export default function App() {
     deviceId: string;
     packages: string[] | null;
   }>({ deviceId: "", packages: null });
+  const [desktopPreferences, setDesktopPreferences] = useState(readDesktopPreferences);
+  const [mirrorWindow, setMirrorWindow] = useState<DesktopWindowState>(() => ({
+    id: "mirror",
+    open: false,
+    minimized: false,
+    maximized: false,
+    x: Math.max(20, Math.round((window.innerWidth - 520) / 2)),
+    y: 54,
+    width: Math.min(520, window.innerWidth - 40),
+    height: Math.min(760, window.innerHeight - 110),
+    zIndex: 20,
+  }));
   const [fileWindow, setFileWindow] = useState<DesktopWindowState>(() => {
     const width = Math.min(760, window.innerWidth - 40);
     return {
@@ -215,6 +262,16 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    try {
+      localStorage.setItem(
+        DESKTOP_SETTINGS_STORAGE,
+        JSON.stringify(desktopPreferences),
+      );
+    } catch {
+    }
+  }, [desktopPreferences]);
+
+  useEffect(() => {
     if (panelView !== "mirror") {
       mirror.setMirrorQualityMenuOpen(false);
     }
@@ -240,6 +297,17 @@ export default function App() {
       setLauncherOpen(false);
       setSystemPanel(null);
       setFileWindow((current) => ({
+        ...current,
+        open: true,
+        minimized: false,
+        zIndex: nextZIndex(),
+      }));
+      return;
+    }
+    if (id === "mirror") {
+      setLauncherOpen(false);
+      setSystemPanel(null);
+      setMirrorWindow((current) => ({
         ...current,
         open: true,
         minimized: false,
@@ -335,6 +403,9 @@ export default function App() {
             void mirror.pressAndroidKey(AndroidKeyCode.AndroidAppSwitch)
           }
           onRotate={mirror.rotateDevice}
+          controlPending={controls.controlsPending}
+          onControlCommand={(label, command) => void controls.runControl(label, command)}
+          onScreenshot={() => void controls.captureScreenshot()}
         />
       </aside>
       <MirrorDisplay
@@ -411,17 +482,10 @@ export default function App() {
       />
     ),
     controls: (
-      <ControlsView
-        hasDevice={Boolean(devicesHook.selectedDevice)}
-        serial={devicesHook.selectedDevice?.serial ?? "-"}
-        snapshot={controls.snapshot}
-        pending={controls.controlsPending}
-        onRefresh={() => void controls.refreshSnapshot()}
-        onCommand={(label, command) =>
-          void controls.runControl(label, command)
-        }
-        onScreenshot={() => void controls.captureScreenshot()}
-        onConnect={() => focusWindow("connect")}
+      <DesktopSettingsView
+        preferences={desktopPreferences}
+        onChange={setDesktopPreferences}
+        onReset={() => setDesktopPreferences(DEFAULT_DESKTOP_PREFERENCES)}
       />
     ),
   };
@@ -433,27 +497,26 @@ export default function App() {
       title={appWindow.app.name}
       icon={appWindow.app.icon}
       active={appWindows.activeId === appWindow.id}
-      className={`android-app-stream-window ${appWindow.wideCapable ? "freeform" : "fixed-aspect"} ${appWindow.landscape ? "landscape" : "portrait"} ${appWindow.app.packageName === "tv.danmaku.bili" && appWindow.viewport.height > appWindow.viewport.width * 1.9 ? "crop-device-inset" : ""}`}
+      className={`android-app-stream-window ${appWindow.wideCapable ? "freeform" : "fixed-aspect"} ${appWindow.landscape ? "landscape" : "portrait"}`}
       canMaximize={!isMobileLayout}
-      onRotate={appWindow.wideCapable ? () => appWindows.rotateWindow(appWindow.id) : undefined}
+      onRotate={!isMobileLayout && appWindow.wideCapable ? () => appWindows.rotateWindow(appWindow.id) : undefined}
       rotateLabel={appWindow.landscape ? "旋转为竖屏" : "旋转为横屏"}
       audioMuted={appWindow.audioMuted}
       onToggleAudio={appWindow.audioAvailable ? () => appWindows.toggleAudio(appWindow.id) : undefined}
       iconUrl={appWindow.app.iconUrl}
       onFocus={() => appWindows.focusWindow(appWindow.id)}
       onMove={(x, y) => appWindows.patchWindow(appWindow.id, { x, y })}
-      onResize={(width, height) =>
+      onResize={isMobileLayout ? undefined : (width, height) =>
         appWindows.resizeDisplay(appWindow.id, width, height)
       }
-      onMinimize={() =>
-        appWindows.patchWindow(appWindow.id, { minimized: true })
-      }
+      onMinimize={() => appWindows.minimizeWindow(appWindow.id)}
       onMaximize={() =>
         appWindows.patchWindow(appWindow.id, {
           maximized: !appWindow.maximized,
         })
       }
-      onClose={() => handleStopApp(appWindow.app.packageName)}
+      onStopApp={() => handleStopApp(appWindow.app.packageName)}
+      onClose={() => appWindows.closeWindow(appWindow.id)}
     >
       <div className="app-stream-layout">
         <MirrorDisplay
@@ -465,6 +528,11 @@ export default function App() {
           pendingLabel={`正在启动 ${appWindow.app.name} 的独立窗口…`}
           emptyLabel={appWindow.error || `${appWindow.app.name} 尚未启动`}
           connectedMessage="应用已连接"
+          cropTop={
+            appWindow.app.packageName === "com.tencent.mm"
+              ? Math.round(appWindow.viewport.width * 2 / 15)
+              : 0
+          }
           onPointerDown={(event) => appWindows.pointerDown(appWindow.id, event)}
           onPointerMove={(event) => appWindows.pointerMove(appWindow.id, event)}
           onPointerUp={(event) => appWindows.pointerUp(appWindow.id, event)}
@@ -555,13 +623,12 @@ export default function App() {
       .map((packageName) => apps.apps.find((app) => app.packageName === packageName))
       .filter((app): app is InstalledApp => Boolean(app))
     : defaultDesktopApps;
-  const systemViews = (Object.keys(APP_META) as PanelView[]).filter(
-    (id): id is Exclude<PanelView, "apps"> => id !== "apps",
-  );
-
   return (
     <main
-      className={`app-shell ${isMobileLayout ? "mobile-shell" : "desktop-shell"}`}
+      className={`app-shell ${isMobileLayout ? "mobile-shell" : "desktop-shell"} ${desktopPreferences.reduceMotion ? "reduce-motion" : ""}`}
+      data-wallpaper={desktopPreferences.wallpaper}
+      data-icon-size={desktopPreferences.iconSize}
+      data-dock-size={desktopPreferences.dockSize}
       onKeyDown={(event) => {
         const target = event.target;
         if (
@@ -582,21 +649,28 @@ export default function App() {
           </div>
         </header>
 
-        <aside className="dex-clock-widget" aria-label="桌面状态">
-          <div>
-            <strong>{clock.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit", hour12: false })}</strong>
-            <span>{clock.toLocaleDateString("zh-CN", { weekday: "long", month: "long", day: "numeric" })}</span>
-          </div>
-          <div className="dex-device-widget">
-            <span className="material-symbols-rounded">android</span>
-            <span>
-              <strong>{selectedDeviceName ?? "等待连接"}</strong>
-              <small>{devicesHook.selectedDevice ? `${controls.snapshot.batteryLevel} · Android ${controls.snapshot.androidVersion}` : "连接设备以进入桌面"}</small>
-            </span>
-          </div>
-        </aside>
-
         <section className="dex-home-icons" aria-label="桌面应用">
+          <aside className="dex-clock-widget" aria-label="桌面状态">
+            <div>
+              <strong>{clock.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit", hour12: false })}</strong>
+              <span>{clock.toLocaleDateString("zh-CN", { weekday: "long", month: "long", day: "numeric" })}</span>
+            </div>
+            <div className="dex-device-widget">
+              <span className="material-symbols-rounded">android</span>
+              <span>
+                <strong>{selectedDeviceName ?? "等待连接"}</strong>
+                <small>{devicesHook.selectedDevice ? `${controls.snapshot.batteryLevel} · Android ${controls.snapshot.androidVersion}` : "连接设备以进入桌面"}</small>
+              </span>
+            </div>
+          </aside>
+          <button onClick={() => focusWindow("mirror")} type="button">
+            <span className="dex-home-app-icon system"><span className="material-symbols-rounded">phone_android</span></span>
+            <span>手机镜像</span>
+          </button>
+          <button onClick={() => focusWindow("files")} type="button">
+            <span className="dex-home-app-icon system"><span className="material-symbols-rounded">folder</span></span>
+            <span>文件管理</span>
+          </button>
           {desktopApps.map((app) => (
             <button key={app.packageName} onClick={() => handleLaunchApp(app)} type="button">
               <span className="dex-home-app-icon" style={{ "--app-hue": app.hue } as React.CSSProperties}>
@@ -633,29 +707,50 @@ export default function App() {
         ) : null}
 
         {systemPanel ? (
-          <aside className={`dex-system-panel ${systemPanel}`}>
-            <header>
-              <nav aria-label="系统工具">
-                {systemViews.map((id) => (
-                  <button key={id} className={systemPanel === id ? "active" : ""} onClick={() => focusWindow(id)} type="button">
-                    <span className="material-symbols-rounded">{APP_META[id].icon}</span>
-                    <span>{APP_META[id].shortTitle}</span>
-                  </button>
-                ))}
-              </nav>
-              <button onClick={() => setSystemPanel(null)} aria-label="关闭控制中心" type="button">
-                <span className="material-symbols-rounded">close</span>
-              </button>
-            </header>
-            <div className="dex-system-content">{contentByView[systemPanel]}</div>
-          </aside>
+          <div className="dex-system-panel-backdrop" onPointerDown={() => setSystemPanel(null)}>
+            <aside className={`dex-system-panel ${systemPanel}`} onPointerDown={(event) => event.stopPropagation()}>
+              <header>
+                <strong className="dex-panel-title">
+                  <span className="material-symbols-rounded">{APP_META[systemPanel].icon}</span>
+                  {APP_META[systemPanel].title}
+                </strong>
+                <button onClick={() => setSystemPanel(null)} aria-label="关闭桌面设置" type="button">
+                  <span className="material-symbols-rounded">close</span>
+                </button>
+              </header>
+              <div className="dex-system-content">{contentByView[systemPanel]}</div>
+            </aside>
+          </div>
         ) : null}
+
+        <DesktopWindow
+          state={mirrorWindow}
+          title="手机镜像"
+          icon="phone_android"
+          active={mirrorWindow.open && !mirrorWindow.minimized && panelView === "mirror" && !appWindows.activeId}
+          className="mirror-manager-window"
+          canMaximize={!isMobileLayout}
+          onFocus={() => {
+            appWindows.blur();
+            setPanelView("mirror");
+            setMirrorWindow((current) => ({ ...current, zIndex: nextZIndex() }));
+          }}
+          onMove={(x, y) => setMirrorWindow((current) => ({ ...current, x, y }))}
+          onMinimize={() => setMirrorWindow((current) => ({ ...current, minimized: true }))}
+          onMaximize={() => setMirrorWindow((current) => ({ ...current, maximized: !current.maximized }))}
+          onClose={() => {
+            setMirrorWindow((current) => ({ ...current, open: false, minimized: false }));
+            void mirror.stopMirrorSession();
+          }}
+        >
+          {mirrorContent}
+        </DesktopWindow>
 
         <DesktopWindow
           state={fileWindow}
           title="文件管理"
           icon="folder"
-          active={fileWindow.open && !fileWindow.minimized && !appWindows.activeId}
+          active={fileWindow.open && !fileWindow.minimized && panelView === "files" && !appWindows.activeId}
           className="file-manager-window"
           canMaximize={!isMobileLayout}
           onFocus={() => {
@@ -679,13 +774,40 @@ export default function App() {
             <button onClick={() => { appWindows.minimizeAll(); setLauncherOpen(false); setSystemPanel(null); }} type="button" aria-label="桌面"><span className="material-symbols-rounded">circle</span></button>
           </nav>
           <div className="dex-running-apps">
+            {mirrorWindow.open ? (
+              <button
+                className={!mirrorWindow.minimized && panelView === "mirror" && !appWindows.activeId ? "active" : ""}
+                onClick={() => {
+                  if (!mirrorWindow.minimized && panelView === "mirror" && !appWindows.activeId) {
+                    setMirrorWindow((current) => ({ ...current, minimized: true }));
+                    return;
+                  }
+                  focusWindow("mirror");
+                }}
+                title="手机镜像"
+                type="button"
+              >
+                <span className="material-symbols-rounded">phone_android</span>
+              </button>
+            ) : null}
             {fileWindow.open ? (
-              <button className={!fileWindow.minimized && panelView === "files" ? "active" : ""} onClick={() => focusWindow("files")} title="文件管理" type="button">
+              <button
+                className={!fileWindow.minimized && panelView === "files" ? "active" : ""}
+                onClick={() => {
+                  if (!fileWindow.minimized && panelView === "files" && !appWindows.activeId) {
+                    setFileWindow((current) => ({ ...current, minimized: true }));
+                    return;
+                  }
+                  focusWindow("files");
+                }}
+                title="文件管理"
+                type="button"
+              >
                 <span className="material-symbols-rounded">folder</span>
               </button>
             ) : null}
             {appWindows.windows.map((appWindow) => (
-              <button key={appWindow.id} className={appWindows.activeId === appWindow.id ? "active" : ""} onClick={() => appWindows.focusWindow(appWindow.id)} title={appWindow.app.name} type="button">
+              <button key={appWindow.id} className={appWindows.activeId === appWindow.id ? "active" : ""} onClick={() => appWindows.toggleWindow(appWindow.id)} title={appWindow.app.name} type="button">
                 <span>{appWindow.app.name.trim().slice(0, 1)}</span>
                 {appWindow.app.iconUrl ? <img src={appWindow.app.iconUrl} alt="" onError={(event) => event.currentTarget.remove()} /> : null}
               </button>
@@ -696,7 +818,7 @@ export default function App() {
           </button>
           <div className="dex-dock-status">
             <button onClick={() => focusWindow("connect")} title="设备连接" type="button"><span className="material-symbols-rounded">smartphone</span></button>
-            <button onClick={() => focusWindow("controls")} title="控制中心" type="button"><span className="material-symbols-rounded">settings</span></button>
+            <button onClick={() => focusWindow("controls")} title="桌面设置" type="button"><span className="material-symbols-rounded">settings</span></button>
             <button className="dex-clock-button" onClick={() => focusWindow("controls")} type="button">
               <strong>{clock.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit", hour12: false })}</strong>
               <span>{clock.toLocaleDateString("zh-CN", { month: "2-digit", day: "2-digit" })}</span>

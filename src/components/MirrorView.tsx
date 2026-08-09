@@ -2,6 +2,7 @@ import {
   useEffect,
   useRef,
   useState,
+  type CSSProperties,
   type ClipboardEvent as ReactClipboardEvent,
   type KeyboardEvent as ReactKeyboardEvent,
   type RefObject,
@@ -26,6 +27,9 @@ interface MirrorSidebarProps {
   onPressHome: () => void;
   onPressAppSwitch: () => void;
   onRotate: () => void;
+  controlPending: string;
+  onControlCommand: (label: string, command: readonly string[]) => void;
+  onScreenshot: () => void;
 }
 
 export function MirrorSidebar({
@@ -43,6 +47,9 @@ export function MirrorSidebar({
   onPressHome,
   onPressAppSwitch,
   onRotate,
+  controlPending,
+  onControlCommand,
+  onScreenshot,
 }: MirrorSidebarProps) {
   const mirrorQualityMenuRef = useRef<HTMLDivElement | null>(null);
   const mirrorQualityConfig = MIRROR_QUALITY_CONFIG[mirrorQuality];
@@ -196,6 +203,41 @@ export function MirrorSidebar({
           </button>
         </div>
       </div>
+
+      <div className="screen-sidebar-group">
+        <div className="screen-icon-column">
+          {[
+            { label: "音量减", icon: "volume_down", command: ["input", "keyevent", "25"] },
+            { label: "静音", icon: "volume_off", command: ["input", "keyevent", "164"] },
+            { label: "音量加", icon: "volume_up", command: ["input", "keyevent", "24"] },
+            { label: "电源键", icon: "power_settings_new", command: ["input", "keyevent", "26"] },
+            { label: "通知栏", icon: "notifications", command: ["cmd", "statusbar", "expand-notifications"] },
+            { label: "快捷设置", icon: "instant_mix", command: ["cmd", "statusbar", "expand-settings"] },
+          ].map((action) => (
+            <button
+              key={action.label}
+              className="ghost-button screen-icon-button"
+              onClick={() => onControlCommand(action.label, action.command)}
+              disabled={!selectedDevice || Boolean(controlPending)}
+              aria-label={action.label}
+              title={action.label}
+              type="button"
+            >
+              <span className="material-symbols-rounded">{action.icon}</span>
+            </button>
+          ))}
+          <button
+            className="ghost-button screen-icon-button"
+            onClick={onScreenshot}
+            disabled={!selectedDevice || Boolean(controlPending)}
+            aria-label="设备截图"
+            title="设备截图"
+            type="button"
+          >
+            <span className="material-symbols-rounded">screenshot_monitor</span>
+          </button>
+        </div>
+      </div>
     </>
   );
 }
@@ -215,6 +257,7 @@ interface MirrorDisplayProps {
   pendingLabel?: string;
   emptyLabel?: string;
   connectedMessage?: string;
+  cropTop?: number;
 }
 
 export function MirrorDisplay({
@@ -232,6 +275,7 @@ export function MirrorDisplay({
   pendingLabel = "正在启动 Screen Mirror…",
   emptyLabel = "Screen Mirror 未启动",
   connectedMessage = "Screen Mirror 已连接。",
+  cropTop = 0,
 }: MirrorDisplayProps) {
   const displayRef = useRef<HTMLDivElement | null>(null);
   const [containerSize, setContainerSize] = useState<{
@@ -333,14 +377,36 @@ export function MirrorDisplay({
     containerSize.width > 0 &&
     containerSize.height > 0
       ? (() => {
+          const safeCropTop = Math.min(
+            Math.max(cropTop, 0),
+            activeMirrorViewport.height - 1,
+          );
+          const visibleHeight = activeMirrorViewport.height - safeCropTop;
           const scale = Math.min(
             containerSize.width / activeMirrorViewport.width,
-            containerSize.height / activeMirrorViewport.height,
+            containerSize.height / visibleHeight,
           );
+          const width = Math.floor(activeMirrorViewport.width * scale);
+          const height = Math.floor(activeMirrorViewport.height * scale);
+
+          if (safeCropTop > 0) {
+            const visibleScaledHeight = visibleHeight * scale;
+            return {
+              position: "absolute",
+              left: `${Math.floor((containerSize.width - width) / 2)}px`,
+              top: `${Math.floor((containerSize.height - visibleScaledHeight) / 2 - safeCropTop * scale)}px`,
+              width: `${width}px`,
+              height: `${height}px`,
+              maxWidth: "none",
+              maxHeight: "none",
+              margin: 0,
+              clipPath: `inset(${Math.floor(safeCropTop * scale)}px 0 0)`,
+            } satisfies CSSProperties;
+          }
 
           return {
-            width: `${Math.floor(activeMirrorViewport.width * scale)}px`,
-            height: `${Math.floor(activeMirrorViewport.height * scale)}px`,
+            width: `${width}px`,
+            height: `${height}px`,
           };
         })()
       : undefined;

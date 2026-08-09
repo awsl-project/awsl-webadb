@@ -64,6 +64,8 @@ export function useMirror(
   const clipboardSequenceRef = useRef(0n);
   const clipboardSyncTokenRef = useRef(0);
   const clipboardWriteWarningRef = useRef(false);
+  const backgroundTimerRef = useRef(0);
+  const resumeAfterBackgroundRef = useRef(false);
 
   const activeMirrorViewport = mirrorViewport ?? DEFAULT_MIRROR_VIEWPORT;
   const mirrorQualityConfig = MIRROR_QUALITY_CONFIG[mirrorQuality];
@@ -570,9 +572,47 @@ export function useMirror(
     };
   }, [mirrorRunning, panelView, pressAndroidKey]);
 
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        if (backgroundTimerRef.current) {
+          window.clearTimeout(backgroundTimerRef.current);
+          backgroundTimerRef.current = 0;
+        }
+        if (!resumeAfterBackgroundRef.current || !canvasRef.current) {
+          return;
+        }
+        resumeAfterBackgroundRef.current = false;
+        void startMirrorSession(canvasRef.current);
+        return;
+      }
+      if (backgroundTimerRef.current || !mirrorSessionRef.current) {
+        return;
+      }
+      backgroundTimerRef.current = window.setTimeout(() => {
+        backgroundTimerRef.current = 0;
+        if (!document.hidden || !mirrorSessionRef.current) {
+          return;
+        }
+        resumeAfterBackgroundRef.current = true;
+        void stopMirrorSession();
+      }, 10_000);
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      if (backgroundTimerRef.current) {
+        window.clearTimeout(backgroundTimerRef.current);
+        backgroundTimerRef.current = 0;
+      }
+    };
+  }, [startMirrorSession, stopMirrorSession]);
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
+      resumeAfterBackgroundRef.current = false;
       void stopMirrorSession();
     };
   }, []);

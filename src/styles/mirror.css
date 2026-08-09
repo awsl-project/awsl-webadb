@@ -51,7 +51,7 @@
 }
 
 .mirror-canvas.live {
-  cursor: crosshair;
+  cursor: default;
 }
 
 .mirror-status {

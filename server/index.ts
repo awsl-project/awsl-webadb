@@ -383,8 +383,16 @@ bridge.on("connection", (webSocket) => {
     if (webSocket.readyState !== webSocket.OPEN) {
       return;
     }
-
-    webSocket.send(chunk, { binary: true });
+    adbSocket.pause();
+    webSocket.send(chunk, { binary: true }, (error) => {
+      if (error) {
+        destroyBridge(1011, error.message || "WebSocket send error");
+        return;
+      }
+      if (!bridgeClosed) {
+        adbSocket.resume();
+      }
+    });
   });
 
   adbSocket.on("error", (error) => {

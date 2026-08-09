@@ -327,6 +327,10 @@ input:focus-visible {
   background: #d55245;
 }
 
+.window-action.stop-app:hover:not(:disabled) {
+  background: #d9823f;
+}
+
 .window-action .material-symbols-rounded {
   font-size: 17px;
 }

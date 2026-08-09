@@ -1,4 +1,4 @@
-import { startTransition, useCallback, useEffect, useState } from "react";
+import { startTransition, useCallback, useEffect, useRef, useState } from "react";
 
 import type { AdbConnection, DeviceRecord, HealthResponse } from "../types";
 import { TRACKED_STATES } from "../types";
@@ -9,6 +9,7 @@ export function useDevices(onMessage: (msg: string) => void) {
   const [devices, setDevices] = useState<DeviceRecord[]>([]);
   const [selectedTransportId, setSelectedTransportId] = useState("");
   const [pendingAction, setPendingAction] = useState("");
+  const refreshPendingRef = useRef(false);
 
   const selectedDevice =
     devices.find((d) => d.transportId.toString() === selectedTransportId) ?? null;
@@ -34,26 +35,34 @@ export function useDevices(onMessage: (msg: string) => void) {
 
   const refreshDevices = useCallback(
     async (silent = false) => {
-      const nextDevices = await adbClient.getDevices(TRACKED_STATES);
+      if (refreshPendingRef.current) {
+        return;
+      }
+      refreshPendingRef.current = true;
+      try {
+        const nextDevices = await adbClient.getDevices(TRACKED_STATES);
 
-      startTransition(() => {
-        setDevices(nextDevices);
-        setSelectedTransportId((current) => {
-          const hasSelection = nextDevices.some(
-            (d) => d.transportId.toString() === current,
-          );
-          if (hasSelection) {
-            return current;
-          }
+        startTransition(() => {
+          setDevices(nextDevices);
+          setSelectedTransportId((current) => {
+            const hasSelection = nextDevices.some(
+              (d) => d.transportId.toString() === current,
+            );
+            if (hasSelection) {
+              return current;
+            }
 
-          const preferred =
-            nextDevices.find((d) => d.state === "device") ?? nextDevices[0];
-          return preferred?.transportId.toString() ?? "";
+            const preferred =
+              nextDevices.find((d) => d.state === "device") ?? nextDevices[0];
+            return preferred?.transportId.toString() ?? "";
+          });
         });
-      });
 
-      if (!silent) {
-        onMessage(`已同步 ${nextDevices.length} 台设备。`);
+        if (!silent) {
+          onMessage(`已同步 ${nextDevices.length} 台设备。`);
+        }
+      } finally {
+        refreshPendingRef.current = false;
       }
     },
     [onMessage],
@@ -165,6 +174,9 @@ export function useDevices(onMessage: (msg: string) => void) {
     void refreshAll();
 
     const timer = window.setInterval(() => {
+      if (document.hidden) {
+        return;
+      }
       void refreshDevices(true);
     }, 5000);
 
