@@ -61,7 +61,7 @@ export function useDevices(onMessage: (msg: string) => void) {
 
   const refreshAll = useCallback(async () => {
     try {
-      await Promise.all([refreshHealth(), refreshDevices()]);
+      await Promise.all([refreshHealth(), refreshDevices(true)]);
     } catch (error) {
       onMessage(formatError(error));
     }

@@ -1,9 +1,11 @@
 .toast-layer {
   position: fixed;
-  left: 50%;
-  bottom: 20px;
-  z-index: 50;
-  transform: translateX(-50%);
+  top: max(18px, env(safe-area-inset-top));
+  right: 18px;
+  z-index: 2147483647;
+  display: grid;
+  justify-items: end;
+  gap: 10px;
   pointer-events: none;
 }
 
@@ -23,11 +25,11 @@
   pointer-events: auto;
 }
 
-.toast-layer.success .toast-card {
+.toast-card.success {
   background: rgba(18, 74, 54, 0.9);
 }
 
-.toast-layer.error .toast-card {
+.toast-card.error {
   background: rgba(133, 38, 28, 0.92);
 }
 
@@ -36,6 +38,10 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.toast-card > .toast-tone-icon {
+  flex: 0 0 auto;
 }
 
 .toast-close {

@@ -83,7 +83,7 @@ export function formatFileTime(mtime: bigint) {
 
 export function getToastTone(message: string): ToastState["tone"] {
   if (
-    /失败|错误|不支持|无法|请输入|请先|未选择|不可用|aborted|closed|error/i.test(message)
+    /失败|错误|不支持|无法|请输入|请先|未选择|不可用|aborted|closed|error|not configured|exception/i.test(message)
   ) {
     return "error";
   }

@@ -4,5 +4,9 @@
 @import "./mirror.css";
 @import "./connect.css";
 @import "./files.css";
+@import "./apps.css";
+@import "./controls.css";
 @import "./toast.css";
 @import "./responsive.css";
+@import "./desktop.css";
+@import "./dex-theme.css";

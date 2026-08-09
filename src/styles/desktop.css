@@ -1,0 +1,621 @@
+:root {
+  color-scheme: dark;
+  --bg: #07100f;
+  --bg-tonal: #0b1917;
+  --surface: #101b1a;
+  --surface-2: #14211f;
+  --surface-3: #182725;
+  --surface-4: #1d312d;
+  --surface-container: #111d1c;
+  --surface-container-high: #1a2927;
+  --ink: #eef5f2;
+  --muted: #91a6a1;
+  --line: rgba(215, 235, 229, 0.1);
+  --line-strong: rgba(215, 235, 229, 0.18);
+  --primary: #46e0b4;
+  --primary-strong: #27b98f;
+  --primary-soft: rgba(70, 224, 180, 0.12);
+  --on-primary-container: #86f4d5;
+  --secondary: #73a7ff;
+  --secondary-soft: rgba(115, 167, 255, 0.12);
+  --warn: #ff9a7d;
+  --warn-soft: rgba(255, 154, 125, 0.12);
+  --shadow-1: 0 12px 32px rgba(0, 0, 0, 0.22);
+  --shadow-2: 0 24px 64px rgba(0, 0, 0, 0.46);
+  --sidebar-bg: rgba(9, 17, 16, 0.96);
+  --sidebar-border: rgba(215, 235, 229, 0.08);
+  --card-bg: linear-gradient(180deg, rgba(24, 39, 37, 0.96), rgba(17, 29, 28, 0.98));
+  --card-selected-bg: linear-gradient(180deg, rgba(29, 62, 53, 0.96), rgba(19, 43, 37, 1));
+  --input-bg: rgba(8, 16, 15, 0.82);
+  --input-focus-bg: #0d1917;
+  --overlay-bg: rgba(3, 9, 8, 0.84);
+  --connect-surface-bg: linear-gradient(180deg, rgba(20, 34, 32, 0.98), rgba(13, 24, 22, 0.98));
+  --connect-card-bg: linear-gradient(180deg, rgba(17, 29, 28, 0.99), rgba(10, 20, 18, 0.99));
+  --utility-page-bg: linear-gradient(145deg, #111d1c 0%, #0a1413 100%);
+  --file-row-bg: rgba(19, 33, 31, 0.82);
+  --file-row-hover: rgba(70, 224, 180, 0.09);
+  --upload-bg: linear-gradient(180deg, rgba(20, 35, 32, 0.94), rgba(10, 21, 19, 0.98));
+  --upload-active-bg: linear-gradient(180deg, rgba(25, 58, 49, 0.98), rgba(14, 35, 30, 1));
+  --dialog-bg: rgba(12, 23, 21, 0.98);
+  --dialog-backdrop: rgba(0, 6, 5, 0.62);
+}
+
+body {
+  font-family: "IBM Plex Sans", "Noto Sans SC", sans-serif;
+  background: #07100f;
+}
+
+button:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.desktop-shell {
+  isolation: isolate;
+  background: #07100f;
+}
+
+.desktop-workspace {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 76% 22%, rgba(52, 159, 137, 0.24), transparent 25%),
+    radial-gradient(circle at 28% 68%, rgba(29, 85, 74, 0.22), transparent 31%),
+    linear-gradient(135deg, rgba(7, 17, 15, 0.78), rgba(8, 32, 28, 0.7)),
+    repeating-linear-gradient(90deg, transparent 0 47px, rgba(151, 226, 206, 0.025) 48px),
+    #07100f;
+}
+
+.desktop-workspace::before {
+  content: "";
+  position: absolute;
+  inset: 48px 0 68px;
+  pointer-events: none;
+  opacity: 0.32;
+  background-image:
+    linear-gradient(rgba(130, 224, 197, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(130, 224, 197, 0.035) 1px, transparent 1px);
+  background-size: 40px 40px;
+  mask-image: linear-gradient(to bottom, transparent, #000 18%, #000 82%, transparent);
+}
+
+.desktop-menubar {
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: 10000;
+  height: 48px;
+  padding: 0 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(5, 12, 11, 0.76);
+  border-bottom: 1px solid rgba(222, 241, 235, 0.08);
+  backdrop-filter: blur(20px) saturate(130%);
+}
+
+.desktop-brand,
+.desktop-status,
+.window-title,
+.window-actions {
+  display: flex;
+  align-items: center;
+}
+
+.desktop-brand {
+  gap: 10px;
+}
+
+.desktop-brand strong {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.84rem;
+  letter-spacing: 0.02em;
+}
+
+.brand-mark {
+  width: 28px;
+  height: 28px;
+  padding: 1px;
+  display: grid;
+  place-items: center;
+  border-radius: 9px;
+  color: #07100f;
+  background: linear-gradient(135deg, #86f4d5, #2dc195 62%, #5e9fff);
+  box-shadow: 0 0 24px rgba(70, 224, 180, 0.2);
+}
+
+.brand-mark span {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.edition-tag {
+  padding: 4px 7px;
+  border: 1px solid rgba(70, 224, 180, 0.2);
+  border-radius: 5px;
+  color: var(--primary);
+  font: 500 0.62rem/1 "IBM Plex Mono", monospace;
+  letter-spacing: 0.08em;
+}
+
+.desktop-status {
+  gap: 8px;
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.connection-light {
+  width: 7px;
+  height: 7px;
+  display: block;
+  flex: 0 0 7px;
+  border-radius: 50%;
+  background: #66736f;
+  box-shadow: 0 0 0 4px rgba(102, 115, 111, 0.1);
+}
+
+.connection-light.online {
+  background: var(--primary);
+  box-shadow: 0 0 0 4px rgba(70, 224, 180, 0.1), 0 0 15px rgba(70, 224, 180, 0.55);
+}
+
+.desktop-shortcuts {
+  position: absolute;
+  top: 72px;
+  left: 18px;
+  z-index: 1;
+  display: grid;
+  gap: 10px;
+}
+
+.desktop-shortcuts > button {
+  width: 82px;
+  min-height: 84px;
+  padding: 8px 4px;
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 7px;
+  color: rgba(238, 245, 242, 0.9);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 13px;
+  box-shadow: none;
+  font-size: 0.72rem;
+  text-shadow: 0 2px 8px #000;
+}
+
+.desktop-shortcuts > button:hover {
+  transform: none;
+  background: rgba(217, 240, 233, 0.06);
+  border-color: rgba(217, 240, 233, 0.08);
+}
+
+.shortcut-icon {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  color: #07100f;
+  background: linear-gradient(145deg, #8df3d6, #34c599);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.45);
+}
+
+.shortcut-icon.files {
+  background: linear-gradient(145deg, #ffe193, #e3a93a);
+}
+
+.shortcut-icon.connect {
+  background: linear-gradient(145deg, #9ec0ff, #5b83de);
+}
+
+.shortcut-icon.controls {
+  background: linear-gradient(145deg, #b8caff, #778fe7);
+}
+
+.shortcut-icon.apps {
+  background: linear-gradient(145deg, #e8b5ff, #9d65df);
+}
+
+.desktop-window {
+  position: absolute;
+  min-width: 240px;
+  min-height: 180px;
+  max-width: calc(100vw - 16px);
+  max-height: calc(100vh - 16px);
+  display: grid;
+  grid-template-rows: 42px minmax(0, 1fr);
+  resize: both;
+  overflow: hidden;
+  border: 1px solid rgba(218, 238, 232, 0.12);
+  border-radius: 12px;
+  background: #0b1413;
+  box-shadow: 0 22px 65px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(0, 0, 0, 0.4);
+  transition: border-color 140ms ease, box-shadow 140ms ease;
+  animation: window-enter 220ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.desktop-window.active {
+  border-color: rgba(90, 228, 188, 0.34);
+  box-shadow: 0 28px 75px rgba(0, 0, 0, 0.58), 0 0 0 1px rgba(70, 224, 180, 0.1);
+}
+
+.desktop-window.maximized {
+  inset: 48px 0 68px !important;
+  width: auto !important;
+  height: auto !important;
+  max-width: none;
+  max-height: none;
+  border-radius: 0;
+  resize: none;
+}
+
+@keyframes window-enter {
+  from { opacity: 0; transform: translateY(8px) scale(0.99); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.window-titlebar {
+  min-width: 0;
+  padding: 0 5px 0 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: #eaf2ef;
+  background: linear-gradient(180deg, #172321, #101a19);
+  border-bottom: 1px solid rgba(215, 235, 229, 0.08);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.desktop-window.active .window-titlebar {
+  background: linear-gradient(180deg, #1a2926, #111d1b);
+}
+
+.window-titlebar:active {
+  cursor: grabbing;
+}
+
+.window-title {
+  min-width: 0;
+  gap: 9px;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.window-title > span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.window-title-icon {
+  color: var(--primary);
+  font-size: 17px;
+}
+
+.window-actions {
+  align-self: stretch;
+}
+
+.window-action {
+  width: 36px;
+  min-width: 36px;
+  min-height: 100%;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  color: #a7b6b2;
+  background: transparent;
+  border-radius: 6px;
+  box-shadow: none;
+}
+
+.window-action:hover:not(:disabled) {
+  transform: none;
+  color: white;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.window-action.close:hover:not(:disabled) {
+  background: #d55245;
+}
+
+.window-action .material-symbols-rounded {
+  font-size: 17px;
+}
+
+.window-body,
+.mirror-window-layout,
+.mobile-workspace,
+.mobile-pane {
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+.mobile-pane[hidden] {
+  display: none;
+}
+
+.mirror-window-layout {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+}
+
+.mirror-window-layout .screen-sidebar {
+  max-width: 52px;
+  padding-top: 7px;
+}
+
+.mirror-window-layout .mirror-display {
+  height: 100%;
+}
+
+.desktop-window .utility-page {
+  padding: 18px;
+  gap: 13px;
+}
+
+.desktop-window .utility-card,
+.desktop-window .file-list {
+  border-radius: 12px;
+  box-shadow: none;
+}
+
+.desktop-window .utility-empty {
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.desktop-window .connect-card {
+  padding: 14px;
+}
+
+.desktop-window .file-row {
+  border-radius: 8px;
+}
+
+.desktop-taskbar {
+  position: absolute;
+  inset: auto 0 0;
+  z-index: 10000;
+  height: 68px;
+  padding: 8px 14px;
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  background: rgba(6, 14, 13, 0.84);
+  border-top: 1px solid rgba(217, 240, 233, 0.08);
+  backdrop-filter: blur(24px) saturate(140%);
+}
+
+.taskbar-launcher,
+.taskbar-apps button {
+  min-height: 46px;
+  color: #d8e5e1;
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 11px;
+  box-shadow: none;
+}
+
+.taskbar-launcher {
+  width: 48px;
+  padding: 0;
+  color: #07100f;
+  background: linear-gradient(145deg, #80eccd, #31bd93);
+}
+
+.taskbar-apps {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.taskbar-apps button {
+  position: relative;
+  min-width: 48px;
+  padding: 0 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.74rem;
+  font-weight: 600;
+}
+
+.taskbar-apps button:hover,
+.taskbar-apps button.active {
+  transform: none;
+  background: rgba(70, 224, 180, 0.11);
+  border-color: rgba(70, 224, 180, 0.18);
+}
+
+.taskbar-apps button.open::after {
+  content: "";
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: 3px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--primary);
+}
+
+.taskbar-apps .material-symbols-rounded {
+  color: var(--primary);
+  font-size: 19px;
+}
+
+.taskbar-clock {
+  min-width: 64px;
+  display: grid;
+  gap: 2px;
+  justify-items: end;
+  font-family: "IBM Plex Mono", monospace;
+}
+
+.taskbar-clock strong {
+  font-size: 0.78rem;
+}
+
+.taskbar-clock span {
+  color: var(--muted);
+  font-size: 0.64rem;
+}
+
+.mobile-shell {
+  grid-template-rows: 60px minmax(0, 1fr) calc(68px + env(safe-area-inset-bottom));
+  background:
+    radial-gradient(circle at 100% 0, rgba(70, 224, 180, 0.13), transparent 36%),
+    #091210;
+}
+
+.mobile-topbar {
+  z-index: 10;
+  padding: env(safe-area-inset-top) 16px 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 11px;
+  background: rgba(8, 17, 15, 0.92);
+  border-bottom: 1px solid var(--line);
+  backdrop-filter: blur(18px);
+}
+
+.mobile-brand-copy {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.mobile-brand-copy strong {
+  font: 600 0.84rem/1.2 "IBM Plex Mono", monospace;
+}
+
+.mobile-brand-copy span {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 0.68rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mobile-workspace .mirror-window-layout {
+  grid-template-columns: 48px minmax(0, 1fr);
+}
+
+.mobile-workspace .screen-sidebar {
+  position: relative;
+  inset: auto;
+  z-index: 2;
+  width: 48px;
+  max-width: 48px;
+  padding: 7px 0;
+}
+
+.mobile-workspace .mirror-display {
+  --screen-side-gutter: 0px;
+  padding: 0;
+}
+
+.mobile-workspace .utility-page {
+  padding: 14px;
+  gap: 12px;
+}
+
+.mobile-workspace .utility-card,
+.mobile-workspace .file-list,
+.mobile-workspace .connect-surface,
+.mobile-workspace .utility-empty {
+  border-radius: 14px;
+}
+
+.mobile-workspace .utility-head {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.mobile-taskbar {
+  z-index: 10;
+  padding: 7px 10px calc(7px + env(safe-area-inset-bottom));
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+  background: rgba(8, 17, 15, 0.95);
+  border-top: 1px solid var(--line);
+  backdrop-filter: blur(20px);
+}
+
+.mobile-taskbar button {
+  min-width: 0;
+  min-height: 52px;
+  padding: 5px 8px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 3px;
+  color: var(--muted);
+  background: transparent;
+  border-radius: 12px;
+  box-shadow: none;
+  font-size: 0.66rem;
+}
+
+.mobile-taskbar button.active {
+  color: var(--primary);
+  background: rgba(70, 224, 180, 0.1);
+}
+
+.mobile-taskbar button:hover {
+  transform: none;
+}
+
+.mobile-taskbar .material-symbols-rounded {
+  font-size: 21px;
+}
+
+.mobile-shell .toast-layer {
+  top: max(10px, env(safe-area-inset-top));
+}
+
+@media (max-width: 1080px) and (min-width: 761px) {
+  .taskbar-apps button > span:last-child,
+  .edition-tag {
+    display: none;
+  }
+
+  .taskbar-apps button {
+    width: 48px;
+    padding: 0;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 420px) {
+  .mobile-shell {
+    grid-template-rows: 56px minmax(0, 1fr) calc(64px + env(safe-area-inset-bottom));
+  }
+
+  .mobile-workspace .utility-page {
+    padding: 10px;
+  }
+
+  .mobile-workspace .connect-card,
+  .mobile-workspace .connect-surface {
+    padding: 12px;
+  }
+
+  .mobile-workspace .page-actions {
+    gap: 6px;
+  }
+}

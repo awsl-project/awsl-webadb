@@ -1,4 +1,11 @@
-import { useEffect, useRef, useState, type RefObject } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ClipboardEvent as ReactClipboardEvent,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type RefObject,
+} from "react";
 
 import type { MirrorViewport, MirrorQuality } from "../types";
 import { MIRROR_QUALITY_CONFIG } from "../types";
@@ -202,6 +209,12 @@ interface MirrorDisplayProps {
   onPointerDown: (event: ReactPointerEvent<HTMLCanvasElement>) => void;
   onPointerMove: (event: ReactPointerEvent<HTMLCanvasElement>) => void;
   onPointerUp: (event: ReactPointerEvent<HTMLCanvasElement>) => void;
+  onKeyDown?: (event: ReactKeyboardEvent<HTMLCanvasElement>) => void;
+  onPaste?: (event: ReactClipboardEvent<HTMLCanvasElement>) => void;
+  onRetry?: () => void;
+  pendingLabel?: string;
+  emptyLabel?: string;
+  connectedMessage?: string;
 }
 
 export function MirrorDisplay({
@@ -213,6 +226,12 @@ export function MirrorDisplay({
   onPointerDown,
   onPointerMove,
   onPointerUp,
+  onKeyDown,
+  onPaste,
+  onRetry,
+  pendingLabel = "正在启动 Screen Mirror…",
+  emptyLabel = "Screen Mirror 未启动",
+  connectedMessage = "Screen Mirror 已连接。",
 }: MirrorDisplayProps) {
   const displayRef = useRef<HTMLDivElement | null>(null);
   const [containerSize, setContainerSize] = useState<{
@@ -221,8 +240,8 @@ export function MirrorDisplay({
   } | null>(null);
 
   const mirrorNotice = mirrorPending
-    ? "正在启动 Screen Mirror…"
-    : mirrorRunning && message === "Screen Mirror 已连接。"
+    ? pendingLabel
+    : mirrorRunning && message === connectedMessage
       ? ""
       : message;
 
@@ -348,6 +367,8 @@ export function MirrorDisplay({
         onPointerCancel={(event) => {
           void onPointerUp(event);
         }}
+        onKeyDown={onKeyDown}
+        onPaste={onPaste}
       />
       {mirrorNotice && (mirrorPending || mirrorRunning) ? (
         <div className={`mirror-status ${mirrorRunning ? "inline" : "empty"}`}>
@@ -356,7 +377,13 @@ export function MirrorDisplay({
       ) : null}
       {!mirrorRunning ? (
         <div className="mirror-empty">
-          <strong>Screen Mirror 未启动</strong>
+          <strong>{emptyLabel}</strong>
+          {onRetry ? (
+            <button onClick={onRetry} type="button">
+              <span className="material-symbols-rounded">refresh</span>
+              重新启动
+            </button>
+          ) : null}
         </div>
       ) : null}
     </div>

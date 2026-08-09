@@ -1,0 +1,1149 @@
+:root {
+  color-scheme: dark;
+  --bg: #152d3d;
+  --bg-tonal: #23485d;
+  --surface: #20394a;
+  --surface-2: #29485c;
+  --surface-3: #31566b;
+  --surface-4: #3b6479;
+  --surface-container: #213e50;
+  --surface-container-high: #2a4b60;
+  --ink: #f2f7fa;
+  --muted: #b5c8d3;
+  --line: rgba(225, 243, 250, 0.14);
+  --line-strong: rgba(225, 243, 250, 0.24);
+  --primary: #87eaff;
+  --primary-strong: #56cbe7;
+  --primary-soft: rgba(116, 222, 246, 0.16);
+  --on-primary-container: #bcefff;
+  --secondary: #a6d8ef;
+  --secondary-soft: rgba(166, 216, 239, 0.14);
+  --sidebar-bg: rgba(22, 39, 51, 0.96);
+  --sidebar-border: rgba(220, 240, 248, 0.12);
+  --input-bg: rgba(10, 29, 41, 0.56);
+  --input-focus-bg: rgba(13, 34, 47, 0.9);
+  --utility-page-bg: linear-gradient(145deg, rgba(36, 67, 84, 0.98), rgba(20, 42, 55, 0.98));
+}
+
+body,
+.desktop-shell {
+  background: #5f8fa8;
+}
+
+.desktop-workspace {
+  background:
+    radial-gradient(ellipse at 8% 18%, rgba(224, 248, 250, 0.7) 0 2%, transparent 2.5%),
+    radial-gradient(ellipse at 13% 23%, rgba(221, 245, 250, 0.56) 0 3.2%, transparent 3.8%),
+    radial-gradient(ellipse at 88% 15%, rgba(207, 239, 245, 0.5) 0 3%, transparent 3.6%),
+    radial-gradient(ellipse at 76% 73%, rgba(225, 247, 250, 0.4) 0 4%, transparent 4.6%),
+    linear-gradient(125deg, transparent 0 42%, rgba(223, 244, 246, 0.18) 42.2% 42.8%, transparent 43%),
+    linear-gradient(30deg, transparent 0 70%, rgba(220, 241, 244, 0.15) 70.2% 70.8%, transparent 71%),
+    radial-gradient(circle at 60% 40%, #8db5c6, #58879f 58%, #315f78 100%);
+}
+
+.desktop-workspace::before {
+  inset: 48px 0 64px;
+  opacity: 0.55;
+  background:
+    radial-gradient(ellipse at 20% 80%, transparent 0 7%, rgba(235, 249, 250, 0.16) 7.2% 7.8%, transparent 8%),
+    radial-gradient(ellipse at 80% 30%, transparent 0 8%, rgba(235, 249, 250, 0.13) 8.2% 8.8%, transparent 9%);
+  background-size: 520px 360px, 620px 420px;
+  mask-image: none;
+}
+
+.desktop-menubar {
+  height: 44px;
+  background: rgba(21, 40, 51, 0.75);
+  border-bottom-color: rgba(230, 247, 252, 0.22);
+  box-shadow: 0 8px 26px rgba(7, 24, 34, 0.2);
+}
+
+.brand-mark,
+.taskbar-launcher {
+  color: #153345;
+  background: linear-gradient(145deg, #c8f5ff, #72d4eb 58%, #4aa6c1);
+}
+
+.edition-tag {
+  color: #b9effb;
+  border-color: rgba(180, 235, 248, 0.34);
+  background: rgba(26, 68, 86, 0.32);
+}
+
+.desktop-shortcuts > button:hover {
+  background: rgba(211, 240, 249, 0.18);
+  border-color: rgba(229, 247, 251, 0.24);
+}
+
+.shortcut-icon,
+.tool-launcher-icon {
+  color: #123346;
+  background: linear-gradient(145deg, #d6f7ff, #79d7ea);
+  box-shadow: 0 10px 22px rgba(17, 44, 58, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.72);
+}
+
+.desktop-window {
+  grid-template-rows: 38px minmax(0, 1fr);
+  border-color: rgba(224, 242, 248, 0.2);
+  border-radius: 7px;
+  background: rgba(24, 45, 57, 0.94);
+  box-shadow: 0 22px 64px rgba(9, 28, 39, 0.5), 0 0 0 1px rgba(5, 17, 24, 0.62);
+}
+
+.desktop-window.active {
+  border-color: rgba(180, 232, 245, 0.52);
+  box-shadow: 0 28px 72px rgba(7, 25, 35, 0.56), 0 0 0 1px rgba(166, 230, 244, 0.16);
+}
+
+.window-titlebar,
+.desktop-window.active .window-titlebar {
+  color: #eef7fa;
+  background: linear-gradient(180deg, #182128, #070b0e);
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+.window-title-icon {
+  color: #8ddcef;
+}
+
+.apps-page {
+  padding: clamp(16px, 2vw, 24px);
+  gap: 14px;
+  background:
+    radial-gradient(circle at 90% 8%, rgba(174, 230, 244, 0.18), transparent 30%),
+    linear-gradient(145deg, rgba(38, 70, 88, 0.88), rgba(18, 40, 53, 0.9));
+  backdrop-filter: blur(24px) saturate(130%);
+}
+
+.apps-eyebrow,
+.apps-refresh,
+.apps-filters button.active {
+  color: #a9ebfa;
+}
+
+.tool-launchers > button,
+.android-app-card {
+  border-color: rgba(220, 241, 248, 0.13);
+  background: linear-gradient(145deg, rgba(69, 103, 120, 0.5), rgba(25, 52, 67, 0.64));
+}
+
+.tool-launchers > button:hover:not(:disabled),
+.android-app-card:hover {
+  border-color: rgba(164, 225, 240, 0.38);
+  background: linear-gradient(145deg, rgba(80, 119, 137, 0.62), rgba(28, 59, 74, 0.76));
+}
+
+.android-app-card.running {
+  border-color: rgba(130, 230, 249, 0.62);
+  box-shadow: inset 0 0 0 1px rgba(122, 222, 242, 0.14);
+}
+
+.android-app-running {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 3px 6px;
+  color: #bff4ff;
+  border-radius: 999px;
+  background: rgba(34, 122, 145, 0.74);
+  font-size: 0.54rem;
+}
+
+.apps-search,
+.apps-filters {
+  background: rgba(7, 25, 36, 0.4);
+}
+
+.desktop-taskbar {
+  height: 64px;
+  background: rgba(27, 55, 70, 0.78);
+  border-top-color: rgba(225, 244, 249, 0.22);
+  box-shadow: 0 -12px 30px rgba(10, 31, 42, 0.16);
+}
+
+.taskbar-apps {
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.taskbar-apps button {
+  flex: 0 0 auto;
+  background: rgba(222, 243, 249, 0.08);
+  border-color: rgba(230, 247, 251, 0.12);
+}
+
+.taskbar-apps button:hover,
+.taskbar-apps button.active {
+  background: rgba(137, 216, 235, 0.22);
+  border-color: rgba(178, 233, 246, 0.32);
+}
+
+.app-stream-layout {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  background: #050708;
+}
+
+.android-app-stream-window {
+  min-width: 240px;
+  min-height: 220px;
+}
+
+.android-app-stream-window.fixed-aspect {
+  min-height: 517px;
+}
+
+.android-app-stream-window.crop-device-inset .mirror-display {
+  display: block;
+}
+
+.android-app-stream-window.crop-device-inset .mirror-canvas {
+  width: 100% !important;
+  height: auto !important;
+  max-height: none;
+  align-self: start;
+  transform: translateY(-11.765%);
+  transform-origin: center top;
+}
+
+@media (min-width: 761px) {
+  .android-app-stream-window.landscape.maximized {
+    inset: var(--window-y) 0 auto !important;
+    width: auto !important;
+    height: min(calc(100vh - 64px - var(--window-y)), calc(56.25vw + 90px)) !important;
+    max-width: none;
+    max-height: calc(100vh - 64px - var(--window-y));
+    border-radius: 0;
+  }
+
+  .android-app-stream-window.portrait.maximized {
+    inset: 0 auto 64px var(--window-x) !important;
+    width: max(286px, calc((100vh - 154px) * 0.5625)) !important;
+    height: auto !important;
+    max-height: none;
+    min-height: 517px;
+    margin-inline: auto;
+    border-radius: 0;
+  }
+}
+
+.android-app-stream-window .window-action:disabled {
+  opacity: 0.3;
+}
+
+.android-app-stream-window .mirror-empty {
+  gap: 12px;
+}
+
+.android-app-stream-window .mirror-empty button {
+  min-height: 36px;
+  padding: 0 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #d9f5fb;
+  border: 1px solid rgba(141, 220, 239, 0.24);
+  border-radius: 10px;
+  background: rgba(82, 170, 193, 0.14);
+  box-shadow: none;
+  font-size: 0.68rem;
+}
+
+.android-app-stream-window .mirror-empty button .material-symbols-rounded {
+  font-size: 17px;
+}
+
+.app-stream-layout .mirror-display {
+  --screen-side-gutter: 0px;
+  padding: 0 0 48px;
+  background: #050708;
+}
+
+.app-stream-navigation {
+  position: absolute;
+  inset: auto 0 0;
+  z-index: 3;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 0 10px;
+  background: rgba(4, 7, 9, 0.96);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.app-stream-navigation button {
+  width: 44px;
+  min-height: 36px;
+  display: grid;
+  place-items: center;
+  color: #dce8ec;
+  border-radius: 8px;
+  background: transparent;
+  box-shadow: none;
+}
+
+.app-stream-navigation button:hover {
+  transform: none;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.app-stream-navigation button.active {
+  color: #9de8f7;
+  background: rgba(116, 222, 246, 0.14);
+}
+
+.app-stream-text-input {
+  min-width: 90px;
+  max-width: 220px;
+  height: 34px;
+  flex: 1;
+  padding: 0 11px;
+  color: #edf8fa;
+  border: 1px solid rgba(181, 231, 242, 0.2);
+  border-radius: 10px;
+  outline: 0;
+  background: rgba(225, 244, 248, 0.08);
+  font-size: 0.7rem;
+}
+
+.app-stream-text-input:focus {
+  border-color: rgba(141, 220, 239, 0.52);
+  box-shadow: 0 0 0 3px rgba(104, 205, 229, 0.1);
+}
+
+.app-stream-text-input::placeholder {
+  color: rgba(219, 237, 242, 0.48);
+}
+
+.dex-system-panel.controls .control-groups {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.mobile-shell {
+  grid-template-rows: minmax(0, 1fr);
+  background: linear-gradient(155deg, #345f77, #17384c);
+}
+
+.mobile-topbar,
+.mobile-taskbar {
+  z-index: 10000;
+  background: rgba(21, 44, 57, 0.94);
+}
+
+@media (max-width: 900px) {
+  .mobile-shell .desktop-window.file-manager-window {
+    position: fixed;
+    inset: 0 0 calc(60px + env(safe-area-inset-bottom)) !important;
+    width: auto !important;
+    height: auto !important;
+    min-width: 0;
+    min-height: 0;
+    max-width: none;
+    max-height: none;
+    border: 0;
+    border-radius: 0;
+    resize: none;
+  }
+
+  .mobile-shell .desktop-window.android-app-stream-window {
+    position: fixed;
+    inset: 0 0 calc(60px + env(safe-area-inset-bottom)) !important;
+    width: auto !important;
+    height: auto !important;
+    min-width: 0;
+    min-height: 0;
+    max-width: none;
+    max-height: none;
+    border: 0;
+    border-radius: 0;
+    resize: none;
+  }
+
+  .apps-page {
+    background: linear-gradient(155deg, rgba(48, 84, 103, 0.94), rgba(20, 46, 61, 0.96));
+  }
+}
+
+.dex-desktop::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.72;
+  background:
+    radial-gradient(ellipse at 73% 28%, rgba(189, 239, 246, 0.32) 0 7%, transparent 7.4%),
+    radial-gradient(ellipse at 83% 38%, rgba(77, 149, 170, 0.3) 0 11%, transparent 11.5%),
+    radial-gradient(ellipse at 66% 57%, rgba(30, 95, 124, 0.3) 0 15%, transparent 15.5%),
+    radial-gradient(ellipse at 92% 76%, rgba(202, 239, 242, 0.18) 0 12%, transparent 12.5%);
+  filter: blur(5px);
+  transform: scale(1.05);
+}
+
+.dex-topbar {
+  inset: 20px auto auto 24px;
+  z-index: 4;
+  width: auto;
+}
+
+.dex-topbar .desktop-status {
+  min-height: 40px;
+  padding: 0 14px;
+  display: flex;
+  gap: 8px;
+  color: rgba(235, 247, 250, 0.74);
+  border: 1px solid rgba(231, 247, 251, 0.2);
+  border-radius: 14px;
+  background: rgba(24, 53, 68, 0.5);
+  box-shadow: 0 12px 34px rgba(14, 37, 49, 0.14);
+  backdrop-filter: blur(20px) saturate(135%);
+}
+
+.dex-topbar .desktop-status > span:nth-child(2) {
+  font: 700 0.58rem/1 "IBM Plex Mono", monospace;
+  letter-spacing: 0.12em;
+}
+
+.dex-topbar .desktop-status strong {
+  max-width: 210px;
+  overflow: hidden;
+  color: #f7fcfd;
+  font-size: 0.72rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dex-clock-widget {
+  position: absolute;
+  top: 24px;
+  right: 28px;
+  z-index: 3;
+  width: 250px;
+  padding: 17px 18px 14px;
+  display: grid;
+  gap: 14px;
+  color: #f4fbfd;
+  border: 1px solid rgba(232, 247, 251, 0.22);
+  border-radius: 22px;
+  background: linear-gradient(145deg, rgba(53, 88, 106, 0.56), rgba(16, 43, 58, 0.52));
+  box-shadow: 0 18px 52px rgba(13, 35, 48, 0.2);
+  backdrop-filter: blur(24px) saturate(140%);
+}
+
+.dex-clock-widget > div:first-child {
+  display: grid;
+  gap: 2px;
+}
+
+.dex-clock-widget > div:first-child strong {
+  font: 500 2.35rem/1 "IBM Plex Sans", "Noto Sans SC", sans-serif;
+  letter-spacing: -0.07em;
+}
+
+.dex-clock-widget > div:first-child span {
+  color: rgba(230, 244, 248, 0.68);
+  font-size: 0.68rem;
+}
+
+.dex-device-widget {
+  padding-top: 12px;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  border-top: 1px solid rgba(231, 246, 250, 0.13);
+}
+
+.dex-device-widget > .material-symbols-rounded {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  color: #15374a;
+  border-radius: 11px;
+  background: linear-gradient(145deg, #c6f5ff, #60cce4);
+  font-size: 19px;
+}
+
+.dex-device-widget > span:last-child {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.dex-device-widget strong,
+.dex-device-widget small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dex-device-widget strong {
+  font-size: 0.72rem;
+}
+
+.dex-device-widget small {
+  color: rgba(225, 242, 247, 0.62);
+  font-size: 0.6rem;
+}
+
+.dex-home-icons {
+  inset-block-start: 82px;
+}
+
+.dex-home-icons > button {
+  transition: background 140ms ease, border-color 140ms ease, transform 140ms ease;
+}
+
+.dex-home-icons > button:hover {
+  transform: translateY(-2px);
+}
+
+.dex-home-sync .dex-home-app-icon {
+  color: #16374a;
+}
+
+.window-title-icon {
+  width: 21px;
+  height: 21px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  flex: 0 0 21px;
+  border-radius: 6px;
+}
+
+.window-title-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.window-title-icon .material-symbols-rounded {
+  color: #8ddcef;
+  font-size: 17px;
+}
+
+.apps-loading-state {
+  min-height: 240px;
+}
+
+.apps-loading-state > .material-symbols-rounded {
+  font-size: 30px;
+}
+
+@media (max-width: 900px) {
+  .dex-clock-widget {
+    width: 220px;
+  }
+}
+
+@media (max-width: 900px) {
+  .dex-desktop::after,
+  .dex-clock-widget {
+    display: none;
+  }
+
+  .dex-topbar {
+    inset: max(8px, env(safe-area-inset-top)) 10px auto;
+  }
+
+  .dex-topbar .desktop-status {
+    min-height: 38px;
+    padding-inline: 12px;
+  }
+
+  .dex-topbar .desktop-status > span:nth-child(2) {
+    display: none;
+  }
+
+  .dex-home-icons {
+    inset-block-start: 58px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .desktop-window,
+  .android-app-card,
+  .dex-home-icons > button {
+    animation: none;
+    transition: none;
+  }
+}
+
+/* Integrated desktop shell */
+.dex-desktop {
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+}
+
+.dex-topbar {
+  position: absolute;
+  inset: 22px auto auto 28px;
+  z-index: 30;
+  width: min(520px, calc(100vw - 56px));
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.dex-global-search {
+  height: 50px;
+  min-width: 0;
+  flex: 1;
+  padding: 0 18px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #eaf6fa;
+  border: 1px solid rgba(244, 251, 253, 0.26);
+  border-radius: 26px;
+  background: rgba(77, 104, 122, 0.42);
+  box-shadow: 0 12px 34px rgba(19, 44, 58, 0.14);
+  backdrop-filter: blur(20px) saturate(125%);
+}
+
+.dex-global-search input {
+  min-width: 0;
+  flex: 1;
+  color: #fff;
+  border: 0;
+  outline: 0;
+  background: transparent;
+}
+
+.dex-global-search input::placeholder {
+  color: rgba(238, 248, 251, 0.74);
+}
+
+.dex-topbar .desktop-status {
+  display: none;
+}
+
+.dex-home-icons {
+  position: absolute;
+  inset: 104px auto 84px 26px;
+  z-index: 2;
+  width: min(520px, 46vw);
+  display: grid;
+  grid-template-columns: repeat(4, 92px);
+  grid-auto-rows: 102px;
+  align-content: start;
+  gap: 18px 32px;
+}
+
+.dex-home-icons > button {
+  min-width: 0;
+  padding: 4px;
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 7px;
+  color: #f5fbfd;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: transparent;
+  box-shadow: none;
+  text-shadow: 0 2px 8px rgba(10, 27, 37, 0.72);
+  font-size: 0.72rem;
+}
+
+.dex-home-icons > button:hover {
+  transform: none;
+  border-color: rgba(244, 251, 253, 0.22);
+  background: rgba(220, 242, 248, 0.14);
+}
+
+.dex-home-icons > button > span:last-child {
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dex-home-app-icon,
+.dex-running-apps button {
+  position: relative;
+  overflow: hidden;
+  color: #fff;
+  background: linear-gradient(145deg, hsl(var(--app-hue, 198) 72% 58%), hsl(var(--app-hue, 198) 70% 32%));
+}
+
+.dex-home-app-icon {
+  width: 54px;
+  height: 54px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.38);
+  border-radius: 16px;
+  box-shadow: 0 9px 22px rgba(14, 37, 49, 0.3), inset 0 1px rgba(255, 255, 255, 0.35);
+  font-size: 1.1rem;
+  font-weight: 700;
+  text-shadow: none;
+}
+
+.dex-home-app-icon.system {
+  background: linear-gradient(145deg, #86d9ea, #276e8b);
+}
+
+.dex-home-app-icon img,
+.dex-running-apps img,
+.android-app-icon img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.dex-launcher-backdrop {
+  position: absolute;
+  inset: 0 0 64px;
+  z-index: 9000;
+  display: grid;
+  place-items: center;
+  padding: 72px 6vw 30px;
+  background: rgba(11, 30, 42, 0.12);
+  backdrop-filter: blur(5px);
+}
+
+.dex-launcher-surface {
+  position: relative;
+  width: min(1250px, 92vw);
+  height: min(810px, calc(100vh - 120px));
+  overflow: hidden;
+  border: 1px solid rgba(229, 245, 250, 0.25);
+  border-radius: 30px;
+  background: linear-gradient(135deg, rgba(134, 151, 163, 0.75), rgba(10, 31, 45, 0.92));
+  box-shadow: 0 30px 100px rgba(8, 28, 40, 0.48);
+  backdrop-filter: blur(32px) saturate(125%);
+}
+
+.dex-overlay-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 3;
+  width: 36px;
+  min-height: 36px;
+  display: grid;
+  place-items: center;
+  color: #dcebef;
+  border-radius: 50%;
+  background: rgba(7, 20, 28, 0.28);
+  box-shadow: none;
+}
+
+.dex-app-drawer {
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 16px;
+  padding: 26px 36px 24px;
+  background: transparent;
+}
+
+.drawer-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-right: 44px;
+}
+
+.drawer-heading > div {
+  display: grid;
+  gap: 5px;
+}
+
+.drawer-heading > div span,
+.drawer-app-group h2 {
+  color: rgba(239, 248, 251, 0.72);
+  font: 700 0.68rem/1 "IBM Plex Mono", monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.drawer-heading > div strong {
+  font-size: 1.05rem;
+}
+
+.drawer-heading > button {
+  min-height: 38px;
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #d8f4fa;
+  border-radius: 10px;
+  background: rgba(7, 24, 34, 0.3);
+  box-shadow: none;
+}
+
+.drawer-app-group + .drawer-app-group {
+  margin-top: 24px;
+  padding-top: 22px;
+  border-top: 1px solid rgba(224, 241, 247, 0.12);
+}
+
+.drawer-app-group h2 {
+  margin: 0 0 14px;
+}
+
+.dex-app-drawer .android-app-grid {
+  grid-template-columns: repeat(auto-fill, minmax(86px, 1fr));
+  gap: 16px 12px;
+}
+
+.dex-app-drawer .android-app-card {
+  position: relative;
+  min-height: 126px;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) 30px;
+  overflow: visible;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.dex-app-drawer .android-app-pin {
+  min-width: 0;
+  min-height: 28px;
+  margin: 0 6px 4px;
+  padding: 0 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  border: 1px solid rgba(219, 241, 247, 0.12);
+  border-radius: 8px;
+  color: rgba(235, 247, 250, 0.72);
+  background: rgba(7, 24, 34, 0.24);
+  cursor: pointer;
+}
+
+.dex-app-drawer .android-app-pin:hover {
+  color: var(--primary);
+  background: var(--primary-soft);
+}
+
+.dex-app-drawer .android-app-pin[aria-pressed="true"] {
+  color: #bff4ff;
+  border-color: rgba(135, 234, 255, 0.24);
+  background: rgba(86, 203, 231, 0.12);
+}
+
+.dex-app-drawer .android-app-pin .material-symbols-rounded {
+  font-size: 17px;
+}
+
+.android-app-pin-label {
+  overflow: hidden;
+  font-size: 0.55rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dex-app-drawer .android-app-card:hover {
+  background: rgba(226, 244, 249, 0.1);
+}
+
+.dex-app-drawer .android-app-launch {
+  min-height: 92px;
+  padding: 7px 4px;
+  gap: 6px;
+  align-content: center;
+}
+
+.android-app-icon {
+  position: relative;
+  overflow: hidden;
+}
+
+.android-app-fallback {
+  font-size: 1.02rem;
+  font-weight: 700;
+}
+
+.dex-app-drawer .android-app-package,
+.dex-app-drawer .android-app-meta {
+  display: none;
+}
+
+.android-app-stop {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 2;
+  width: 24px;
+  min-width: 24px;
+  min-height: 24px;
+  padding: 0;
+  display: none;
+  place-items: center;
+  color: #fff;
+  border-radius: 50%;
+  background: rgba(174, 58, 55, 0.9);
+  box-shadow: none;
+}
+
+.android-app-card:hover .android-app-stop,
+.android-app-card.running .android-app-stop {
+  display: grid;
+}
+
+.drawer-search {
+  width: min(520px, 90%);
+  max-width: none;
+  margin: 0 auto;
+  flex: 0 0 48px;
+  border-radius: 24px;
+  background: rgba(11, 34, 46, 0.66);
+}
+
+.dex-system-panel {
+  position: absolute;
+  right: 16px;
+  bottom: 76px;
+  z-index: 9200;
+  width: min(560px, calc(100vw - 32px));
+  height: min(720px, calc(100vh - 100px));
+  display: grid;
+  grid-template-rows: 58px minmax(0, 1fr);
+  overflow: hidden;
+  border: 1px solid rgba(227, 244, 249, 0.25);
+  border-radius: 22px;
+  background: rgba(20, 43, 57, 0.94);
+  box-shadow: 0 26px 80px rgba(7, 24, 35, 0.54);
+  backdrop-filter: blur(28px);
+}
+
+.dex-system-panel.mirror,
+.dex-system-panel.files {
+  width: min(760px, calc(100vw - 32px));
+}
+
+.dex-system-panel > header {
+  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-bottom: 1px solid rgba(225, 242, 248, 0.1);
+  background: rgba(5, 18, 26, 0.34);
+}
+
+.dex-system-panel > header nav {
+  min-width: 0;
+  display: flex;
+  gap: 5px;
+}
+
+.dex-system-panel > header button {
+  min-height: 38px;
+  padding: 0 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  border-radius: 10px;
+  background: transparent;
+  box-shadow: none;
+}
+
+.dex-system-panel > header button.active {
+  color: #c8f4fd;
+  background: rgba(112, 209, 232, 0.15);
+}
+
+.dex-system-content {
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.dex-dock {
+  position: absolute;
+  inset: auto 0 0;
+  z-index: 10000;
+  height: 64px;
+  padding: 7px 20px;
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) auto 58px minmax(220px, 1fr);
+  align-items: center;
+  gap: 12px;
+  background: transparent;
+  border: 0;
+  pointer-events: none;
+}
+
+.dex-dock button {
+  color: #eaf5f8;
+  background: rgba(225, 242, 247, 0.1);
+  border: 1px solid rgba(232, 247, 251, 0.1);
+  box-shadow: none;
+}
+
+.dex-dock-navigation,
+.dex-running-apps,
+.dex-dock-status {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: max-content;
+  padding: 4px;
+  border: 1px solid rgba(231, 246, 250, 0.16);
+  border-radius: 14px;
+  background: rgba(25, 49, 63, 0.72);
+  backdrop-filter: blur(22px) saturate(135%);
+  pointer-events: auto;
+}
+
+.dex-dock-navigation button,
+.dex-dock-status > button:not(.dex-clock-button),
+.dex-running-apps button,
+.dex-launcher-button {
+  width: 46px;
+  min-width: 46px;
+  min-height: 46px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+}
+
+.dex-running-apps {
+  max-width: 360px;
+  overflow-x: auto;
+}
+
+.dex-running-apps button {
+  flex: 0 0 46px;
+  background: linear-gradient(145deg, #6fcde2, #276e8b);
+}
+
+.dex-running-apps button.active,
+.dex-launcher-button.active {
+  border-color: rgba(193, 242, 252, 0.62);
+  box-shadow: 0 0 0 3px rgba(110, 211, 235, 0.14);
+}
+
+.dex-launcher-button {
+  color: #143244 !important;
+  background: linear-gradient(145deg, #bceefa, #54bfd9) !important;
+  pointer-events: auto;
+}
+
+.dex-dock-status {
+  justify-self: end;
+}
+
+.dex-clock-button {
+  min-height: 46px;
+  padding: 5px 12px;
+  display: grid;
+  justify-items: end;
+  gap: 1px;
+  border-radius: 10px;
+}
+
+.dex-clock-button strong {
+  font-size: 0.76rem;
+}
+
+.dex-clock-button span {
+  color: var(--muted);
+  font-size: 0.59rem;
+}
+
+@media (max-width: 900px) {
+  .dex-topbar {
+    inset: 8px 10px auto;
+    width: auto;
+  }
+
+  .dex-global-search {
+    height: 44px;
+  }
+
+  .dex-home-icons {
+    inset: 68px 10px 70px;
+    width: auto;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-auto-rows: 94px;
+    gap: 8px;
+    overflow-y: auto;
+  }
+
+  .dex-launcher-backdrop {
+    inset: 0 0 60px;
+    padding: 0;
+    background: transparent;
+    backdrop-filter: none;
+  }
+
+  .dex-launcher-surface {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .dex-app-drawer {
+    padding: 18px 14px 12px;
+  }
+
+  .dex-app-drawer .android-app-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px 5px;
+  }
+
+  .dex-system-panel,
+  .dex-system-panel.mirror,
+  .dex-system-panel.files {
+    position: absolute;
+    inset: 0 0 60px;
+    width: auto;
+    height: auto;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .dex-system-panel > header nav button span:last-child {
+    display: none;
+  }
+
+  .dex-dock {
+    height: 60px;
+    padding: 6px 8px;
+    grid-template-columns: auto minmax(0, 1fr) 48px auto;
+    gap: 6px;
+  }
+
+  .dex-running-apps {
+    max-width: none;
+  }
+
+  .dex-dock-status > button:first-child,
+  .dex-clock-button,
+  .dex-dock-navigation button:first-child {
+    display: none;
+  }
+
+  .dex-dock-navigation button,
+  .dex-dock-status > button:not(.dex-clock-button),
+  .dex-running-apps button,
+  .dex-launcher-button {
+    width: 42px;
+    min-width: 42px;
+    min-height: 42px;
+  }
+}
+
+@media (max-width: 340px) {
+  .dex-app-drawer .android-app-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

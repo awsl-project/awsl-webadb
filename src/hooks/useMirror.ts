@@ -7,7 +7,6 @@ import {
 } from "react";
 
 import { AdbScrcpyClient, AdbScrcpyOptionsLatest } from "@yume-chan/adb-scrcpy";
-import { BIN as SCRCPY_SERVER_BIN } from "@yume-chan/fetch-scrcpy-server";
 import {
   AndroidKeyCode,
   type AndroidKeyCode as AndroidKeyCodeValue,
@@ -22,15 +21,18 @@ import {
   BitmapVideoFrameRenderer,
   WebCodecsVideoDecoder,
 } from "@yume-chan/scrcpy-decoder-webcodecs";
-import type { ReadableStream as ExtraReadableStream } from "@yume-chan/stream-extra";
 
-import type { MirrorSession, MirrorViewport } from "../types";
+import type { AdbConnection, MirrorSession, MirrorViewport } from "../types";
 import {
   DEFAULT_MIRROR_VIEWPORT,
   MIRROR_QUALITY_CONFIG,
   type MirrorQuality,
 } from "../types";
 import { adbClient } from "../lib/adb-client";
+import {
+  pushScrcpyServer,
+  scrcpyServerVersion,
+} from "../lib/scrcpy-server";
 import { formatError } from "../utils";
 
 function getPointerId(event: ReactPointerEvent<HTMLCanvasElement>) {
@@ -78,6 +80,7 @@ export function useMirror(
       return;
     }
 
+    current.abortController.abort();
     current.removeSizeListener();
     current.decoder.dispose();
 
@@ -189,25 +192,23 @@ export function useMirror(
 
       setMirrorPending("启动中");
 
+      let adb: AdbConnection | null = null;
+      let client: MirrorSession["client"] | null = null;
+      let decoder: MirrorSession["decoder"] | null = null;
+      let removeSizeListener: (() => void) | null = null;
+      let abortController: AbortController | null = null;
+      let session: MirrorSession | null = null;
       try {
         await stopMirrorSession();
-
-        const binaryResponse = await fetch(SCRCPY_SERVER_BIN);
-        if (!binaryResponse.ok || !binaryResponse.body) {
-          throw new Error("无法加载 scrcpy server 二进制");
-        }
 
         if (!selectedTransportId) {
           throw new Error("请先选择设备");
         }
 
-        const adb = await adbClient.createAdb({
+        adb = await adbClient.createAdb({
           transportId: BigInt(selectedTransportId),
         });
-        await AdbScrcpyClient.pushServer(
-          adb,
-          binaryResponse.body as unknown as ExtraReadableStream<Uint8Array>,
-        );
+        await pushScrcpyServer(adb);
 
         const videoBitRate = isCompactViewport
           ? Math.min(mirrorQualityConfig.videoBitRate, 3_000_000)
@@ -216,29 +217,37 @@ export function useMirror(
           ? Math.min(mirrorQualityConfig.maxSize, 840)
           : mirrorQualityConfig.maxSize;
 
-        const options = new AdbScrcpyOptionsLatest({
-          video: true,
-          audio: false,
-          control: true,
-          tunnelForward: true,
-          clipboardAutosync: true,
-          powerOn: true,
-          maxSize,
-          videoBitRate,
-        });
+        const options = new AdbScrcpyOptionsLatest(
+          {
+            video: true,
+            videoCodec: "h264",
+            audio: false,
+            control: true,
+            tunnelForward: true,
+            clipboardAutosync: true,
+            powerOn: true,
+            cleanup: false,
+            maxSize,
+            videoBitRate,
+          },
+          { version: scrcpyServerVersion },
+        );
 
-        const client = await AdbScrcpyClient.start(
+        client = await AdbScrcpyClient.start(
           adb,
           DefaultServerPath,
           options,
         );
         const videoStream = await client.videoStream;
-        const renderer = new BitmapVideoFrameRenderer(canvas);
-        const decoder = new WebCodecsVideoDecoder({
+        if (!videoStream) {
+          throw new Error("scrcpy 未返回视频流");
+        }
+        const renderer = new BitmapVideoFrameRenderer({ canvas });
+        decoder = new WebCodecsVideoDecoder({
           codec: videoStream.metadata.codec,
           renderer,
         });
-        const removeSizeListener = videoStream.sizeChanged(
+        removeSizeListener = videoStream.sizeChanged(
           ({ width, height }) => {
             setMirrorViewport({ width, height });
           },
@@ -251,16 +260,20 @@ export function useMirror(
         setMirrorRunning(true);
         onMessage("Screen Mirror 已连接。");
 
-        const session: MirrorSession = {
+        abortController = new AbortController();
+        session = {
           adb,
           client,
           decoder,
+          abortController,
           removeSizeListener,
         };
         mirrorSessionRef.current = session;
         startClipboardAutosync(session);
 
-        void videoStream.stream.pipeTo(decoder.writable).catch((error) => {
+        void videoStream.stream.pipeTo(decoder.writable, {
+          signal: abortController.signal,
+        }).catch((error) => {
           if (mirrorSessionRef.current?.client !== client) {
             return;
           }
@@ -269,7 +282,15 @@ export function useMirror(
           onMessage(formatError(error));
         });
       } catch (error) {
-        await stopMirrorSession();
+        if (session && mirrorSessionRef.current === session) {
+          await stopMirrorSession();
+        } else {
+          abortController?.abort();
+          removeSizeListener?.();
+          decoder?.dispose();
+          await client?.close().catch(() => undefined);
+          await adb?.close().catch(() => undefined);
+        }
         onMessage(formatError(error));
       } finally {
         setMirrorPending("");
@@ -430,12 +451,14 @@ export function useMirror(
       if (activePointerIdRef.current !== getPointerId(event)) {
         return;
       }
+      const canvas = event.currentTarget;
+      const pointerId = event.pointerId;
 
       await sendTouch(event, AndroidMotionEventAction.Up);
       activePointerIdRef.current = null;
 
-      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-        event.currentTarget.releasePointerCapture(event.pointerId);
+      if (canvas.hasPointerCapture(pointerId)) {
+        canvas.releasePointerCapture(pointerId);
       }
     },
     [sendTouch],
@@ -518,7 +541,8 @@ export function useMirror(
       const target = event.target;
       if (
         target instanceof HTMLInputElement ||
-        target instanceof HTMLTextAreaElement
+        target instanceof HTMLTextAreaElement ||
+        (target instanceof HTMLElement && target.isContentEditable)
       ) {
         return;
       }

@@ -74,10 +74,8 @@
   }
 
   .toast-layer {
-    left: auto;
     right: 10px;
-    bottom: 10px;
-    transform: none;
+    top: max(10px, env(safe-area-inset-top));
   }
 
   .toast-card {

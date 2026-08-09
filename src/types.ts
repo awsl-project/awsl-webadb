@@ -22,18 +22,37 @@ export interface HealthResponse {
 
 export interface MirrorSession {
   adb: AdbConnection;
-  client: AdbScrcpyClient<AdbScrcpyOptionsLatest<true>>;
+  client: AdbScrcpyClient<AdbScrcpyOptionsLatest<any>>;
   decoder: WebCodecsVideoDecoder;
+  abortController: AbortController;
   removeSizeListener: () => void;
 }
 
 export interface ToastState {
+  id: number;
   message: string;
   tone: "info" | "success" | "error";
-  visible: boolean;
 }
 
-export type PanelView = "mirror" | "connect" | "files";
+export type PanelView = "apps" | "mirror" | "controls" | "connect" | "files";
+
+export interface InstalledApp {
+  packageName: string;
+  name: string;
+  icon: string;
+  hue: number;
+  system: boolean;
+  iconUrl?: string;
+}
+
+export interface DeviceSnapshot {
+  manufacturer: string;
+  model: string;
+  androidVersion: string;
+  resolution: string;
+  batteryLevel: string;
+  batteryStatus: string;
+}
 export type MirrorQuality = "smooth" | "balanced" | "sharp" | "ultra" | "max";
 
 export const TRACKED_STATES = ["device", "offline", "unauthorized"] as const;

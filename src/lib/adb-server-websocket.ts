@@ -59,18 +59,25 @@ export class AdbServerWebSocketConnector
     socket.binaryType = "arraybuffer";
 
     await new Promise<void>((resolve, reject) => {
+      const cleanup = () => {
+        socket.removeEventListener("open", open);
+        socket.removeEventListener("error", fail);
+        socket.removeEventListener("close", fail);
+        options.signal?.removeEventListener("abort", abort);
+      };
       const abort = () => {
+        cleanup();
         socket.close(1000, "aborted");
         reject(options.signal?.reason ?? new Error("Connection aborted"));
       };
 
       const open = () => {
-        options.signal?.removeEventListener("abort", abort);
+        cleanup();
         resolve();
       };
 
       const fail = () => {
-        options.signal?.removeEventListener("abort", abort);
+        cleanup();
         reject(new Error("WebSocket bridge connection failed"));
       };
 
@@ -84,7 +91,7 @@ export class AdbServerWebSocketConnector
       | {
           close: () => void;
           error: (error?: unknown) => void;
-          enqueue: (chunk: Uint8Array) => Promise<void>;
+          enqueue: (chunk: Uint8Array) => Promise<boolean>;
         }
       | undefined;
     let closedResolve!: () => void;
@@ -112,8 +119,13 @@ export class AdbServerWebSocketConnector
               return;
             }
 
-            controller?.enqueue(await toUint8Array(event.data));
-          })();
+            await controller?.enqueue(await toUint8Array(event.data));
+          })().catch((cause) => {
+            const error = cause instanceof Error ? cause : new Error(String(cause));
+            controller?.error(error);
+            settle(closeState, error);
+            socket.close(1011, "ADB bridge stream error");
+          });
         });
 
         socket.addEventListener("close", (event) => {

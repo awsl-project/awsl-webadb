@@ -1,6 +1,6 @@
 import { useEffect, type RefObject } from "react";
 
-import { LinuxFileType, type AdbSyncEntry } from "@yume-chan/adb";
+import { LinuxFileType, type AdbSync } from "@yume-chan/adb";
 
 import type { DeviceRecord } from "../types";
 import { formatFileSize, formatFileTime, getParentDevicePath } from "../utils";
@@ -8,14 +8,14 @@ import { formatFileSize, formatFileTime, getParentDevicePath } from "../utils";
 interface FilesViewProps {
   selectedDevice: DeviceRecord | null;
   filesPath: string;
-  filesEntries: AdbSyncEntry[];
+  filesEntries: AdbSync.OpenDir.Entry[];
   filesPending: string;
   fileUploadDialogOpen: boolean;
   setFileUploadDialogOpen: (open: boolean) => void;
   uploadInputRef: RefObject<HTMLInputElement | null>;
   onRefresh: (path?: string, silent?: boolean) => Promise<void>;
-  onOpen: (entry: AdbSyncEntry) => Promise<void>;
-  onDownload: (entry: AdbSyncEntry) => Promise<void>;
+  onOpen: (entry: AdbSync.OpenDir.Entry) => Promise<void>;
+  onDownload: (entry: AdbSync.OpenDir.Entry) => Promise<void>;
   onUpload: (files: Iterable<File> | ArrayLike<File> | null) => Promise<void>;
 }
 
@@ -176,11 +176,19 @@ export function FilesView({
           const isDirectory = entry.type === LinuxFileType.Directory;
 
           return (
-            <button
+            <div
               key={`${filesPath}/${entry.name}`}
               className="file-row"
+              role="button"
+              tabIndex={0}
               onClick={() => {
                 void onOpen(entry);
+              }}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  void onOpen(entry);
+                }
               }}
             >
               <span className="file-icon material-symbols-rounded">
@@ -211,7 +219,7 @@ export function FilesView({
                   chevron_right
                 </span>
               )}
-            </button>
+            </div>
           );
         })}
       </div>

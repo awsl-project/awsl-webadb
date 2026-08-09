@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { LinuxFileType, type AdbSyncEntry } from "@yume-chan/adb";
+import { LinuxFileType, type AdbSync } from "@yume-chan/adb";
 import type { ReadableStream as ExtraReadableStream } from "@yume-chan/stream-extra";
 
 import type { AdbConnection } from "../types";
@@ -17,7 +17,7 @@ export function useFiles(
   onMessage: (msg: string) => void,
 ) {
   const [filesPath, setFilesPath] = useState(DEFAULT_FILES_PATH);
-  const [filesEntries, setFilesEntries] = useState<AdbSyncEntry[]>([]);
+  const [filesEntries, setFilesEntries] = useState<AdbSync.OpenDir.Entry[]>([]);
   const [filesPending, setFilesPending] = useState("");
   const [fileUploadDialogOpen, setFileUploadDialogOpen] = useState(false);
   const uploadInputRef = useRef<HTMLInputElement | null>(null);
@@ -33,15 +33,9 @@ export function useFiles(
       setFilesPending("加载中");
 
       try {
-        const entries = await withDevice(async (adb) => {
-          const sync = await adb.sync();
-
-          try {
-            return await sync.readdir(normalizedPath);
-          } finally {
-            await sync.dispose();
-          }
-        });
+        const entries = await withDevice((adb) =>
+          adb.sync.readdir(normalizedPath),
+        );
 
         const nextEntries = entries
           .filter((entry) => entry.name !== "." && entry.name !== "..")
@@ -77,7 +71,7 @@ export function useFiles(
   );
 
   const downloadFileEntry = useCallback(
-    async (entry: AdbSyncEntry) => {
+    async (entry: AdbSync.OpenDir.Entry) => {
       if (entry.type === LinuxFileType.Directory) {
         return;
       }
@@ -87,16 +81,10 @@ export function useFiles(
 
       try {
         const blob = await withDevice(async (adb) => {
-          const sync = await adb.sync();
-
-          try {
-            const stream = sync.read(
-              targetPath,
-            ) as unknown as ReadableStream<Uint8Array>;
-            return await new Response(stream).blob();
-          } finally {
-            await sync.dispose();
-          }
+          const stream = adb.sync.read(
+            targetPath,
+          ) as unknown as ReadableStream<Uint8Array>;
+          return await new Response(stream).blob();
         });
 
         const url = URL.createObjectURL(blob);
@@ -119,7 +107,7 @@ export function useFiles(
   );
 
   const openFileEntry = useCallback(
-    async (entry: AdbSyncEntry) => {
+    async (entry: AdbSync.OpenDir.Entry) => {
       const targetPath = joinDevicePath(filesPath, entry.name);
       if (entry.type === LinuxFileType.Directory) {
         await refreshFiles(targetPath);
@@ -147,17 +135,11 @@ export function useFiles(
 
       try {
         await withDevice(async (adb) => {
-          const sync = await adb.sync();
-
-          try {
-            for (const file of files) {
-              await sync.write({
-                filename: joinDevicePath(filesPath, file.name),
-                file: file.stream() as unknown as ExtraReadableStream<Uint8Array>,
-              });
-            }
-          } finally {
-            await sync.dispose();
+          for (const file of files) {
+            await adb.sync.write({
+              filename: joinDevicePath(filesPath, file.name),
+              file: file.stream() as unknown as ExtraReadableStream<Uint8Array>,
+            });
           }
         });
 

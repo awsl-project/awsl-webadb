@@ -1,0 +1,522 @@
+.apps-page {
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  padding: clamp(18px, 2.3vw, 28px);
+  display: grid;
+  grid-template-rows: auto auto auto minmax(0, 1fr);
+  gap: 18px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 92% 4%, rgba(70, 224, 180, 0.12), transparent 25%),
+    linear-gradient(145deg, #101c1a, #091311 72%);
+}
+
+.apps-hero {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.apps-eyebrow {
+  display: block;
+  margin-bottom: 7px;
+  color: var(--primary);
+  font: 600 0.62rem/1 "IBM Plex Mono", monospace;
+  letter-spacing: 0.16em;
+}
+
+.apps-hero h1 {
+  margin: 0;
+  font-size: clamp(1.55rem, 3vw, 2.35rem);
+  line-height: 1.05;
+  letter-spacing: -0.05em;
+}
+
+.apps-hero p {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.apps-refresh {
+  min-height: 40px;
+  padding: 0 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--primary);
+  border: 1px solid rgba(70, 224, 180, 0.16);
+  border-radius: 10px;
+  background: rgba(70, 224, 180, 0.07);
+  box-shadow: none;
+  font-size: 0.72rem;
+}
+
+.apps-refresh:hover:not(:disabled) {
+  transform: none;
+  background: rgba(70, 224, 180, 0.12);
+}
+
+.apps-refresh .material-symbols-rounded {
+  font-size: 18px;
+}
+
+.spinning {
+  animation: apps-spin 850ms linear infinite;
+}
+
+@keyframes apps-spin {
+  to { transform: rotate(360deg); }
+}
+
+.tool-launchers {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.tool-launchers > button {
+  min-width: 0;
+  min-height: 72px;
+  padding: 11px 12px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 11px;
+  text-align: left;
+  color: var(--ink);
+  border: 1px solid rgba(218, 238, 232, 0.08);
+  border-radius: 13px;
+  background: linear-gradient(145deg, rgba(28, 45, 42, 0.78), rgba(14, 26, 24, 0.86));
+  box-shadow: none;
+}
+
+.tool-launchers > button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  border-color: rgba(70, 224, 180, 0.22);
+  background: linear-gradient(145deg, rgba(32, 54, 49, 0.9), rgba(15, 30, 27, 0.94));
+}
+
+.tool-launcher-icon {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  color: #07100f;
+  background: linear-gradient(145deg, #8df3d6, #34c599);
+}
+
+.tool-launcher-icon.files {
+  background: linear-gradient(145deg, #ffe193, #e3a93a);
+}
+
+.tool-launcher-icon.controls {
+  background: linear-gradient(145deg, #b8caff, #778fe7);
+}
+
+.tool-launcher-icon.connect {
+  background: linear-gradient(145deg, #a4c4ff, #628ce5);
+}
+
+.tool-launcher-icon .material-symbols-rounded {
+  font-size: 21px;
+}
+
+.tool-launchers > button > span:nth-child(2) {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.tool-launchers strong,
+.tool-launchers small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tool-launchers strong {
+  font-size: 0.78rem;
+}
+
+.tool-launchers small {
+  color: var(--muted);
+  font-size: 0.65rem;
+  font-weight: 500;
+}
+
+.tool-launch-arrow {
+  color: rgba(238, 245, 242, 0.36);
+  font-size: 17px;
+}
+
+.apps-toolbar {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.apps-search {
+  min-width: 180px;
+  max-width: 430px;
+  height: 42px;
+  flex: 1;
+  padding: 0 6px 0 13px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  border: 1px solid rgba(218, 238, 232, 0.1);
+  border-radius: 11px;
+  background: rgba(3, 10, 9, 0.42);
+}
+
+.apps-search:focus-within {
+  border-color: rgba(70, 224, 180, 0.4);
+  box-shadow: 0 0 0 3px rgba(70, 224, 180, 0.08);
+}
+
+.apps-search > .material-symbols-rounded {
+  color: var(--muted);
+  font-size: 19px;
+}
+
+.apps-search input {
+  min-width: 0;
+  height: 100%;
+  flex: 1;
+  color: var(--ink);
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font-size: 0.76rem;
+}
+
+.apps-search button {
+  width: 30px;
+  min-width: 30px;
+  min-height: 30px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  border-radius: 8px;
+  background: transparent;
+  box-shadow: none;
+}
+
+.apps-search button:hover {
+  transform: none;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.apps-search button .material-symbols-rounded {
+  font-size: 16px;
+}
+
+.apps-filters {
+  padding: 3px;
+  display: flex;
+  gap: 2px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.apps-filters button {
+  min-height: 34px;
+  padding: 0 12px;
+  color: var(--muted);
+  border-radius: 8px;
+  background: transparent;
+  box-shadow: none;
+  font-size: 0.7rem;
+}
+
+.apps-filters button:hover,
+.apps-filters button.active {
+  transform: none;
+  color: var(--primary);
+  background: rgba(70, 224, 180, 0.1);
+}
+
+.apps-scroll-area {
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-color: rgba(70, 224, 180, 0.25) transparent;
+}
+
+.android-app-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
+  gap: 10px;
+  padding: 2px 2px 16px;
+}
+
+.android-app-card {
+  position: relative;
+  min-width: 0;
+  min-height: 158px;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  overflow: hidden;
+  border: 1px solid rgba(218, 238, 232, 0.075);
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at 50% 0, hsla(var(--app-hue), 72%, 55%, 0.13), transparent 52%),
+    rgba(17, 29, 27, 0.78);
+  animation: app-card-enter 280ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: min(calc(var(--app-index) * 18ms), 300ms);
+}
+
+@keyframes app-card-enter {
+  from { opacity: 0; transform: translateY(7px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.android-app-card:hover {
+  border-color: hsla(var(--app-hue), 72%, 65%, 0.28);
+  background:
+    radial-gradient(circle at 50% 0, hsla(var(--app-hue), 72%, 55%, 0.2), transparent 58%),
+    rgba(20, 35, 32, 0.92);
+}
+
+.android-app-launch {
+  min-width: 0;
+  min-height: 112px;
+  padding: 15px 10px 8px;
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  gap: 7px;
+  text-align: center;
+  color: var(--ink);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.android-app-launch:hover:not(:disabled) {
+  transform: none;
+}
+
+.android-app-icon {
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  border: 1px solid hsla(var(--app-hue), 75%, 75%, 0.3);
+  border-radius: 16px;
+  color: hsl(var(--app-hue), 78%, 78%);
+  background: linear-gradient(145deg, hsla(var(--app-hue), 58%, 44%, 0.54), hsla(var(--app-hue), 66%, 20%, 0.72));
+  box-shadow: 0 9px 24px hsla(var(--app-hue), 70%, 10%, 0.32), inset 0 1px 0 hsla(var(--app-hue), 80%, 90%, 0.18);
+}
+
+.android-app-icon .material-symbols-rounded {
+  font-size: 26px;
+}
+
+.android-app-name,
+.android-app-package {
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.android-app-name {
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.android-app-package {
+  color: var(--muted);
+  font: 400 0.57rem/1.2 "IBM Plex Mono", monospace;
+}
+
+.android-app-meta {
+  min-height: 35px;
+  padding: 4px 6px 5px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid rgba(218, 238, 232, 0.055);
+}
+
+.android-app-meta > span {
+  color: var(--muted);
+  font-size: 0.58rem;
+}
+
+.android-app-meta button {
+  width: 28px;
+  min-width: 28px;
+  min-height: 27px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  border-radius: 8px;
+  background: transparent;
+  box-shadow: none;
+}
+
+.android-app-meta button:hover:not(:disabled) {
+  transform: none;
+  color: var(--warn);
+  background: var(--warn-soft);
+}
+
+.android-app-meta .material-symbols-rounded {
+  font-size: 16px;
+}
+
+.apps-empty {
+  width: 100%;
+  min-height: 190px;
+  padding: 24px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 8px;
+  text-align: center;
+  color: var(--muted);
+  border: 1px dashed rgba(70, 224, 180, 0.17);
+  border-radius: 14px;
+  background: rgba(70, 224, 180, 0.025);
+  box-shadow: none;
+}
+
+button.apps-empty:hover {
+  transform: none;
+  border-color: rgba(70, 224, 180, 0.35);
+  background: rgba(70, 224, 180, 0.055);
+}
+
+.apps-empty .material-symbols-rounded {
+  color: var(--primary);
+  font-size: 34px;
+}
+
+.apps-empty strong {
+  color: var(--ink);
+  font-size: 0.9rem;
+}
+
+.apps-empty span:last-child {
+  font-size: 0.72rem;
+}
+
+@media (max-width: 760px) {
+  .apps-page {
+    padding: 14px;
+    grid-template-rows: auto auto auto minmax(0, 1fr);
+    gap: 13px;
+  }
+
+  .apps-hero {
+    align-items: flex-start;
+  }
+
+  .apps-hero h1 {
+    font-size: 1.55rem;
+  }
+
+  .apps-refresh {
+    width: 40px;
+    min-width: 40px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .apps-refresh > span:last-child {
+    display: none;
+  }
+
+  .tool-launchers {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 7px;
+  }
+
+  .tool-launchers > button {
+    min-height: 68px;
+    padding: 8px 4px;
+    display: grid;
+    grid-template-columns: 1fr;
+    justify-items: center;
+    text-align: center;
+  }
+
+  .tool-launchers > button > span:nth-child(2) {
+    justify-items: center;
+  }
+
+  .tool-launchers small,
+  .tool-launch-arrow {
+    display: none;
+  }
+
+  .tool-launcher-icon {
+    width: 36px;
+    height: 36px;
+  }
+
+  .apps-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .apps-search {
+    width: 100%;
+    max-width: none;
+    flex: 0 0 42px;
+  }
+
+  .apps-filters {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .android-app-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 7px;
+  }
+
+  .android-app-card {
+    min-height: 138px;
+  }
+
+  .android-app-launch {
+    min-height: 101px;
+    padding-inline: 6px;
+  }
+
+  .android-app-icon {
+    width: 46px;
+    height: 46px;
+    border-radius: 14px;
+  }
+
+  .android-app-package {
+    display: none;
+  }
+}
+
+@media (max-width: 380px) {
+  .apps-page {
+    padding: 10px;
+  }
+
+  .android-app-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .tool-launchers {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
