@@ -39,10 +39,12 @@ const trackedStates = ["device", "offline", "unauthorized"] as const;
 const playStoreIconCache = new Map<string, string | null>();
 const deviceIconCache = new Map<string, { data: Buffer; contentType: string } | null>();
 const deviceIconRequests = new Map<string, Promise<{ data: Buffer; contentType: string } | null>>();
+const audioLeases = new Map<string, { leaseId: string; expiresAt: number }>();
 const inputHelperUrl = "https://github.com/senzhk/ADBKeyBoard/releases/download/v2.5-dev/keyboardservice-debug.apk";
 const inputHelperSha256 = "41a8a0996d7397a2390d1ca16a75cb66c4a7bdaa89cf4e63600a4d3fb346fbbb";
 let inputHelperRequest: Promise<Buffer> | null = null;
 let deviceIconQueue = Promise.resolve();
+const audioLeaseTtl = 15_000;
 
 const bridge = new WebSocketServer({
   noServer: true,
@@ -113,6 +115,51 @@ app.get("/api/health", async (_request, response) => {
       message: error instanceof Error ? error.message : String(error),
     });
   }
+});
+
+app.post("/api/audio-lease", express.json({ limit: "4kb" }), (request, response) => {
+  const lease = parseAudioLeaseRequest(request.body);
+  if (!lease) {
+    response.sendStatus(400);
+    return;
+  }
+
+  const now = Date.now();
+  for (const [deviceId, value] of audioLeases) {
+    if (value.expiresAt <= now) {
+      audioLeases.delete(deviceId);
+    }
+  }
+  const current = audioLeases.get(lease.deviceId);
+  if (current && current.leaseId !== lease.leaseId && current.expiresAt > now) {
+    response.setHeader("Cache-Control", "no-store");
+    response.json({
+      granted: false,
+      retryAfterMs: current.expiresAt - now,
+    });
+    return;
+  }
+
+  const expiresAt = now + audioLeaseTtl;
+  audioLeases.set(lease.deviceId, {
+    leaseId: lease.leaseId,
+    expiresAt,
+  });
+  response.setHeader("Cache-Control", "no-store");
+  response.json({ granted: true, expiresAt });
+});
+
+app.post("/api/audio-lease/release", express.json({ limit: "4kb" }), (request, response) => {
+  const lease = parseAudioLeaseRequest(request.body);
+  if (!lease) {
+    response.sendStatus(400);
+    return;
+  }
+
+  if (audioLeases.get(lease.deviceId)?.leaseId === lease.leaseId) {
+    audioLeases.delete(lease.deviceId);
+  }
+  response.sendStatus(204);
 });
 
 app.get("/api/app-icon", async (request, response) => {
@@ -228,6 +275,22 @@ function setBoundedCache<T>(
     }
     cache.delete(oldestKey);
   }
+}
+
+function parseAudioLeaseRequest(body: unknown) {
+  if (!body || typeof body !== "object") {
+    return null;
+  }
+  const { deviceId, leaseId } = body as Record<string, unknown>;
+  if (
+    typeof deviceId !== "string"
+    || typeof leaseId !== "string"
+    || !/^[a-zA-Z0-9_.:-]{1,160}$/.test(deviceId)
+    || !/^[0-9a-f-]{36}$/i.test(leaseId)
+  ) {
+    return null;
+  }
+  return { deviceId, leaseId };
 }
 
 function queueDeviceAppIcon(transportId: bigint, packageName: string) {

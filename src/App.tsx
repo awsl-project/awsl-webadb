@@ -223,6 +223,7 @@ export default function App() {
   );
   const appWindows = useAppWindows(
     devicesHook.selectedTransportId,
+    devicesHook.selectedDevice?.serial ?? "",
     isMobileLayout,
     nextZIndex,
     showMessage,
@@ -502,8 +503,9 @@ export default function App() {
       canMaximize={!isMobileLayout}
       onRotate={!isMobileLayout && appWindow.wideCapable ? () => appWindows.rotateWindow(appWindow.id) : undefined}
       rotateLabel={appWindow.landscape ? "旋转为竖屏" : "旋转为横屏"}
+      audioAvailable={appWindow.audioAvailable}
       audioMuted={appWindow.audioMuted}
-      onToggleAudio={appWindow.audioAvailable ? () => appWindows.toggleAudio(appWindow.id) : undefined}
+      onToggleAudio={appWindow.running ? () => appWindows.toggleAudio(appWindow.id) : undefined}
       iconUrl={appWindow.app.iconUrl}
       onFocus={() => appWindows.focusWindow(appWindow.id)}
       onMove={(x, y) => appWindows.patchWindow(appWindow.id, { x, y })}

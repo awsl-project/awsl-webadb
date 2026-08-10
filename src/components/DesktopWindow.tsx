@@ -32,6 +32,7 @@ interface DesktopWindowProps {
   rotateLabel?: string;
   maximizeLabel?: string;
   maximizeIcon?: string;
+  audioAvailable?: boolean;
   audioMuted?: boolean;
   onToggleAudio?: () => void;
   onStopApp?: () => void;
@@ -56,6 +57,7 @@ export function DesktopWindow({
   rotateLabel = "旋转",
   maximizeLabel = "最大化",
   maximizeIcon = "crop_square",
+  audioAvailable,
   audioMuted,
   onToggleAudio,
   onStopApp,
@@ -161,12 +163,12 @@ export function DesktopWindow({
             onPointerDown={(event) => event.stopPropagation()}
             onClick={onToggleAudio}
             hidden={!onToggleAudio}
-            aria-label={`${audioMuted ? "开启" : "静音"}${title}声音`}
-            title={audioMuted ? "开启声音" : "静音"}
+            aria-label={`${audioAvailable === false ? "恢复" : audioMuted ? "开启" : "静音"}${title}声音`}
+            title={audioAvailable === false ? "恢复声音" : audioMuted ? "开启声音" : "静音"}
             type="button"
           >
             <span className="material-symbols-rounded">
-              {audioMuted ? "volume_off" : "volume_up"}
+              {audioAvailable === false ? "sync_problem" : audioMuted ? "volume_off" : "volume_up"}
             </span>
           </button>
           <button

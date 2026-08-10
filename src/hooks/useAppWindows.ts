@@ -71,6 +71,9 @@ type SharedAudioSession = {
   client: MirrorSession["client"];
   abortController: AbortController;
   player: ScrcpyPcmAudioPlayer;
+  deviceId: string;
+  leaseId: string;
+  heartbeatTimer: number;
 };
 
 type SuspendedAppSession = {
@@ -89,7 +92,48 @@ function isWideCapable(packageName: string) {
   return WIDE_APP_PATTERN.test(packageName);
 }
 
+function normalizeAudioDeviceId(deviceId: string) {
+  return deviceId.match(/^adb-(.+)-[^-]+\._adb-tls-connect\._tcp$/)?.[1] ?? deviceId;
+}
+
 const FIXED_WINDOW_ASPECT = 9 / 16;
+const AUDIO_RETRY_DELAY = 2_000;
+const AUDIO_LEASE_HEARTBEAT = 5_000;
+
+async function acquireAudioLease(deviceId: string, leaseId: string) {
+  const response = await fetch("/api/audio-lease", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ deviceId, leaseId }),
+  });
+  if (!response.ok) {
+    throw new Error(`音频租约请求失败 (${response.status})`);
+  }
+  return response.json() as Promise<{ granted: boolean }>;
+}
+
+async function releaseAudioLease(deviceId: string, leaseId: string) {
+  await fetch("/api/audio-lease/release", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ deviceId, leaseId }),
+    keepalive: true,
+  }).catch(() => undefined);
+}
+
+function releaseAudioLeaseOnPageHide(deviceId: string, leaseId: string) {
+  const body = JSON.stringify({ deviceId, leaseId });
+  const data = new Blob([body], { type: "application/json" });
+  if (navigator.sendBeacon("/api/audio-lease/release", data)) {
+    return;
+  }
+  void fetch("/api/audio-lease/release", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body,
+    keepalive: true,
+  });
+}
 
 function wait(duration: number) {
   return new Promise((resolve) => window.setTimeout(resolve, duration));
@@ -201,14 +245,21 @@ function injectUnicodeText(session: AppSession, content: string) {
 
 export function useAppWindows(
   selectedTransportId: string,
+  selectedDeviceId: string,
   compact: boolean,
   nextZIndex: () => number,
   onMessage: (message: string) => void,
 ) {
   const [windows, setWindows] = useState<AppWindow[]>([]);
   const [activeId, setActiveId] = useState("");
+  const [audioRecoveryTick, setAudioRecoveryTick] = useState(0);
+  const audioDeviceId = normalizeAudioDeviceId(selectedDeviceId) || selectedTransportId;
   const windowsRef = useRef(windows);
   windowsRef.current = windows;
+  const activeIdRef = useRef(activeId);
+  activeIdRef.current = activeId;
+  const onMessageRef = useRef(onMessage);
+  onMessageRef.current = onMessage;
   const sessionsRef = useRef(new Map<string, AppSession>());
   const canvasesRef = useRef(
     new Map<string, RefObject<HTMLCanvasElement | null>>(),
@@ -225,6 +276,8 @@ export function useAppWindows(
   const sharedAudioRef = useRef<SharedAudioSession | null>(null);
   const sharedAudioStartRef = useRef<Promise<boolean> | null>(null);
   const sharedAudioGenerationRef = useRef(0);
+  const audioRetryTimerRef = useRef(0);
+  const audioRetryNotifiedRef = useRef(false);
   const mountedRef = useRef(true);
 
   const patchWindow = useCallback(
@@ -245,6 +298,37 @@ export function useAppWindows(
     return ref;
   }, []);
 
+  const cancelAudioRetry = useCallback((resetState = true) => {
+    if (audioRetryTimerRef.current) {
+      window.clearTimeout(audioRetryTimerRef.current);
+      audioRetryTimerRef.current = 0;
+    }
+    if (resetState) {
+      audioRetryNotifiedRef.current = false;
+    }
+  }, []);
+
+  const scheduleAudioRetry = useCallback(() => {
+    if (audioRetryTimerRef.current || document.hidden || !mountedRef.current) {
+      return;
+    }
+    const activeWindow = windowsRef.current.find((item) => item.id === activeIdRef.current);
+    if (!activeWindow?.running || activeWindow.minimized) {
+      return;
+    }
+    if (!audioRetryNotifiedRef.current) {
+      audioRetryNotifiedRef.current = true;
+      onMessageRef.current("声音暂不可用，正在自动重试，也可点击标题栏恢复声音");
+    }
+    audioRetryTimerRef.current = window.setTimeout(() => {
+      audioRetryTimerRef.current = 0;
+      const current = windowsRef.current.find((item) => item.id === activeIdRef.current);
+      if (current?.running && !current.minimized && !document.hidden) {
+        setAudioRecoveryTick((value) => value + 1);
+      }
+    }, AUDIO_RETRY_DELAY);
+  }, []);
+
   const stopSharedAudio = useCallback(async () => {
     sharedAudioGenerationRef.current += 1;
     const session = sharedAudioRef.current;
@@ -260,8 +344,12 @@ export function useAppWindows(
 
     session.abortController.abort();
     session.player.dispose();
-    await session.client.close().catch(() => undefined);
-    await session.adb.close().catch(() => undefined);
+    window.clearInterval(session.heartbeatTimer);
+    await Promise.all([
+      session.client.close().catch(() => undefined),
+      session.adb.close().catch(() => undefined),
+    ]);
+    await releaseAudioLease(session.deviceId, session.leaseId);
   }, []);
 
   const ensureSharedAudio = useCallback(async (muted: boolean) => {
@@ -278,17 +366,25 @@ export function useAppWindows(
       sharedAudioRef.current?.player.setMuted(muted);
       return available;
     }
-    if (!selectedTransportId || !mountedRef.current) {
+    if (!selectedTransportId || !audioDeviceId || !mountedRef.current) {
       return false;
     }
 
     const generation = sharedAudioGenerationRef.current + 1;
     sharedAudioGenerationRef.current = generation;
     const request = (async () => {
+      const leaseId = crypto.randomUUID();
+      let leaseHeld = false;
       let adb: AdbConnection | null = null;
       let client: MirrorSession["client"] | null = null;
       let player: ScrcpyPcmAudioPlayer | null = null;
       try {
+        const lease = await acquireAudioLease(audioDeviceId, leaseId);
+        if (!lease.granted) {
+          scheduleAudioRetry();
+          return false;
+        }
+        leaseHeld = true;
         adb = await adbClient.createAdb({
           transportId: BigInt(selectedTransportId),
         });
@@ -313,6 +409,9 @@ export function useAppWindows(
         if (!audioStream || audioStream.type !== "success") {
           throw new Error("scrcpy 未返回音频流");
         }
+        if (!(await acquireAudioLease(audioDeviceId, leaseId)).granted) {
+          throw new Error("声音已由其他页面接管");
+        }
 
         player = new ScrcpyPcmAudioPlayer(muted);
         const abortController = new AbortController();
@@ -321,6 +420,9 @@ export function useAppWindows(
           client,
           abortController,
           player,
+          deviceId: audioDeviceId,
+          leaseId,
+          heartbeatTimer: 0,
         };
         if (
           !mountedRef.current
@@ -330,10 +432,24 @@ export function useAppWindows(
           player.dispose();
           await client.close().catch(() => undefined);
           await adb.close().catch(() => undefined);
+          await releaseAudioLease(audioDeviceId, leaseId);
           return false;
         }
 
+        session.heartbeatTimer = window.setInterval(() => {
+          void acquireAudioLease(audioDeviceId, leaseId).then((result) => {
+            if (result.granted || sharedAudioRef.current !== session) {
+              return;
+            }
+            void stopSharedAudio().then(scheduleAudioRetry);
+          }).catch(() => {
+            if (sharedAudioRef.current === session) {
+              void stopSharedAudio().then(scheduleAudioRetry);
+            }
+          });
+        }, AUDIO_LEASE_HEARTBEAT);
         sharedAudioRef.current = session;
+        cancelAudioRetry();
         setWindows((current) => current.some((item) => item.running && !item.audioAvailable)
           ? current.map((item) => (
               item.running && !item.audioAvailable
@@ -345,22 +461,23 @@ export function useAppWindows(
           if (abortController.signal.aborted || sharedAudioRef.current !== session) {
             return;
           }
-          void stopSharedAudio();
-          onMessage("音频流已断开");
-        }, (error) => {
+          void stopSharedAudio().then(scheduleAudioRetry);
+        }, () => {
           if (abortController.signal.aborted || sharedAudioRef.current !== session) {
             return;
           }
-          void stopSharedAudio();
-          onMessage(`音频播放失败：${formatError(error)}`);
+          void stopSharedAudio().then(scheduleAudioRetry);
         });
         return true;
-      } catch (error) {
+      } catch {
         player?.dispose();
         await client?.close().catch(() => undefined);
         await adb?.close().catch(() => undefined);
+        if (leaseHeld) {
+          await releaseAudioLease(audioDeviceId, leaseId);
+        }
         if (mountedRef.current && sharedAudioGenerationRef.current === generation) {
-          onMessage(`音频播放失败：${formatError(error)}`);
+          scheduleAudioRetry();
         }
         return false;
       }
@@ -373,7 +490,13 @@ export function useAppWindows(
         sharedAudioStartRef.current = null;
       }
     }
-  }, [onMessage, selectedTransportId, stopSharedAudio]);
+  }, [
+    audioDeviceId,
+    cancelAudioRetry,
+    scheduleAudioRetry,
+    selectedTransportId,
+    stopSharedAudio,
+  ]);
 
   const disposeSession = useCallback(async (id: string) => {
     const session = sessionsRef.current.get(id);
@@ -918,13 +1041,26 @@ export function useAppWindows(
     if (!appWindow) {
       return;
     }
+    if (!appWindow.audioAvailable) {
+      const pending = sharedAudioStartRef.current;
+      cancelAudioRetry();
+      patchWindow(id, { audioMuted: false });
+      resumeScrcpyAudio();
+      void stopSharedAudio().then(async () => {
+        await pending?.catch(() => undefined);
+        if (mountedRef.current) {
+          setAudioRecoveryTick((value) => value + 1);
+        }
+      });
+      return;
+    }
     const audioMuted = !appWindow.audioMuted;
     patchWindow(id, { audioMuted });
     sharedAudioRef.current?.player.setMuted(audioMuted);
     if (!audioMuted) {
       resumeScrcpyAudio();
     }
-  }, [patchWindow, windows]);
+  }, [cancelAudioRetry, patchWindow, stopSharedAudio, windows]);
 
   const keyDown = useCallback(
     (id: string, event: ReactKeyboardEvent<HTMLCanvasElement>) => {
@@ -1094,10 +1230,12 @@ export function useAppWindows(
       || activeAudioWindow.minimized
       || document.hidden
     ) {
+      cancelAudioRetry();
       void stopSharedAudio();
       return;
     }
     if (!activeAudioWindow.running) {
+      cancelAudioRetry();
       sharedAudioRef.current?.player.setMuted(true);
       return;
     }
@@ -1108,6 +1246,8 @@ export function useAppWindows(
     activeAudioWindow?.minimized,
     activeAudioWindow?.running,
     activeId,
+    audioRecoveryTick,
+    cancelAudioRetry,
     ensureSharedAudio,
     stopSharedAudio,
   ]);
@@ -1146,8 +1286,11 @@ export function useAppWindows(
           backgroundTimerRef.current = 0;
         }
         restoreBackgroundSessions();
+        setAudioRecoveryTick((value) => value + 1);
         return;
       }
+      cancelAudioRetry();
+      void stopSharedAudio();
       if (backgroundTimerRef.current) {
         return;
       }
@@ -1171,7 +1314,6 @@ export function useAppWindows(
           });
           void disposeSession(id);
         }
-        void stopSharedAudio();
       }, 10_000);
     };
 
@@ -1183,7 +1325,7 @@ export function useAppWindows(
         backgroundTimerRef.current = 0;
       }
     };
-  }, [disposeSession, patchWindow, startSession, stopSharedAudio]);
+  }, [cancelAudioRetry, disposeSession, patchWindow, startSession, stopSharedAudio]);
 
   useEffect(() => {
     const sessions = sessionsRef.current;
@@ -1206,15 +1348,16 @@ export function useAppWindows(
     setWindows([]);
     setActiveId("");
     windowIdsRef.current.clear();
+    cancelAudioRetry();
     void stopSharedAudio();
     for (const id of sessions.keys()) {
       void disposeSession(id);
     }
-  }, [disposeSession, selectedTransportId, stopSharedAudio]);
+  }, [audioDeviceId, cancelAudioRetry, disposeSession, selectedTransportId, stopSharedAudio]);
 
   useEffect(() => {
     mountedRef.current = true;
-    const disposeAll = () => {
+    const disposeAll = (pageHide = false) => {
       if (!mountedRef.current) {
         return;
       }
@@ -1229,6 +1372,7 @@ export function useAppWindows(
         window.clearTimeout(backgroundTimerRef.current);
         backgroundTimerRef.current = 0;
       }
+      cancelAudioRetry();
       for (const session of sessionsRef.current.values()) {
         session.abortController.abort();
         session.removeSizeListener();
@@ -1242,8 +1386,16 @@ export function useAppWindows(
       if (audioSession) {
         audioSession.abortController.abort();
         audioSession.player.dispose();
-        void audioSession.client.close();
-        void audioSession.adb.close();
+        window.clearInterval(audioSession.heartbeatTimer);
+        const closed = Promise.all([
+          audioSession.client.close().catch(() => undefined),
+          audioSession.adb.close().catch(() => undefined),
+        ]);
+        if (pageHide) {
+          releaseAudioLeaseOnPageHide(audioSession.deviceId, audioSession.leaseId);
+        } else {
+          void closed.then(() => releaseAudioLease(audioSession.deviceId, audioSession.leaseId));
+        }
       }
       for (const canvasRef of canvasesRef.current.values()) {
         if (!canvasRef.current) {
@@ -1264,7 +1416,7 @@ export function useAppWindows(
     };
     const handlePageHide = (event: PageTransitionEvent) => {
       if (!event.persisted) {
-        disposeAll();
+        disposeAll(true);
       }
     };
     window.addEventListener("pagehide", handlePageHide);
@@ -1272,7 +1424,7 @@ export function useAppWindows(
       window.removeEventListener("pagehide", handlePageHide);
       disposeAll();
     };
-  }, []);
+  }, [cancelAudioRetry]);
 
   return {
     windows,
