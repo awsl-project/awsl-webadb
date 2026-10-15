@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import { registerSW } from "virtual:pwa-register";
 
@@ -23,21 +24,25 @@ export function UpdateNotice() {
   return (
     <aside className="update-notice" role="status">
       <span>新版本已就绪</span>
-      <button
+      <Button
+        variant="outline"
+        size="sm"
         onClick={() => {
           void update();
         }}
         type="button"
       >
         刷新更新
-      </button>
-      <button
+      </Button>
+      <Button
+        variant="outline"
+        size="sm"
         className="ghost-button"
         onClick={() => setUpdate(null)}
         type="button"
       >
         稍后
-      </button>
+      </Button>
     </aside>
   );
 }

@@ -96,7 +96,7 @@
   border-radius: 12px;
 }
 
-.screen-menu-item .material-symbols-rounded {
+.screen-menu-item .ui-icon {
   font-size: 18px;
 }
 
@@ -111,7 +111,11 @@
   overflow-y: auto;
   overscroll-behavior: contain;
   background:
-    radial-gradient(circle at top right, rgba(53, 95, 189, 0.06), transparent 24%),
+    radial-gradient(
+      circle at top right,
+      rgba(53, 95, 189, 0.06),
+      transparent 24%
+    ),
     var(--utility-page-bg);
 }
 
@@ -159,15 +163,4 @@
   border-radius: 24px;
   background: rgba(255, 255, 255, 0.72);
   border: 1px dashed rgba(53, 95, 189, 0.2);
-}
-
-.dialog-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 40;
-  display: grid;
-  place-items: center;
-  padding: 20px;
-  background: var(--dialog-backdrop);
-  backdrop-filter: blur(10px);
 }

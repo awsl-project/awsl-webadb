@@ -1,4 +1,9 @@
+import { Icon } from "@/components/Icon";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
+  lazy,
+  Suspense,
   useCallback,
   useEffect,
   useRef,
@@ -17,15 +22,18 @@ import { useFiles } from "./hooks/useFiles";
 import { useApps } from "./hooks/useApps";
 import { useDeviceControls } from "./hooks/useDeviceControls";
 import { useAppWindows } from "./hooks/useAppWindows";
-import { ControlsView } from "./components/ControlsView";
-import { useDialog } from "./hooks/useDialog";
-import { AppsView } from "./components/AppsView";
-import { AppIconImage } from "./components/AppIconImage";
+
 import {
-  DesktopSettingsView,
-  type DesktopPreferences,
-} from "./components/DesktopSettingsView";
-import { ConnectView } from "./components/ConnectView";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from "./components/ui/dialog";
+import { cn } from "./lib/utils";
+
+import { AppIconImage } from "./components/AppIconImage";
+import type { DesktopPreferences } from "./components/DesktopSettingsView";
+
 import {
   DesktopWindow,
   type DesktopWindowState,
@@ -34,8 +42,44 @@ import { FilesView } from "./components/FilesView";
 import { MirrorSidebar, MirrorDisplay } from "./components/MirrorView";
 import { Toast } from "./components/Toast";
 import { UploadDialog } from "./components/UploadDialog";
-import { AppInspector } from "./components/AppInspector";
-import { FileCameraPanel } from "./components/FileCameraPanel";
+
+import { WorkspaceHome } from "./components/WorkspaceHome";
+
+const ControlsView = lazy(() =>
+  import("./components/ControlsView").then((module) => ({
+    default: module.ControlsView,
+  })),
+);
+
+const AppsView = lazy(() =>
+  import("./components/AppsView").then((module) => ({
+    default: module.AppsView,
+  })),
+);
+
+const DesktopSettingsView = lazy(() =>
+  import("./components/DesktopSettingsView").then((module) => ({
+    default: module.DesktopSettingsView,
+  })),
+);
+
+const ConnectView = lazy(() =>
+  import("./components/ConnectView").then((module) => ({
+    default: module.ConnectView,
+  })),
+);
+
+const AppInspector = lazy(() =>
+  import("./components/AppInspector").then((module) => ({
+    default: module.AppInspector,
+  })),
+);
+
+const FileCameraPanel = lazy(() =>
+  import("./components/FileCameraPanel").then((module) => ({
+    default: module.FileCameraPanel,
+  })),
+);
 
 const APP_META: Record<
   PanelView,
@@ -175,14 +219,11 @@ export default function App() {
   );
   const [message, setMessage] = useState("正在连接后端 bridge。");
   const [launcherOpen, setLauncherOpen] = useState(false);
+  const [systemCameraOpen, setSystemCameraOpen] = useState(false);
   const [systemPanel, setSystemPanel] = useState<Exclude<
     PanelView,
     "apps"
   > | null>(null);
-  const overlayRef = useDialog(launcherOpen ? "apps" : systemPanel, () => {
-    setLauncherOpen(false);
-    setSystemPanel(null);
-  });
   const [desktopPreference, setDesktopPreference] = useState<{
     deviceId: string;
     packages: string[] | null;
@@ -282,7 +323,6 @@ export default function App() {
     devicesHook.withDevice,
     showMessage,
   );
-  const [systemCameraOpen, setSystemCameraOpen] = useState(false);
   const appWindows = useAppWindows(
     devicesHook.selectedTransportId,
     devicesHook.selectedDevice?.serial ?? "",
@@ -356,6 +396,7 @@ export default function App() {
 
   const focusWindow = useCallback(
     (id: PanelView) => {
+      setSystemCameraOpen(false);
       setPanelView(id);
       appWindows.blur();
       if (id === "apps") {
@@ -427,6 +468,7 @@ export default function App() {
 
   const handleLaunchApp = useCallback(
     (app: InstalledApp) => {
+      setSystemCameraOpen(false);
       setLauncherOpen(false);
       setSystemPanel(null);
       setPanelView("apps");
@@ -587,45 +629,120 @@ export default function App() {
         preferences={desktopPreferences}
         onChange={setDesktopPreferences}
         onReset={() => setDesktopPreferences(DEFAULT_DESKTOP_PREFERENCES)}
-        onOpenCamera={() => setSystemCameraOpen(true)}
+        onOpenCamera={() => {
+          setLauncherOpen(false);
+          setSystemPanel(null);
+          setSystemCameraOpen(true);
+        }}
       />
     ),
   };
 
-  const systemCameraPanel = (
-    <section
-      className="system-camera-window"
-      hidden={!systemCameraOpen}
-      aria-label="WebADB 系统摄像头"
+  const openSystemCamera = () => {
+    setLauncherOpen(false);
+    setSystemPanel(null);
+    setSystemCameraOpen(true);
+  };
+  const activePanel = systemCameraOpen
+    ? "camera"
+    : launcherOpen
+      ? "apps"
+      : systemPanel;
+  const closePanel = () => {
+    setSystemCameraOpen(false);
+    setLauncherOpen(false);
+    setSystemPanel(null);
+  };
+  const panelTitle =
+    activePanel === "camera"
+      ? "系统摄像头"
+      : activePanel
+        ? APP_META[activePanel].title
+        : "";
+  const panelDialog = (
+    <Dialog
+      open={Boolean(activePanel)}
+      onOpenChange={(open) => {
+        if (!open) closePanel();
+      }}
     >
-      <header>
-        <strong>WebADB 系统摄像头</strong>
-        <button
-          type="button"
-          aria-label="收起系统摄像头"
-          onClick={() => setSystemCameraOpen(false)}
+      <DialogContent
+        showCloseButton={false}
+        className={cn(
+          "flex min-h-0 flex-col gap-0 overflow-hidden bg-card p-0",
+          isMobileLayout
+            ? "inset-0 h-dvh max-h-dvh w-full max-w-none sm:max-w-none translate-x-0 translate-y-0 rounded-none border-0"
+            : activePanel === "apps"
+              ? "h-[min(810px,calc(100dvh-4rem))] w-[calc(100%-4rem)] max-w-6xl sm:max-w-6xl"
+              : activePanel === "camera"
+                ? "max-h-[min(760px,calc(100dvh-3rem))] w-[calc(100%-3rem)] max-w-[800px] sm:max-w-[800px]"
+                : "max-h-[min(760px,calc(100dvh-3rem))] w-[calc(100%-3rem)] max-w-[640px] sm:max-w-[640px]",
+        )}
+      >
+        <header className="flex shrink-0 items-center gap-3 border-b border-border px-5 py-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
+          <Icon
+            name={
+              activePanel === "camera"
+                ? "camera_alt"
+                : activePanel
+                  ? APP_META[activePanel].icon
+                  : "apps"
+            }
+            className="text-primary"
+          />
+          <div className="min-w-0 flex-1">
+            <DialogTitle className="text-sm leading-5">
+              {panelTitle}
+            </DialogTitle>
+            <DialogDescription
+              className={
+                activePanel === "camera" ? "mt-1 mb-0 text-xs" : "sr-only"
+              }
+            >
+              {activePanel === "camera"
+                ? `${selectedDeviceName || "尚未连接设备"} · 手动推流，后台运行`
+                : `管理${panelTitle}`}
+            </DialogDescription>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label={`关闭${panelTitle}`}
+            onClick={closePanel}
+          >
+            <Icon name="close" />
+          </Button>
+        </header>
+        <Suspense
+          fallback={
+            <div className="grid min-h-40 place-items-center text-sm text-muted-foreground">
+              正在加载…
+            </div>
+          }
         >
-          ×
-        </button>
-      </header>
-      <p>
-        统一视频源供 WebADB 独立窗口中的应用调用。关闭网页或 CLI
-        后继续在后台运行。
-      </p>
-      <FileCameraPanel
-        running={Boolean(devicesHook.selectedTransportId)}
-        enabled={appWindows.cameraEnabled}
-        pending={appWindows.cameraPending}
-        camera={appWindows.camera}
-        onStartFile={appWindows.startCameraFile}
-        onStartUrl={appWindows.startCameraUrl}
-        onStop={appWindows.stopSystemCamera}
-        onPause={appWindows.pauseCamera}
-      />
-      <p className="mode-hint">
-        手动开始推流后才启用文件摄像头，停止后释放。打开应用不会开启摄像头。
-      </p>
-    </section>
+          {activePanel === "camera" ? (
+            <FileCameraPanel
+              running={Boolean(devicesHook.selectedTransportId)}
+              enabled={appWindows.cameraEnabled}
+              pending={appWindows.cameraPending}
+              camera={appWindows.camera}
+              onStartFile={appWindows.startCameraFile}
+              onStartUrl={appWindows.startCameraUrl}
+              onStop={appWindows.stopSystemCamera}
+              onPause={appWindows.pauseCamera}
+            />
+          ) : activePanel === "apps" ? (
+            <div className="min-h-0 flex-1 overflow-hidden">
+              {contentByView.apps}
+            </div>
+          ) : activePanel ? (
+            <div className="min-h-0 overflow-y-auto">
+              {contentByView[activePanel]}
+            </div>
+          ) : null}
+        </Suspense>
+      </DialogContent>
+    </Dialog>
   );
 
   const appWindowNodes = appWindows.windows.map((appWindow) => (
@@ -695,27 +812,29 @@ export default function App() {
           }
         />
         {appWindow.inspectorOpen ? (
-          <AppInspector
-            id={appWindow.id}
-            width={appWindow.viewport.width}
-            height={appWindow.viewport.height}
-            onClose={() =>
-              appWindows.patchWindow(appWindow.id, { inspectorOpen: false })
-            }
-          />
+          <Suspense fallback={null}>
+            <AppInspector
+              id={appWindow.id}
+              width={appWindow.viewport.width}
+              height={appWindow.viewport.height}
+              onClose={() =>
+                appWindows.patchWindow(appWindow.id, { inspectorOpen: false })
+              }
+            />
+          </Suspense>
         ) : null}
         <nav className="app-stream-navigation" aria-label="Android 导航">
-          <button
+          <Button
+            variant="unstyled"
+            size="unstyled"
             onClick={() => void appWindows.pressBack(appWindow.id)}
             aria-label="返回"
             type="button"
           >
-            <span aria-hidden="true" className="material-symbols-rounded">
-              arrow_back
-            </span>
-          </button>
+            <Icon aria-hidden="true" className="ui-icon" name="arrow_back" />
+          </Button>
           {appWindow.keyboardOpen ? (
-            <input
+            <Input
               autoFocus
               className="app-stream-text-input"
               aria-label={`向${appWindow.app.name}输入文字`}
@@ -744,7 +863,9 @@ export default function App() {
               }}
             />
           ) : null}
-          <button
+          <Button
+            variant="unstyled"
+            size="unstyled"
             className={appWindow.keyboardOpen ? "active" : ""}
             onClick={() =>
               appWindows.patchWindow(appWindow.id, {
@@ -755,12 +876,12 @@ export default function App() {
             title="外部输入栏"
             type="button"
           >
-            <span aria-hidden="true" className="material-symbols-rounded">
-              edit_note
-            </span>
-          </button>
+            <Icon aria-hidden="true" className="ui-icon" name="edit_note" />
+          </Button>
           {appWindow.keyboardOpen ? (
-            <button
+            <Button
+              variant="unstyled"
+              size="unstyled"
               onClick={() => {
                 if (!appWindow.textInput) {
                   return;
@@ -772,12 +893,12 @@ export default function App() {
               aria-label="发送输入内容"
               type="button"
             >
-              <span aria-hidden="true" className="material-symbols-rounded">
-                send
-              </span>
-            </button>
+              <Icon aria-hidden="true" className="ui-icon" name="send" />
+            </Button>
           ) : null}
-          <button
+          <Button
+            variant="unstyled"
+            size="unstyled"
             type="button"
             onClick={() =>
               appWindows.patchWindow(appWindow.id, {
@@ -787,11 +908,11 @@ export default function App() {
             aria-label="读取应用页面与元素"
             title="截图、XML、元素和坐标操作"
           >
-            <span aria-hidden="true" className="material-symbols-rounded">
-              code
-            </span>
-          </button>
-          <button
+            <Icon aria-hidden="true" className="ui-icon" name="code" />
+          </Button>
+          <Button
+            variant="unstyled"
+            size="unstyled"
             className={appWindow.nativeKeyboard ? "active" : ""}
             onClick={() => appWindows.toggleNativeKeyboard(appWindow.id)}
             aria-label={
@@ -804,10 +925,12 @@ export default function App() {
             }
             type="button"
           >
-            <span aria-hidden="true" className="material-symbols-rounded">
-              {appWindow.nativeKeyboard ? "keyboard" : "keyboard_hide"}
-            </span>
-          </button>
+            <Icon
+              aria-hidden="true"
+              className="ui-icon"
+              name={appWindow.nativeKeyboard ? "keyboard" : "keyboard_hide"}
+            />
+          </Button>
         </nav>
       </div>
     </DesktopWindow>
@@ -840,7 +963,9 @@ export default function App() {
     >
       <section className="desktop-workspace dex-desktop">
         <header className="dex-topbar">
-          <button
+          <Button
+            variant="unstyled"
+            size="unstyled"
             className="desk-brand"
             onClick={() => {
               appWindows.minimizeAll();
@@ -856,233 +981,85 @@ export default function App() {
               W<span>↗</span>
             </span>
             <strong>
-              WebADB<span>Desk</span>
+              WebADB<span className="hidden sm:inline">Desk</span>
             </strong>
-          </button>
-          <div className="desktop-status">
-            <span
-              className={`connection-light ${selectedDeviceName ? "online" : ""}`}
-            />
-            <span>{devicesHook.connectionError ? "服务离线" : "ANDROID"}</span>
-            <strong>{selectedDeviceName ?? "未连接设备"}</strong>
+          </Button>
+          <div className="ml-auto flex min-w-0 items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className={cn(
+                "h-11 px-3",
+                appWindows.cameraEnabled && "text-[var(--oh-green)]",
+              )}
+              onClick={openSystemCamera}
+              type="button"
+              aria-label="打开系统摄像头"
+              aria-expanded={systemCameraOpen}
+            >
+              <Icon className="ui-icon" aria-hidden="true" name="camera_alt" />
+              <span className="hidden sm:inline">
+                {appWindows.cameraEnabled
+                  ? appWindows.camera?.paused
+                    ? "已暂停"
+                    : "推流中"
+                  : "摄像头"}
+              </span>
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-11 min-w-0 shrink gap-2 px-2"
+              onClick={() => focusWindow("connect")}
+              type="button"
+              aria-label="管理设备连接"
+            >
+              <span
+                className={`connection-light ${selectedDeviceName ? "online" : ""}`}
+              />
+              <span className="hidden text-xs text-muted-foreground min-[901px]:inline">
+                {devicesHook.connectionError
+                  ? "服务离线"
+                  : selectedDeviceName
+                    ? "已连接"
+                    : "未连接"}
+              </span>
+              <strong className="max-w-20 truncate text-xs sm:max-w-48">
+                {selectedDeviceName || "连接设备"}
+              </strong>
+              <Icon className="hidden sm:inline-flex" name="expand_more" />
+            </Button>
           </div>
         </header>
         {devicesHook.connectionError ? (
           <div className="connection-banner" role="status">
-            <span aria-hidden="true" className="material-symbols-rounded">
-              cloud_off
-            </span>
+            <Icon aria-hidden="true" className="ui-icon" name="cloud_off" />
             <span>连接服务不可用，正在自动重试</span>
-            <button onClick={() => focusWindow("connect")} type="button">
+            <Button
+              variant="unstyled"
+              size="unstyled"
+              onClick={() => focusWindow("connect")}
+              type="button"
+            >
               查看连接
-            </button>
+            </Button>
           </div>
         ) : null}
 
-        <section className="dex-home-icons" aria-label="桌面应用">
-          <aside className="dex-clock-widget" aria-label="桌面状态">
-            <div>
-              <span className="desktop-eyebrow">YOUR ANDROID WORKSPACE</span>
-              <strong>
-                {clock.toLocaleTimeString("zh-CN", {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                  hour12: false,
-                })}
-              </strong>
-              <span>
-                {clock.toLocaleDateString("zh-CN", {
-                  weekday: "long",
-                  month: "long",
-                  day: "numeric",
-                })}
-              </span>
-            </div>
-            <div className="dex-device-widget">
-              <span aria-hidden="true" className="material-symbols-rounded">
-                android
-              </span>
-              <span>
-                <strong>{selectedDeviceName ?? "等待连接"}</strong>
-                <small>
-                  {devicesHook.selectedDevice
-                    ? `${controls.snapshot.batteryLevel} · Android ${controls.snapshot.androidVersion}`
-                    : "连接设备以进入桌面"}
-                </small>
-              </span>
-            </div>
-          </aside>
-          <button onClick={() => focusWindow("mirror")} type="button">
-            <span className="dex-home-app-icon system">
-              <span aria-hidden="true" className="material-symbols-rounded">
-                phone_android
-              </span>
-            </span>
-            <span>手机镜像</span>
-          </button>
-          <button onClick={() => focusWindow("files")} type="button">
-            <span className="dex-home-app-icon system">
-              <span aria-hidden="true" className="material-symbols-rounded">
-                folder
-              </span>
-            </span>
-            <span>文件管理</span>
-          </button>
-          <button onClick={() => focusWindow("controls")} type="button">
-            <span className="dex-home-app-icon system">
-              <span aria-hidden="true" className="material-symbols-rounded">
-                tune
-              </span>
-            </span>
-            <span>设备控制</span>
-          </button>
-          <button onClick={() => focusWindow("apps")} type="button">
-            <span className="dex-home-app-icon system">
-              <span aria-hidden="true" className="material-symbols-rounded">
-                apps
-              </span>
-            </span>
-            <span>应用中心</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              const chrome = apps.apps.find(
-                (app) => app.packageName === "com.android.chrome",
-              );
-              if (!chrome) {
-                showMessage("需要手机安装 Chrome，并先完成应用列表读取");
-                return;
-              }
-              setLauncherOpen(false);
-              setSystemPanel(null);
-              appWindows.openApp(chrome, true);
-            }}
-          >
-            <span className="dex-home-app-icon system">
-              <span aria-hidden="true" className="material-symbols-rounded">
-                movie
-              </span>
-            </span>
-            <span>扫码验收</span>
-          </button>
-          <button type="button" onClick={() => setSystemCameraOpen(true)}>
-            <span className="dex-home-app-icon system" aria-hidden="true">
-              <span className="material-symbols-rounded">movie</span>
-            </span>
-            <span>系统摄像头</span>
-          </button>
-          {desktopApps.map((app) => (
-            <button
-              key={app.packageName}
-              onClick={() => handleLaunchApp(app)}
-              type="button"
-            >
-              <span
-                className="dex-home-app-icon"
-                style={{ "--app-hue": app.hue } as React.CSSProperties}
-              >
-                <span>{app.name.trim().slice(0, 1)}</span>
-                <AppIconImage src={app.iconUrl} />
-              </span>
-              <span>{app.name}</span>
-            </button>
-          ))}
-          {!devicesHook.selectedDevice ? (
-            <button onClick={() => focusWindow("connect")} type="button">
-              <span className="dex-home-app-icon system">
-                <span aria-hidden="true" className="material-symbols-rounded">
-                  add_link
-                </span>
-              </span>
-              <span>连接设备</span>
-            </button>
-          ) : null}
-          {devicesHook.selectedDevice && !desktopApps.length ? (
-            <button
-              className="dex-home-sync"
-              onClick={() => focusWindow("apps")}
-              type="button"
-            >
-              <span className="dex-home-app-icon system">
-                <span
-                  aria-hidden="true"
-                  className={`material-symbols-rounded ${apps.appsPending ? "spinning" : ""}`}
-                >
-                  {apps.appsPending ? "progress_activity" : "sync_problem"}
-                </span>
-              </span>
-              <span>{apps.appsPending || "添加桌面应用"}</span>
-            </button>
-          ) : null}
-        </section>
-
-        {launcherOpen ? (
-          <div
-            className="dex-launcher-backdrop"
-            onPointerDown={() => setLauncherOpen(false)}
-          >
-            <div
-              ref={overlayRef}
-              role="dialog"
-              aria-modal="true"
-              aria-label="应用中心"
-              tabIndex={-1}
-              className="dex-launcher-surface"
-              onPointerDown={(event) => event.stopPropagation()}
-            >
-              <button
-                className="overlay-close"
-                onClick={() => setLauncherOpen(false)}
-                type="button"
-                aria-label="关闭应用中心"
-              >
-                <span aria-hidden="true" className="material-symbols-rounded">
-                  close
-                </span>
-              </button>
-              {contentByView.apps}
-            </div>
-          </div>
-        ) : null}
-
-        {systemPanel ? (
-          <div
-            className="dex-system-panel-backdrop"
-            onPointerDown={() => setSystemPanel(null)}
-          >
-            <div
-              ref={overlayRef}
-              role="dialog"
-              aria-modal="true"
-              aria-label={APP_META[systemPanel].title}
-              tabIndex={-1}
-              className={`dex-system-panel ${systemPanel}`}
-              onPointerDown={(event) => event.stopPropagation()}
-            >
-              <header>
-                <strong className="dex-panel-title">
-                  <span aria-hidden="true" className="material-symbols-rounded">
-                    {APP_META[systemPanel].icon}
-                  </span>
-                  {APP_META[systemPanel].title}
-                </strong>
-                <button
-                  onClick={() => setSystemPanel(null)}
-                  aria-label={`关闭${APP_META[systemPanel].title}`}
-                  type="button"
-                >
-                  <span aria-hidden="true" className="material-symbols-rounded">
-                    close
-                  </span>
-                </button>
-              </header>
-              <div className="dex-system-content">
-                {contentByView[systemPanel]}
-              </div>
-            </div>
-          </div>
-        ) : null}
+        <WorkspaceHome
+          deviceName={selectedDeviceName ?? undefined}
+          snapshot={controls.snapshot}
+          apps={desktopApps}
+          appCount={apps.apps.length}
+          pending={apps.appsPending}
+          runningPackages={appWindows.runningPackages}
+          cameraEnabled={appWindows.cameraEnabled}
+          iconSize={desktopPreferences.iconSize}
+          cameraPaused={Boolean(appWindows.camera?.paused)}
+          onOpen={focusWindow}
+          onOpenCamera={openSystemCamera}
+          onLaunch={handleLaunchApp}
+        />
 
         <DesktopWindow
           state={mirrorWindow}
@@ -1166,12 +1143,14 @@ export default function App() {
           {contentByView.files}
         </DesktopWindow>
 
-        {systemCameraPanel}
+        {panelDialog}
         {appWindowNodes}
 
         <footer className="dex-dock">
           <nav className="dex-dock-navigation" aria-label="桌面导航">
-            <button
+            <Button
+              variant="unstyled"
+              size="unstyled"
               onClick={() => {
                 if (appWindows.activeId)
                   void appWindows.pressBack(appWindows.activeId);
@@ -1189,11 +1168,15 @@ export default function App() {
               type="button"
               aria-label="返回"
             >
-              <span aria-hidden="true" className="material-symbols-rounded">
-                arrow_back_ios_new
-              </span>
-            </button>
-            <button
+              <Icon
+                aria-hidden="true"
+                className="ui-icon"
+                name="arrow_back_ios_new"
+              />
+            </Button>
+            <Button
+              variant="unstyled"
+              size="unstyled"
               onClick={() => {
                 appWindows.minimizeAll();
                 setFileWindow((current) => ({ ...current, minimized: true }));
@@ -1204,14 +1187,14 @@ export default function App() {
               type="button"
               aria-label="桌面"
             >
-              <span aria-hidden="true" className="material-symbols-rounded">
-                circle
-              </span>
-            </button>
+              <Icon aria-hidden="true" className="ui-icon" name="circle" />
+            </Button>
           </nav>
           <div className="dex-running-apps">
             {mirrorWindow.open ? (
-              <button
+              <Button
+                variant="unstyled"
+                size="unstyled"
                 className={
                   !mirrorWindow.minimized &&
                   panelView === "mirror" &&
@@ -1236,13 +1219,17 @@ export default function App() {
                 title="手机镜像"
                 type="button"
               >
-                <span aria-hidden="true" className="material-symbols-rounded">
-                  phone_android
-                </span>
-              </button>
+                <Icon
+                  aria-hidden="true"
+                  className="ui-icon"
+                  name="phone_android"
+                />
+              </Button>
             ) : null}
             {fileWindow.open ? (
-              <button
+              <Button
+                variant="unstyled"
+                size="unstyled"
                 className={
                   !fileWindow.minimized && panelView === "files" ? "active" : ""
                 }
@@ -1263,13 +1250,13 @@ export default function App() {
                 title="文件管理"
                 type="button"
               >
-                <span aria-hidden="true" className="material-symbols-rounded">
-                  folder
-                </span>
-              </button>
+                <Icon aria-hidden="true" className="ui-icon" name="folder" />
+              </Button>
             ) : null}
             {appWindows.windows.map((appWindow) => (
-              <button
+              <Button
+                variant="unstyled"
+                size="unstyled"
                 key={appWindow.id}
                 className={appWindows.activeId === appWindow.id ? "active" : ""}
                 onClick={() => appWindows.toggleWindow(appWindow.id)}
@@ -1278,10 +1265,12 @@ export default function App() {
               >
                 <span>{appWindow.app.name.trim().slice(0, 1)}</span>
                 <AppIconImage src={appWindow.app.iconUrl} />
-              </button>
+              </Button>
             ))}
           </div>
-          <button
+          <Button
+            variant="unstyled"
+            size="unstyled"
             className={`dex-launcher-button ${launcherOpen ? "active" : ""}`}
             onClick={() => {
               setSystemPanel(null);
@@ -1290,32 +1279,32 @@ export default function App() {
             aria-label="应用中心"
             type="button"
           >
-            <span aria-hidden="true" className="material-symbols-rounded">
-              apps
-            </span>
-          </button>
+            <Icon aria-hidden="true" className="ui-icon" name="apps" />
+          </Button>
           <div className="dex-dock-status">
-            <button
+            <Button
+              variant="unstyled"
+              size="unstyled"
               onClick={() => focusWindow("connect")}
               title="设备连接"
               aria-label="设备连接"
               type="button"
             >
-              <span aria-hidden="true" className="material-symbols-rounded">
-                smartphone
-              </span>
-            </button>
-            <button
+              <Icon aria-hidden="true" className="ui-icon" name="smartphone" />
+            </Button>
+            <Button
+              variant="unstyled"
+              size="unstyled"
               onClick={() => focusWindow("settings")}
               title="桌面设置"
               aria-label="桌面设置"
               type="button"
             >
-              <span aria-hidden="true" className="material-symbols-rounded">
-                settings
-              </span>
-            </button>
-            <button
+              <Icon aria-hidden="true" className="ui-icon" name="settings" />
+            </Button>
+            <Button
+              variant="unstyled"
+              size="unstyled"
               className="dex-clock-button"
               aria-label="设备控制"
               onClick={() => focusWindow("controls")}
@@ -1334,7 +1323,7 @@ export default function App() {
                   day: "2-digit",
                 })}
               </span>
-            </button>
+            </Button>
           </div>
         </footer>
       </section>

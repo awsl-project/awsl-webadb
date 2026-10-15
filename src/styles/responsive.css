@@ -83,11 +83,6 @@
     max-width: calc(100vw - 20px);
   }
 
-  .upload-dropzone {
-    min-height: 116px;
-    border-radius: 22px;
-  }
-
   .file-row {
     min-height: 60px;
     padding: 0 12px;

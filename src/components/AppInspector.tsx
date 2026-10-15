@@ -1,3 +1,6 @@
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { useCallback, useEffect, useState } from "react";
 import { appSessions } from "../lib/app-sessions";
 import type { AppElement } from "../../shared/sessions";
@@ -104,19 +107,33 @@ export function AppInspector({
     <aside className="app-inspector" aria-label="应用页面与元素">
       <header>
         <strong>页面与元素</strong>
-        <button type="button" onClick={onClose} aria-label="关闭元素面板">
+        <Button
+          variant="outline"
+          size="sm"
+          type="button"
+          onClick={onClose}
+          aria-label="关闭元素面板"
+        >
           ×
-        </button>
+        </Button>
       </header>
       <code title={id}>{id}</code>
       <small>
         原始坐标 {width} × {height} · 与 CLI 共用此会话
       </small>
       <div className="inspector-toolbar">
-        <button type="button" disabled={busy} onClick={() => void screenshot()}>
+        <Button
+          variant="outline"
+          size="sm"
+          type="button"
+          disabled={busy}
+          onClick={() => void screenshot()}
+        >
           保存截图
-        </button>
-        <button
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
           type="button"
           disabled={busy || !xml}
           onClick={() =>
@@ -127,10 +144,16 @@ export function AppInspector({
           }
         >
           导出 XML
-        </button>
-        <button type="button" disabled={busy} onClick={() => void refresh()}>
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          type="button"
+          disabled={busy}
+          onClick={() => void refresh()}
+        >
           刷新元素
-        </button>
+        </Button>
       </div>
       <details>
         <summary>显示分辨率</summary>
@@ -138,7 +161,7 @@ export function AppInspector({
           {(["width", "height"] as const).map((key) => (
             <label key={key}>
               {key === "width" ? "宽度" : "高度"}
-              <input
+              <Input
                 aria-label={`应用显示${key === "width" ? "宽度" : "高度"}`}
                 type="number"
                 min={320}
@@ -155,9 +178,15 @@ export function AppInspector({
             </label>
           ))}
         </div>
-        <button type="button" disabled={busy} onClick={() => void resize()}>
+        <Button
+          variant="outline"
+          size="sm"
+          type="button"
+          disabled={busy}
+          onClick={() => void resize()}
+        >
           应用分辨率
-        </button>
+        </Button>
       </details>
       <details>
         <summary>坐标与按键</summary>
@@ -173,7 +202,7 @@ export function AppInspector({
                   duration: "时长 ms",
                 }[key]
               }
-              <input
+              <Input
                 type="number"
                 min="0"
                 step="1"
@@ -189,7 +218,9 @@ export function AppInspector({
           ))}
         </div>
         <div className="inspector-toolbar">
-          <button
+          <Button
+            variant="outline"
+            size="sm"
             type="button"
             disabled={busy}
             onClick={() =>
@@ -197,14 +228,16 @@ export function AppInspector({
             }
           >
             点击坐标
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
             type="button"
             disabled={busy}
             onClick={() => void act({ type: "swipe", ...coordinates })}
           >
             滑动
-          </button>
+          </Button>
           {[
             ["返回", 4],
             ["主页", 3],
@@ -213,18 +246,20 @@ export function AppInspector({
             ["退格", 67],
             ["最近应用", 187],
           ].map(([label, keyCode]) => (
-            <button
+            <Button
+              variant="outline"
+              size="sm"
               key={keyCode}
               type="button"
               disabled={busy}
               onClick={() => void act({ type: "key", keyCode })}
             >
               {label}
-            </button>
+            </Button>
           ))}
         </div>
       </details>
-      <input
+      <Input
         aria-label="筛选应用元素"
         placeholder={`搜索 ${elements.length} 个元素…`}
         value={query}
@@ -232,7 +267,9 @@ export function AppInspector({
       />
       <div className="inspector-elements" aria-busy={busy}>
         {visible.slice(0, 300).map((element) => (
-          <button
+          <Button
+            variant="outline"
+            size="sm"
             type="button"
             key={element.id}
             className={selected === element.id ? "selected" : ""}
@@ -251,29 +288,33 @@ export function AppInspector({
               [{element.bounds.join(", ")}] {element.clickable ? "可点击" : ""}{" "}
               {element.editable ? "可输入" : ""}
             </small>
-          </button>
+          </Button>
         ))}
         {!busy && !visible.length ? (
           <p>没有匹配元素。Canvas 页面可通过截图坐标操作。</p>
         ) : null}
       </div>
       <div className="inspector-toolbar">
-        <button
+        <Button
+          variant="outline"
+          size="sm"
           type="button"
           disabled={busy || !selected}
           onClick={() => void act({ type: "clickElement", nodeId: selected })}
         >
           点击选中元素
-        </button>
+        </Button>
       </div>
-      <textarea
+      <Textarea
         aria-label="应用元素输入文字"
         maxLength={4096}
         placeholder="输入文字；未选元素时发送到焦点输入框"
         value={text}
         onChange={(event) => setText(event.currentTarget.value)}
       />
-      <button
+      <Button
+        variant="outline"
+        size="sm"
         type="button"
         disabled={busy || !text}
         onClick={() =>
@@ -285,7 +326,7 @@ export function AppInspector({
         }
       >
         发送文字
-      </button>
+      </Button>
       {error ? (
         <div className="inline-error" role="alert">
           {error}

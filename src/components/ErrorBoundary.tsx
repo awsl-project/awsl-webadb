@@ -1,3 +1,5 @@
+import { Icon } from "@/components/Icon";
+import { Button } from "@/components/ui/button";
 import { Component, type ErrorInfo, type ReactNode } from "react";
 
 export class ErrorBoundary extends Component<
@@ -15,14 +17,17 @@ export class ErrorBoundary extends Component<
     if (!this.state.failed) return this.props.children;
     return (
       <main className="feature-empty" style={{ minHeight: "100dvh" }}>
-        <span aria-hidden="true" className="material-symbols-rounded">
-          error
-        </span>
+        <Icon aria-hidden="true" className="ui-icon" name="error" />
         <h1>桌面遇到了一点问题</h1>
         <p>重新加载页面可恢复连接，桌面偏好会保留。</p>
-        <button onClick={() => window.location.reload()} type="button">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => window.location.reload()}
+          type="button"
+        >
           重新加载
-        </button>
+        </Button>
       </main>
     );
   }

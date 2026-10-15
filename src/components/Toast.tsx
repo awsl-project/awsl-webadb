@@ -1,3 +1,5 @@
+import { Icon } from "@/components/Icon";
+import { Button } from "@/components/ui/button";
 import type { ToastState } from "../types";
 
 interface ToastProps {
@@ -18,27 +20,28 @@ export function Toast({ toasts, onDismiss }: ToastProps) {
           role="status"
           key={toast.id}
         >
-          <span
+          <Icon
             aria-hidden="true"
-            className="toast-tone-icon material-symbols-rounded"
-          >
-            {toast.tone === "error"
-              ? "error"
-              : toast.tone === "success"
-                ? "check_circle"
-                : "info"}
-          </span>
+            className="toast-tone-icon ui-icon"
+            name={
+              toast.tone === "error"
+                ? "error"
+                : toast.tone === "success"
+                  ? "check_circle"
+                  : "info"
+            }
+          />
           <span>{toast.message}</span>
-          <button
+          <Button
+            variant="unstyled"
+            size="unstyled"
             className="ghost-button toast-close"
             onClick={() => onDismiss(toast.id)}
             type="button"
             aria-label="关闭提示"
           >
-            <span aria-hidden="true" className="material-symbols-rounded">
-              close
-            </span>
-          </button>
+            <Icon aria-hidden="true" className="ui-icon" name="close" />
+          </Button>
         </div>
       ))}
     </div>

@@ -1,6 +1,13 @@
 import { useEffect, useState, type RefObject } from "react";
-
-import { useDialog } from "../hooks/useDialog";
+import { LoaderCircle, Upload, X } from "lucide-react";
+import { Button } from "./ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from "./ui/dialog";
+import { cn } from "../lib/utils";
 
 interface UploadDialogProps {
   pending: string;
@@ -18,7 +25,6 @@ export function UploadDialog({
   onClose,
 }: UploadDialogProps) {
   const [dropActive, setDropActive] = useState(false);
-  const ref = useDialog(true, onClose);
   useEffect(() => {
     if (pending) return;
     const paste = (event: ClipboardEvent) => {
@@ -32,68 +38,58 @@ export function UploadDialog({
   }, [onUpload, pending]);
 
   return (
-    <div
-      className="dialog-backdrop"
-      ref={ref}
-      role="dialog"
-      aria-modal="true"
-      aria-label="上传文件"
-      tabIndex={-1}
-      onClick={() => {
-        onClose();
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open && !pending) onClose();
       }}
     >
-      <section
-        className="connect-dialog upload-dialog"
-        onClick={(event) => {
-          event.stopPropagation();
-        }}
-      >
-        <div className="connect-dialog-head">
-          <strong>上传文件</strong>
-          <button
-            className="ghost-button dialog-close"
+      <DialogContent showCloseButton={false} className="gap-5">
+        <header className="flex items-center justify-between gap-3">
+          <DialogTitle className="text-base">上传文件</DialogTitle>
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={onClose}
             aria-label="关闭上传"
             disabled={Boolean(pending)}
-            type="button"
           >
-            <span aria-hidden="true" className="material-symbols-rounded">
-              close
-            </span>
-          </button>
-        </div>
-
-        <button
+            <X className="size-4" />
+          </Button>
+        </header>
+        <DialogDescription className="m-0 text-xs break-all">
+          目标目录：{filesPath}
+        </DialogDescription>
+        <Button
+          variant="outline"
           disabled={Boolean(pending)}
-          type="button"
-          className={`upload-dropzone ${dropActive ? "active" : ""}`}
-          onClick={() => {
-            uploadInputRef.current?.click();
-          }}
+          className={cn(
+            "h-auto min-h-48 flex-col gap-3 border-dashed p-5 whitespace-normal",
+            dropActive && "border-primary bg-accent",
+          )}
+          onClick={() => uploadInputRef.current?.click()}
           onDragOver={(event) => {
             event.preventDefault();
-            if (!dropActive) {
-              setDropActive(true);
-            }
+            setDropActive(true);
           }}
-          onDragLeave={() => {
-            setDropActive(false);
-          }}
+          onDragLeave={() => setDropActive(false)}
           onDrop={(event) => {
             event.preventDefault();
             setDropActive(false);
             if (!pending) void onUpload(event.dataTransfer.files);
           }}
         >
-          <span aria-hidden="true" className="material-symbols-rounded">
-            upload_file
+          {pending ? (
+            <LoaderCircle className="size-7 animate-spin text-primary" />
+          ) : (
+            <Upload className="size-7 text-primary" />
+          )}
+          <strong className="text-sm">{pending || "点击选择文件"}</strong>
+          <span className="text-center text-xs leading-relaxed font-normal text-muted-foreground">
+            也支持粘贴图片或文件，或拖拽到这里上传
           </span>
-          <strong>{pending || "点击选择文件"}</strong>
-          <span>也支持直接粘贴图片或文件，或拖拽到这里上传</span>
-          <span>目标目录：{filesPath}</span>
-        </button>
-      </section>
-    </div>
+        </Button>
+      </DialogContent>
+    </Dialog>
   );
 }

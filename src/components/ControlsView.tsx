@@ -1,3 +1,5 @@
+import { Icon } from "@/components/Icon";
+import { Button } from "@/components/ui/button";
 import type { DeviceSnapshot } from "../types";
 
 interface ControlsViewProps {
@@ -99,14 +101,12 @@ export function ControlsView({
   if (!hasDevice) {
     return (
       <section className="controls-page controls-disconnected">
-        <span aria-hidden="true" className="material-symbols-rounded">
-          tune
-        </span>
+        <Icon aria-hidden="true" className="ui-icon" name="tune" />
         <strong>控制中心等待设备</strong>
         <span>连接设备后可直接使用系统按键、音量、通知栏和截图。</span>
-        <button onClick={onConnect} type="button">
+        <Button variant="outline" size="sm" onClick={onConnect} type="button">
           打开设备连接
-        </button>
+        </Button>
       </section>
     );
   }
@@ -118,27 +118,26 @@ export function ControlsView({
           <span className="apps-eyebrow">ADB DIRECT CONTROL</span>
           <h1>控制中心</h1>
         </div>
-        <button
+        <Button
+          variant="outline"
+          size="sm"
           className="apps-refresh"
           onClick={onRefresh}
           disabled={Boolean(pending)}
           type="button"
         >
-          <span
+          <Icon
             aria-hidden="true"
-            className={`material-symbols-rounded ${pending ? "spinning" : ""}`}
-          >
-            refresh
-          </span>
+            className={`ui-icon ${pending ? "spinning" : ""}`}
+            name="refresh"
+          />
           <span>{pending || "刷新状态"}</span>
-        </button>
+        </Button>
       </header>
 
       <section className="device-overview">
         <div className="device-orb">
-          <span aria-hidden="true" className="material-symbols-rounded">
-            android
-          </span>
+          <Icon aria-hidden="true" className="ui-icon" name="android" />
         </div>
         <div className="device-overview-copy">
           <strong>
@@ -154,7 +153,10 @@ export function ControlsView({
           <div>
             <dt>BATTERY</dt>
             <dd>
-              {snapshot.batteryLevel} · {snapshot.batteryStatus}
+              <span className="block">{snapshot.batteryLevel}</span>
+              <span className="block text-[10px] text-muted-foreground">
+                {snapshot.batteryStatus}
+              </span>
             </dd>
           </div>
           <div>
@@ -170,17 +172,22 @@ export function ControlsView({
             <span>{group.title}</span>
             <div>
               {group.actions.map((action) => (
-                <button
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-auto min-h-20 flex-col gap-2 px-1 py-3 text-xs"
                   key={action.label}
                   onClick={() => onCommand(action.label, action.command)}
                   disabled={Boolean(pending)}
                   type="button"
                 >
-                  <span aria-hidden="true" className="material-symbols-rounded">
-                    {action.icon}
-                  </span>
+                  <Icon
+                    aria-hidden="true"
+                    className="ui-icon"
+                    name={action.icon}
+                  />
                   <span>{action.label}</span>
-                </button>
+                </Button>
               ))}
             </div>
           </div>
@@ -188,7 +195,9 @@ export function ControlsView({
       </section>
 
       <section className="control-wide-actions">
-        <button
+        <Button
+          variant="outline"
+          size="sm"
           onClick={() =>
             onCommand("展开通知栏", [
               "cmd",
@@ -199,42 +208,44 @@ export function ControlsView({
           disabled={Boolean(pending)}
           type="button"
         >
-          <span aria-hidden="true" className="material-symbols-rounded">
-            notifications
-          </span>
+          <Icon aria-hidden="true" className="ui-icon" name="notifications" />
           <span>
             <strong>通知栏</strong>
             <small>展开设备通知</small>
           </span>
-        </button>
-        <button
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
           onClick={() =>
             onCommand("展开快捷设置", ["cmd", "statusbar", "expand-settings"])
           }
           disabled={Boolean(pending)}
           type="button"
         >
-          <span aria-hidden="true" className="material-symbols-rounded">
-            instant_mix
-          </span>
+          <Icon aria-hidden="true" className="ui-icon" name="instant_mix" />
           <span>
             <strong>快捷设置</strong>
             <small>打开系统控制面板</small>
           </span>
-        </button>
-        <button
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
           onClick={onScreenshot}
           disabled={Boolean(pending)}
           type="button"
         >
-          <span aria-hidden="true" className="material-symbols-rounded">
-            screenshot_monitor
-          </span>
+          <Icon
+            aria-hidden="true"
+            className="ui-icon"
+            name="screenshot_monitor"
+          />
           <span>
             <strong>设备截图</strong>
             <small>保存 PNG 到电脑</small>
           </span>
-        </button>
+        </Button>
       </section>
     </section>
   );

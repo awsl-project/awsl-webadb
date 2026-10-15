@@ -4,7 +4,7 @@
 
 ## 功能
 
-- One Half 明暗主题、跟随系统、本地字体与图标、桌面收藏、移动端布局和 PWA 更新提示。
+- One Half 明暗主题、跟随系统、本地字体与图标、桌面收藏和 PWA 更新提示。电脑使用多窗口工作台，手机采用双列工具、全屏应用和触控布局。
 - 设备发现、授权状态、Wi-Fi 配对与连接、设备信息、电池状态及原屏镜像。
 - 独立应用窗口、横竖屏、调整分辨率、触摸、拖动、滚轮、按键与文字输入。
 - 单应用 JPEG 截图、无障碍 XML / JSON 元素树、元素点击及坐标操作，网页与 CLI 都可使用。
@@ -14,6 +14,8 @@
 默认即可控制，没有只读模式或模式切换确认。打开应用不会启动文件摄像头；选择文件也不会开始推流。必须手动点击“开始推流”，点击“停止推流”后释放相机。标题栏的声音按钮用于手动播放手机音频输出；目前没有麦克风推流功能，不会采集电脑麦克风。
 
 ## 本机运行
+
+电脑和手机浏览器使用同一个服务。首页分为工具区和收藏应用区；系统摄像头在电脑上并排显示配置与预览，在手机上可独立滚动，底部推流操作始终可见。收起面板不会停止后台推流。
 
 需要 Bun 1.4.3 或更新版本、Android Platform Tools，以及已允许 USB 调试的手机。文件摄像头还需要后端安装 FFmpeg（可用 `FFMPEG_PATH` 指定可执行文件）；容器已包含 FFmpeg：
 
@@ -115,7 +117,7 @@ awsl-webadb camera stop
 
 `camera start` 成功后立即返回，服务后台继续供帧。多设备用 `--device` 选择；CLI 链接必须用 `--kind image|video|stream` 明确指定类型。本地文件先流式上传到运行后端的电脑，停止或切换后删除临时副本；原文件不会写入手机。视频流暂停时冻结送往手机的画面，恢复后读取最新帧。
 
-“扫码验收”在电脑上的 Android Chrome 窗口打开内置 `camera-test.html`。开始推流后，在该页面打开摄像头并允许网站访问，使用真实 `getUserMedia()` 和 `BarcodeDetector` 核对画面与二维码。不会自动访问扫码链接。验收网页通过随机 ADB reverse 端口访问运行后端的电脑，要求 ADB server 与 WebADB 服务运行在同一台机器；远程容器需要自行保证该路径可达。
+内部联调页面 `camera-test.html` 用于在 Android Chrome 中检查相机画面，产品界面不提供该测试入口。开始推流后，在该页面打开摄像头并允许网站访问，使用真实 `getUserMedia()` 和 `BarcodeDetector` 核对画面与二维码。不会自动访问扫码链接。验收网页通过随机 ADB reverse 端口访问运行后端的电脑，要求 ADB server 与 WebADB 服务运行在同一台机器；远程容器需要自行保证该路径可达。
 
 需要 Android 16 的 VirtualCamera API，具体兼容性依 ROM 而定。小米隐身模式、系统相机隐私开关或 Chrome 权限可能阻止相机读取；服务不会修改这些系统隐私设置，也不会全局授予 Chrome 相机权限。扫码验收仅在本次虚拟设备上下文授权，并在结束时撤销。本机已完成 960 × 1280 视频扫码与实时时钟画面验收；详细验证范围见 [验证记录](docs/verification.md)。
 
@@ -144,9 +146,15 @@ docker run --rm \
 
 容器自动启动 ADB server，使用 Wi-Fi 设备，不支持 USB 直通。持久化目录保存 ADB 授权密钥与配对缓存。也可以用 `docker compose up --build`。镜像与独立发行版使用同一个程序，可通过 `docker exec CONTAINER /app/awsl-webadb devices` 调用客户端；保留 `/app/webadb` 兼容软链接。
 
-发布流水线运行类型检查、回归测试和前端构建，然后生成 CLI、构建 Linux amd64 / arm64 镜像并发布 GitHub Release。字体和图标本地提供，增加图标后运行 `scripts/fetch-fonts.py`。PWA 离线只提供页面，设备操作仍需后端连接。
+发布流水线运行类型检查、回归测试和前端构建，然后生成 CLI、构建 Linux amd64 / arm64 镜像并发布 GitHub Release。字体本地提供，更新字体使用 `scripts/fetch-fonts.py`；界面图标直接引用 Lucide SVG。PWA 离线只提供页面，设备操作仍需后端连接。
 
 开源依赖与构建工具说明见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+
+## 界面开发
+
+通用控件使用 shadcn/ui（Radix），布局使用 Tailwind CSS 4，图标统一使用 Lucide SVG。配置见 `components.json`，组件源码位于 `src/components/ui`；新增组件可运行 `bunx shadcn@latest add <组件名>`。主题色通过 `src/styles/ui.css` 映射 One Half 变量。原有窗口与设备画面样式放在 `legacy` CSS 层，组件样式和工具类在其后，避免反复覆盖。
+
+应用中心、连接、设置、控制、摄像头及元素面板按需加载。新增界面优先组合现有组件，不新增测试入口或复制按钮、弹层和焦点管理逻辑。
 
 ## Homebrew 发布集成
 

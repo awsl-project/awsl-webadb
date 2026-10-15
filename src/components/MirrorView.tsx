@@ -1,3 +1,5 @@
+import { Icon } from "@/components/Icon";
+import { Button } from "@/components/ui/button";
 import {
   useEffect,
   useRef,
@@ -92,7 +94,9 @@ export function MirrorSidebar({
     <>
       <div className="screen-sidebar-group">
         <div className="screen-icon-column">
-          <button
+          <Button
+            variant="unstyled"
+            size="unstyled"
             className="screen-icon-button"
             onClick={onRequestStart}
             disabled={
@@ -103,23 +107,27 @@ export function MirrorSidebar({
             aria-label={mirrorRunning ? "重新连接镜像" : "开始镜像"}
             title={mirrorRunning ? "重新连接镜像" : "开始镜像"}
           >
-            <span aria-hidden="true" className="material-symbols-rounded">
-              {mirrorPending ? "progress_activity" : "play_arrow"}
-            </span>
-          </button>
-          <button
+            <Icon
+              aria-hidden="true"
+              className="ui-icon"
+              name={mirrorPending ? "progress_activity" : "play_arrow"}
+            />
+          </Button>
+          <Button
+            variant="unstyled"
+            size="unstyled"
             className="ghost-button screen-icon-button"
             onClick={onStop}
             disabled={!mirrorRunning && !mirrorPending}
             aria-label="停止"
             title="停止"
           >
-            <span aria-hidden="true" className="material-symbols-rounded">
-              stop
-            </span>
-          </button>
+            <Icon aria-hidden="true" className="ui-icon" name="stop" />
+          </Button>
           <div ref={mirrorQualityMenuRef} className="screen-menu-anchor">
-            <button
+            <Button
+              variant="unstyled"
+              size="unstyled"
               className={`ghost-button screen-icon-button ${
                 mirrorQualityMenuOpen ? "active" : ""
               }`}
@@ -128,10 +136,12 @@ export function MirrorSidebar({
               aria-label={`画质 ${mirrorQualityConfig.label}`}
               title={`画质 ${mirrorQualityConfig.label}`}
             >
-              <span aria-hidden="true" className="material-symbols-rounded">
-                {mirrorQualityConfig.icon}
-              </span>
-            </button>
+              <Icon
+                aria-hidden="true"
+                className="ui-icon"
+                name={mirrorQualityConfig.icon}
+              />
+            </Button>
             {mirrorQualityMenuOpen ? (
               <div className="screen-menu-popup">
                 {(
@@ -142,7 +152,9 @@ export function MirrorSidebar({
                     ]
                   >
                 ).map(([quality, config]) => (
-                  <button
+                  <Button
+                    variant="unstyled"
+                    size="unstyled"
                     key={quality}
                     className={`ghost-button screen-menu-item ${
                       mirrorQuality === quality ? "active" : ""
@@ -150,14 +162,13 @@ export function MirrorSidebar({
                     onClick={() => onUpdateQuality(quality)}
                     disabled={Boolean(mirrorPending)}
                   >
-                    <span
+                    <Icon
                       aria-hidden="true"
-                      className="material-symbols-rounded"
-                    >
-                      {config.icon}
-                    </span>
+                      className="ui-icon"
+                      name={config.icon}
+                    />
                     <span>{config.label}</span>
-                  </button>
+                  </Button>
                 ))}
               </div>
             ) : null}
@@ -167,50 +178,54 @@ export function MirrorSidebar({
 
       <div className="screen-sidebar-group">
         <div className="screen-icon-column">
-          <button
+          <Button
+            variant="unstyled"
+            size="unstyled"
             className="ghost-button screen-icon-button"
             onClick={onPressBack}
             disabled={!mirrorRunning}
             aria-label="返回 (Esc)"
             title="返回 (Esc)"
           >
-            <span aria-hidden="true" className="material-symbols-rounded">
-              arrow_back
-            </span>
-          </button>
-          <button
+            <Icon aria-hidden="true" className="ui-icon" name="arrow_back" />
+          </Button>
+          <Button
+            variant="unstyled"
+            size="unstyled"
             className="ghost-button screen-icon-button"
             onClick={onPressHome}
             disabled={!mirrorRunning}
             aria-label="主页 (Home)"
             title="主页 (Home)"
           >
-            <span aria-hidden="true" className="material-symbols-rounded">
-              home
-            </span>
-          </button>
-          <button
+            <Icon aria-hidden="true" className="ui-icon" name="home" />
+          </Button>
+          <Button
+            variant="unstyled"
+            size="unstyled"
             className="ghost-button screen-icon-button"
             onClick={onPressAppSwitch}
             disabled={!mirrorRunning}
             aria-label="最近任务"
             title="最近任务"
           >
-            <span aria-hidden="true" className="material-symbols-rounded">
-              apps
-            </span>
-          </button>
-          <button
+            <Icon aria-hidden="true" className="ui-icon" name="apps" />
+          </Button>
+          <Button
+            variant="unstyled"
+            size="unstyled"
             className="ghost-button screen-icon-button"
             onClick={onRotate}
             disabled={!mirrorRunning}
             aria-label="旋转"
             title="旋转"
           >
-            <span aria-hidden="true" className="material-symbols-rounded">
-              screen_rotation
-            </span>
-          </button>
+            <Icon
+              aria-hidden="true"
+              className="ui-icon"
+              name="screen_rotation"
+            />
+          </Button>
         </div>
       </div>
 
@@ -248,7 +263,9 @@ export function MirrorSidebar({
               command: ["cmd", "statusbar", "expand-settings"],
             },
           ].map((action) => (
-            <button
+            <Button
+              variant="unstyled"
+              size="unstyled"
               key={action.label}
               className="ghost-button screen-icon-button"
               onClick={() => onControlCommand(action.label, action.command)}
@@ -257,12 +274,12 @@ export function MirrorSidebar({
               title={action.label}
               type="button"
             >
-              <span aria-hidden="true" className="material-symbols-rounded">
-                {action.icon}
-              </span>
-            </button>
+              <Icon aria-hidden="true" className="ui-icon" name={action.icon} />
+            </Button>
           ))}
-          <button
+          <Button
+            variant="unstyled"
+            size="unstyled"
             className="ghost-button screen-icon-button"
             onClick={onScreenshot}
             disabled={!selectedDevice || Boolean(controlPending)}
@@ -270,10 +287,12 @@ export function MirrorSidebar({
             title="设备截图"
             type="button"
           >
-            <span aria-hidden="true" className="material-symbols-rounded">
-              screenshot_monitor
-            </span>
-          </button>
+            <Icon
+              aria-hidden="true"
+              className="ui-icon"
+              name="screenshot_monitor"
+            />
+          </Button>
         </div>
       </div>
     </>
@@ -477,12 +496,10 @@ export function MirrorDisplay({
         <div className="mirror-empty">
           <strong>{emptyLabel}</strong>
           {onRetry ? (
-            <button onClick={onRetry} type="button">
-              <span aria-hidden="true" className="material-symbols-rounded">
-                refresh
-              </span>
+            <Button variant="outline" onClick={onRetry} type="button">
+              <Icon aria-hidden="true" className="ui-icon" name="refresh" />
               重新启动
-            </button>
+            </Button>
           ) : null}
         </div>
       ) : null}

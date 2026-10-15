@@ -1,5 +1,4 @@
 .utility-card,
-.connect-dialog,
 .file-list {
   border-radius: 28px;
   background: var(--surface-container);
@@ -109,41 +108,11 @@
   font-weight: 700;
 }
 
-.connect-dialog {
-  width: min(480px, calc(100vw - 32px));
-  max-height: min(720px, calc(100vh - 32px));
-  overflow: auto;
-  padding: 18px;
-  background: var(--dialog-bg);
-  box-shadow: var(--shadow-2);
-}
-
-.upload-dialog {
-  width: min(520px, calc(100vw - 32px));
-}
-
-.connect-dialog-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 14px;
-}
-
 .connect-dialog-tabs {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
   margin-bottom: 16px;
-}
-
-.connect-mode-switch {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-  padding: 4px;
-  border-radius: 18px;
-  background: rgba(53, 95, 189, 0.08);
 }
 
 .dialog-tab {
@@ -170,7 +139,7 @@
   text-overflow: ellipsis;
 }
 
-.connect-switch-button .material-symbols-rounded {
+.connect-switch-button .ui-icon {
   font-size: 16px;
 }
 
@@ -228,7 +197,9 @@
   box-shadow: none;
   font-size: 0.84rem;
   font-weight: 600;
-  transition: color 160ms ease, background 160ms ease;
+  transition:
+    color 160ms ease,
+    background 160ms ease;
 }
 
 .stepper-step:hover:not(:disabled) {

@@ -33,13 +33,19 @@ furnished to do so, subject to the following conditions:
 
 ## 本地字体与图标
 
-- Material Symbols Rounded：Google，Apache-2.0；许可证位于 `public/fonts/LICENSE-material-icons.txt`。
 - IBM Plex Sans / IBM Plex Mono：IBM，SIL Open Font License 1.1；许可证位于 `public/fonts/LICENSE-ibm-plex.txt`。
 - Android 资源表读取实现依据 [AOSP ResourceTypes.h](https://android.googlesource.com/platform/frameworks/base/+/refs/heads/main/libs/androidfw/include/androidfw/ResourceTypes.h) 的格式定义，支持稀疏索引、16 位偏移与 compact 条目。
 
 ## Android 摄像头 helper 构建工具
 
 `android/camera` 为本项目实现，运行时调用 Android VirtualDevice / VirtualCamera 系统 API。构建需要 Android 16 API stubs（或 Robolectric android-all）及 R8 / D8；这些工具和 Android framework 代码不包含在生成的 helper JAR 中。R8 来源于 Google，采用 BSD 3-Clause 许可证；Android framework API 来自 AOSP，采用 Apache-2.0 许可证。
+
+## 界面组件
+
+- shadcn/ui：Copyright (c) 2023 shadcn，MIT；通过官方 CLI 生成并按项目主题调整组件源码，许可证位于 `public/licenses/shadcn-ui.txt`。
+- Radix UI：Copyright (c) 2022 WorkOS，MIT，许可证位于 `public/licenses/radix-ui.txt`。
+- Lucide：Lucide Icons and Contributors，ISC；包含的 Feather 来源图标另遵循 MIT，完整声明位于 `public/licenses/lucide.txt`。
+- Tailwind CSS、class-variance-authority、clsx、tailwind-merge 与 tw-animate-css：通过公开 npm 包使用，许可证随各包提供。
 
 ## FFmpeg
 

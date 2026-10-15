@@ -1,3 +1,6 @@
+import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
+import { Icon } from "@/components/Icon";
+import { Button } from "@/components/ui/button";
 import {
   useEffect,
   useRef,
@@ -137,6 +140,60 @@ export function DesktopWindow({
     }
   };
 
+  const audioLabel =
+    audioAvailable === false ? "恢复" : audioMuted ? "开启" : "静音";
+  const actions = [
+    {
+      label: `${audioLabel}${title}声音`,
+      hint: `${audioLabel}声音`,
+      icon:
+        audioAvailable === false
+          ? "sync_problem"
+          : audioMuted
+            ? "volume_off"
+            : "volume_up",
+      action: onToggleAudio,
+      show: Boolean(onToggleAudio),
+    },
+    {
+      label: `最小化${title}`,
+      hint: "最小化",
+      icon: "remove",
+      action: onMinimize,
+      show: true,
+    },
+    {
+      label: `${rotateLabel}${title}`,
+      hint: rotateLabel,
+      icon: "screen_rotation",
+      action: onRotate,
+      show: Boolean(onRotate),
+    },
+    {
+      label: `${state.maximized ? "还原" : maximizeLabel}${title}`,
+      hint: state.maximized ? "还原" : maximizeLabel,
+      icon: state.maximized ? "filter_none" : maximizeIcon,
+      action: onMaximize,
+      show: canMaximize,
+    },
+    {
+      label: `结束${title}应用`,
+      hint: "结束 Android 应用",
+      icon: "stop_circle",
+      action: onStopApp,
+      show: Boolean(onStopApp),
+      tone: "stop-app",
+    },
+    {
+      label: `关闭${title}窗口`,
+      hint: "关闭窗口",
+      icon: "close",
+      action: onClose,
+      show: true,
+      tone: "close",
+    },
+  ];
+
   return (
     <section
       ref={windowRef}
@@ -179,107 +236,31 @@ export function DesktopWindow({
       >
         <div className="window-title">
           <span className="window-title-icon">
-            <span aria-hidden="true" className="material-symbols-rounded">
-              {icon}
-            </span>
+            <Icon aria-hidden="true" className="ui-icon" name={icon} />
             <AppIconImage src={iconUrl} />
           </span>
           <span>{title}</span>
         </div>
         <div className="window-actions">
-          <button
-            className="window-action"
-            onPointerDown={(event) => event.stopPropagation()}
-            onClick={onToggleAudio}
-            hidden={!onToggleAudio}
-            aria-label={`${audioAvailable === false ? "恢复" : audioMuted ? "开启" : "静音"}${title}声音`}
-            title={
-              audioAvailable === false
-                ? "恢复声音"
-                : audioMuted
-                  ? "开启声音"
-                  : "静音"
-            }
-            type="button"
-          >
-            <span aria-hidden="true" className="material-symbols-rounded">
-              {audioAvailable === false
-                ? "sync_problem"
-                : audioMuted
-                  ? "volume_off"
-                  : "volume_up"}
-            </span>
-          </button>
-          <button
-            className="window-action"
-            onPointerDown={(event) => event.stopPropagation()}
-            onClick={onMinimize}
-            aria-label={`最小化${title}`}
-            title="最小化"
-            type="button"
-          >
-            <span aria-hidden="true" className="material-symbols-rounded">
-              remove
-            </span>
-          </button>
-          <button
-            className="window-action"
-            onPointerDown={(event) => event.stopPropagation()}
-            onClick={onRotate}
-            hidden={!onRotate}
-            aria-label={`${rotateLabel}${title}`}
-            title={rotateLabel}
-            type="button"
-          >
-            <span aria-hidden="true" className="material-symbols-rounded">
-              screen_rotation
-            </span>
-          </button>
-          <button
-            className="window-action"
-            onPointerDown={(event) => event.stopPropagation()}
-            onClick={onMaximize}
-            disabled={!canMaximize}
-            hidden={!canMaximize}
-            aria-label={`${state.maximized ? "还原" : maximizeLabel}${title}`}
-            title={
-              canMaximize
-                ? state.maximized
-                  ? "还原"
-                  : maximizeLabel
-                : "此应用仅支持竖屏"
-            }
-            type="button"
-          >
-            <span aria-hidden="true" className="material-symbols-rounded">
-              {state.maximized ? "filter_none" : maximizeIcon}
-            </span>
-          </button>
-          <button
-            className="window-action stop-app"
-            onPointerDown={(event) => event.stopPropagation()}
-            onClick={onStopApp}
-            hidden={!onStopApp}
-            aria-label={`结束${title}应用`}
-            title="结束 Android 应用"
-            type="button"
-          >
-            <span aria-hidden="true" className="material-symbols-rounded">
-              stop_circle
-            </span>
-          </button>
-          <button
-            className="window-action close"
-            onPointerDown={(event) => event.stopPropagation()}
-            onClick={onClose}
-            aria-label={`关闭${title}窗口`}
-            title="关闭窗口"
-            type="button"
-          >
-            <span aria-hidden="true" className="material-symbols-rounded">
-              close
-            </span>
-          </button>
+          {actions
+            .filter((action) => action.show)
+            .map((action) => (
+              <Tooltip key={action.label}>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className={`window-action size-8 max-[900px]:size-11 ${action.tone || ""}`}
+                    onPointerDown={(event) => event.stopPropagation()}
+                    onClick={action.action}
+                    aria-label={action.label}
+                  >
+                    <Icon name={action.icon} />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">{action.hint}</TooltipContent>
+              </Tooltip>
+            ))}
         </div>
       </div>
       <div className="window-body">{children}</div>

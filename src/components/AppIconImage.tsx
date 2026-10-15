@@ -1,3 +1,4 @@
+import { cn } from "@/lib/utils";
 import { useEffect, useRef, useState } from "react";
 
 interface AppIconImageProps {
@@ -40,5 +41,24 @@ export function AppIconImage({ src, loading = "eager" }: AppIconImageProps) {
         );
       }}
     />
+  );
+}
+
+export function AppIcon({
+  name,
+  src,
+  className,
+  loading,
+}: AppIconImageProps & { name: string; className?: string }) {
+  return (
+    <span
+      className={cn(
+        "relative inline-grid size-12 shrink-0 place-items-center overflow-hidden rounded-xl border border-border bg-muted text-sm font-medium [&>img]:absolute [&>img]:inset-0 [&>img]:size-full [&>img]:object-contain [&:has(img)>span]:invisible",
+        className,
+      )}
+    >
+      <span>{name.trim().slice(0, 1)}</span>
+      <AppIconImage src={src} loading={loading} />
+    </span>
   );
 }
