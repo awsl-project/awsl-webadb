@@ -1,5 +1,6 @@
 {
   "name": "awsl-webadb",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -7,8 +8,12 @@
     "dev": "concurrently -k \"bun --watch server/index.ts\" \"vite\"",
     "build": "vite build",
     "check": "tsc --noEmit",
+    "test": "bun test",
     "start": "NODE_ENV=production bun server/index.ts",
-    "fetch:scrcpy-server": "fetch-scrcpy-server 4.1"
+    "fetch:scrcpy-server": "fetch-scrcpy-server 4.1",
+    "cli": "bun cli/index.ts",
+    "serve": "bun server/index.ts",
+    "build:cli": "bun build --compile cli/index.ts --outfile bin/webadb"
   },
   "dependencies": {
     "@yume-chan/adb": "3.0.0-beta.1",

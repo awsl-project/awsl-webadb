@@ -63,7 +63,13 @@ export class AdbServerWebSocketConnector
     socket.binaryType = "arraybuffer";
 
     await new Promise<void>((resolve, reject) => {
+      const timer = window.setTimeout(() => {
+        cleanup();
+        socket.close();
+        reject(new Error("连接超时，请检查后端服务"));
+      }, 10_000);
       const cleanup = () => {
+        window.clearTimeout(timer);
         socket.removeEventListener("open", open);
         socket.removeEventListener("error", fail);
         socket.removeEventListener("close", fail);
@@ -111,6 +117,9 @@ export class AdbServerWebSocketConnector
       closedReject = reject;
     });
 
+    void closed.catch(() => undefined);
+
+    let cancelConnection = () => {};
     const readable = new PushReadableStream<Uint8Array>((nextController) => {
       controller = nextController;
       let messageQueue = Promise.resolve();
@@ -121,6 +130,11 @@ export class AdbServerWebSocketConnector
         socket.removeEventListener("message", handleMessage);
         socket.removeEventListener("close", handleClose);
         socket.removeEventListener("error", handleError);
+        options.signal?.removeEventListener("abort", handleAbort);
+        nextController.abortSignal.removeEventListener(
+          "abort",
+          cancelConnection,
+        );
       };
       const terminate = (error: Error, code: number, reason: string) => {
         if (streamClosed) {
@@ -131,10 +145,12 @@ export class AdbServerWebSocketConnector
         controller?.error(error);
         settle(closeState, error);
         if (socket.readyState < WebSocket.CLOSING) {
-          socket.close(code, reason);
+          socket.close(code >= 3000 ? code : 3000 + code, reason);
         }
       };
-      const handleMessage = (event: MessageEvent<Blob | ArrayBuffer | string>) => {
+      const handleMessage = (
+        event: MessageEvent<Blob | ArrayBuffer | string>,
+      ) => {
         const data = event.data;
         if (typeof data === "string") {
           terminate(new Error(data), 1011, "ADB bridge error");
@@ -152,39 +168,62 @@ export class AdbServerWebSocketConnector
           return;
         }
 
-        messageQueue = messageQueue.then(async () => {
-          if (streamClosed) {
-            return;
-          }
-          await controller?.enqueue(await toUint8Array(data));
-        }).catch((cause) => {
-          const error = cause instanceof Error ? cause : new Error(String(cause));
-          terminate(error, 1011, "ADB bridge stream error");
-        }).finally(() => {
-          pendingMessageBytes = Math.max(0, pendingMessageBytes - byteLength);
-        });
+        messageQueue = messageQueue
+          .then(async () => {
+            if (streamClosed) {
+              return;
+            }
+            await controller?.enqueue(await toUint8Array(data));
+          })
+          .catch((cause) => {
+            const error =
+              cause instanceof Error ? cause : new Error(String(cause));
+            terminate(error, 1011, "ADB bridge stream error");
+          })
+          .finally(() => {
+            pendingMessageBytes = Math.max(0, pendingMessageBytes - byteLength);
+          });
       };
       const handleClose = (event: CloseEvent) => {
-        if (streamClosed) {
-          return;
-        }
-        streamClosed = true;
         cleanup();
-        if (event.code === 1000 || event.code === 1005) {
-          controller?.close();
-          settle(closeState);
-          return;
-        }
-
-        const error = new Error(
-          event.reason || `WebSocket bridge closed (${event.code})`,
-        );
-        controller?.error(error);
-        settle(closeState, error);
+        void messageQueue.then(() => {
+          if (streamClosed) return;
+          streamClosed = true;
+          if (event.code === 1000 || event.code === 1005) {
+            controller?.close();
+            settle(closeState);
+            return;
+          }
+          const error = new Error(
+            event.reason || `WebSocket bridge closed (${event.code})`,
+          );
+          controller?.error(error);
+          settle(closeState, error);
+        });
       };
       const handleError = () => {
         terminate(new Error("WebSocket bridge error"), 1011, "bridge error");
       };
+
+      const handleAbort = () =>
+        terminate(new Error("ADB connection aborted"), 4000, "aborted");
+      cancelConnection = () => {
+        if (streamClosed) return;
+        streamClosed = true;
+        cleanup();
+        controller?.close();
+        settle(closeState);
+        if (socket.readyState < WebSocket.CLOSING)
+          socket.close(1000, "client closed");
+      };
+      nextController.abortSignal.addEventListener("abort", cancelConnection, {
+        once: true,
+      });
+      options.signal?.addEventListener("abort", handleAbort, { once: true });
+      if (options.signal?.aborted) {
+        handleAbort();
+        return;
+      }
 
       socket.addEventListener("message", handleMessage);
       socket.addEventListener("close", handleClose);
@@ -196,8 +235,11 @@ export class AdbServerWebSocketConnector
         if (socket.readyState !== WebSocket.OPEN) {
           throw new Error("WebSocket bridge is not open");
         }
-        if (socket.bufferedAmount + chunk.byteLength > MAX_SOCKET_BUFFERED_BYTES) {
-          socket.close(1013, "send queue overflow");
+        if (
+          socket.bufferedAmount + chunk.byteLength >
+          MAX_SOCKET_BUFFERED_BYTES
+        ) {
+          socket.close(4013, "send queue overflow");
           throw new Error("ADB bridge send queue overflow");
         }
         socket.send(chunk);
@@ -228,7 +270,7 @@ export class AdbServerWebSocketConnector
       },
       abort(reason) {
         if (socket.readyState < WebSocket.CLOSING) {
-          socket.close(1011, String(reason ?? "writer aborted"));
+          socket.close(4011, "writer aborted");
         }
 
         return Promise.resolve(undefined);
@@ -242,9 +284,7 @@ export class AdbServerWebSocketConnector
         return closed;
       },
       close() {
-        if (socket.readyState < WebSocket.CLOSING) {
-          socket.close(1000, "client closed");
-        }
+        cancelConnection();
       },
     };
   }

@@ -13,8 +13,15 @@ export function Toast({ toasts, onDismiss }: ToastProps) {
   return (
     <div className="toast-layer" aria-live="polite">
       {toasts.map((toast) => (
-        <div className={`toast-card ${toast.tone}`} role="status" key={toast.id}>
-          <span className="toast-tone-icon material-symbols-rounded">
+        <div
+          className={`toast-card ${toast.tone}`}
+          role="status"
+          key={toast.id}
+        >
+          <span
+            aria-hidden="true"
+            className="toast-tone-icon material-symbols-rounded"
+          >
             {toast.tone === "error"
               ? "error"
               : toast.tone === "success"
@@ -28,7 +35,9 @@ export function Toast({ toasts, onDismiss }: ToastProps) {
             type="button"
             aria-label="关闭提示"
           >
-            <span className="material-symbols-rounded">close</span>
+            <span aria-hidden="true" className="material-symbols-rounded">
+              close
+            </span>
           </button>
         </div>
       ))}

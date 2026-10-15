@@ -1,4 +1,10 @@
-import { useEffect, useRef, type CSSProperties, type PointerEvent, type ReactNode } from "react";
+import {
+  useEffect,
+  useRef,
+  type CSSProperties,
+  type PointerEvent,
+  type ReactNode,
+} from "react";
 import { AppIconImage } from "./AppIconImage";
 
 export interface DesktopWindowState {
@@ -63,6 +69,8 @@ export function DesktopWindow({
   onStopApp,
 }: DesktopWindowProps) {
   const windowRef = useRef<HTMLElement | null>(null);
+  const resizeRef = useRef(onResize);
+  resizeRef.current = onResize;
   const dragRef = useRef<{
     pointerId: number;
     offsetX: number;
@@ -71,22 +79,26 @@ export function DesktopWindow({
 
   useEffect(() => {
     const element = windowRef.current;
-    if (!element || !onResize) {
+    if (!element || !resizeRef.current) {
       return;
     }
     const observer = new ResizeObserver(([entry]) => {
-      onResize(entry.contentRect.width, entry.contentRect.height);
+      const size = entry.borderBoxSize[0];
+      const width = size?.inlineSize ?? element.getBoundingClientRect().width;
+      const height = size?.blockSize ?? element.getBoundingClientRect().height;
+      if (width > 0 && height > 0)
+        resizeRef.current?.(Math.round(width), Math.round(height));
     });
     observer.observe(element);
     return () => observer.disconnect();
-  }, [onResize]);
+  }, [state.open, state.minimized]);
 
   if (!state.open) {
     return null;
   }
 
   const handlePointerDown = (event: PointerEvent<HTMLDivElement>) => {
-    if (event.button !== 0) {
+    if (event.button !== 0 || state.maximized || !canMaximize) {
       return;
     }
 
@@ -110,7 +122,7 @@ export function DesktopWindow({
     const maxY = Math.max(window.innerHeight - height - 64, 0);
     onMove(
       Math.min(Math.max(event.clientX - drag.offsetX, 0), maxX),
-      Math.min(Math.max(event.clientY - drag.offsetY, 0), maxY),
+      Math.min(Math.max(event.clientY - drag.offsetY, 64), Math.max(64, maxY)),
     );
   };
 
@@ -129,22 +141,37 @@ export function DesktopWindow({
     <section
       ref={windowRef}
       className={`desktop-window ${className} ${active ? "active" : ""} ${state.maximized ? "maximized" : ""}`}
-      style={{
-        display: state.minimized ? "none" : undefined,
-        left: state.x,
-        top: state.y,
-        width: state.width,
-        height: state.height,
-        zIndex: state.zIndex,
-        "--window-x": `${state.x}px`,
-        "--window-y": `${state.y}px`,
-      } as CSSProperties}
+      style={
+        {
+          display: state.minimized ? "none" : undefined,
+          left: Math.max(
+            0,
+            Math.min(
+              state.x,
+              window.innerWidth - Math.min(state.width, window.innerWidth),
+            ),
+          ),
+          top: Math.max(64, Math.min(state.y, window.innerHeight - 160)),
+          width: state.width,
+          height: state.height,
+          zIndex: state.zIndex,
+          "--window-x": `${state.x}px`,
+          "--window-y": `${state.y}px`,
+        } as CSSProperties
+      }
       onPointerDown={onFocus}
+      onFocus={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null))
+          onFocus();
+      }}
       aria-label={title}
     >
       <div
         className="window-titlebar"
-        onDoubleClick={() => canMaximize && onMaximize()}
+        onDoubleClick={(event) => {
+          if (canMaximize && !(event.target as HTMLElement).closest("button"))
+            onMaximize();
+        }}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={stopDragging}
@@ -152,7 +179,9 @@ export function DesktopWindow({
       >
         <div className="window-title">
           <span className="window-title-icon">
-            <span className="material-symbols-rounded">{icon}</span>
+            <span aria-hidden="true" className="material-symbols-rounded">
+              {icon}
+            </span>
             <AppIconImage src={iconUrl} />
           </span>
           <span>{title}</span>
@@ -164,11 +193,21 @@ export function DesktopWindow({
             onClick={onToggleAudio}
             hidden={!onToggleAudio}
             aria-label={`${audioAvailable === false ? "恢复" : audioMuted ? "开启" : "静音"}${title}声音`}
-            title={audioAvailable === false ? "恢复声音" : audioMuted ? "开启声音" : "静音"}
+            title={
+              audioAvailable === false
+                ? "恢复声音"
+                : audioMuted
+                  ? "开启声音"
+                  : "静音"
+            }
             type="button"
           >
-            <span className="material-symbols-rounded">
-              {audioAvailable === false ? "sync_problem" : audioMuted ? "volume_off" : "volume_up"}
+            <span aria-hidden="true" className="material-symbols-rounded">
+              {audioAvailable === false
+                ? "sync_problem"
+                : audioMuted
+                  ? "volume_off"
+                  : "volume_up"}
             </span>
           </button>
           <button
@@ -179,7 +218,9 @@ export function DesktopWindow({
             title="最小化"
             type="button"
           >
-            <span className="material-symbols-rounded">remove</span>
+            <span aria-hidden="true" className="material-symbols-rounded">
+              remove
+            </span>
           </button>
           <button
             className="window-action"
@@ -190,7 +231,9 @@ export function DesktopWindow({
             title={rotateLabel}
             type="button"
           >
-            <span className="material-symbols-rounded">screen_rotation</span>
+            <span aria-hidden="true" className="material-symbols-rounded">
+              screen_rotation
+            </span>
           </button>
           <button
             className="window-action"
@@ -199,10 +242,16 @@ export function DesktopWindow({
             disabled={!canMaximize}
             hidden={!canMaximize}
             aria-label={`${state.maximized ? "还原" : maximizeLabel}${title}`}
-            title={canMaximize ? (state.maximized ? "还原" : maximizeLabel) : "此应用仅支持竖屏"}
+            title={
+              canMaximize
+                ? state.maximized
+                  ? "还原"
+                  : maximizeLabel
+                : "此应用仅支持竖屏"
+            }
             type="button"
           >
-            <span className="material-symbols-rounded">
+            <span aria-hidden="true" className="material-symbols-rounded">
               {state.maximized ? "filter_none" : maximizeIcon}
             </span>
           </button>
@@ -215,7 +264,9 @@ export function DesktopWindow({
             title="结束 Android 应用"
             type="button"
           >
-            <span className="material-symbols-rounded">stop_circle</span>
+            <span aria-hidden="true" className="material-symbols-rounded">
+              stop_circle
+            </span>
           </button>
           <button
             className="window-action close"
@@ -225,7 +276,9 @@ export function DesktopWindow({
             title="关闭窗口"
             type="button"
           >
-            <span className="material-symbols-rounded">close</span>
+            <span aria-hidden="true" className="material-symbols-rounded">
+              close
+            </span>
           </button>
         </div>
       </div>

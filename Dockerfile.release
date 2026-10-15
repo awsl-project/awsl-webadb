@@ -5,16 +5,15 @@ ARG TARGETARCH
 WORKDIR /app
 
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends adb ca-certificates libstdc++6 \
+  && apt-get install -y --no-install-recommends adb ffmpeg ca-certificates libstdc++6 \
   && rm -rf /var/lib/apt/lists/*
 
 COPY dist ./dist
-COPY .release /tmp/release
+COPY .release/awsl-webadb-linux-${TARGETARCH} ./awsl-webadb
+COPY .release/webadb-linux-${TARGETARCH} ./webadb
 COPY docker-entrypoint.sh ./docker-entrypoint.sh
 
-RUN cp "/tmp/release/awsl-webadb-linux-${TARGETARCH}" ./awsl-webadb \
-  && rm -rf /tmp/release \
-  && chmod +x ./docker-entrypoint.sh ./awsl-webadb
+RUN chmod +x ./docker-entrypoint.sh ./awsl-webadb ./webadb
 
 ENV NODE_ENV=production
 ENV HOST=0.0.0.0

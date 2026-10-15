@@ -8,22 +8,25 @@ RUN bun install --frozen-lockfile
 FROM deps AS builder
 
 COPY . .
-RUN bun run build
+RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg && rm -rf /var/lib/apt/lists/*
+RUN bun run check && bun test && bun run build
 RUN bun build --compile --minify ./server/index.ts --outfile ./awsl-webadb
+RUN bun build --compile --minify ./cli/index.ts --outfile ./webadb
 
 FROM debian:bookworm-slim
 
 WORKDIR /app
 
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends adb ca-certificates libstdc++6 \
+  && apt-get install -y --no-install-recommends adb ffmpeg ca-certificates libstdc++6 \
   && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /app/awsl-webadb ./awsl-webadb
+COPY --from=builder /app/webadb ./webadb
 COPY --from=builder /app/dist ./dist
 COPY docker-entrypoint.sh ./docker-entrypoint.sh
 
-RUN chmod +x ./docker-entrypoint.sh ./awsl-webadb
+RUN chmod +x ./docker-entrypoint.sh ./awsl-webadb ./webadb
 
 ENV NODE_ENV=production
 ENV HOST=0.0.0.0

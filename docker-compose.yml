@@ -4,11 +4,16 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "3000:3000"
-      - "5037:5037"
+      - "127.0.0.1:3000:3000"
+      - "127.0.0.1:5037:5037"
     environment:
       HOST: 0.0.0.0
       PORT: 3000
       ADB_SERVER_HOST: 127.0.0.1
       ADB_SERVER_PORT: 5037
+    volumes:
+      - awsl-webadb-data:/var/lib/awsl-webadb
     restart: unless-stopped
+
+volumes:
+  awsl-webadb-data:

@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark light"><title>WebADB 实时时钟推流</title>
+  <link rel="stylesheet" href="/fonts/fonts.css">
+  <style>
+    *{box-sizing:border-box}body{margin:0;background:#282c34;color:#dcdfe4;font:14px/1.6 "IBM Plex Sans",sans-serif}main{max-width:900px;margin:auto;padding:28px}h1{font-size:24px;margin:0 0 8px}p{color:#abb2bf}.layout{display:grid;grid-template-columns:minmax(220px,380px) 1fr;gap:28px;align-items:start}canvas{display:block;width:100%;aspect-ratio:3/4;background:#21252b;border:1px solid #4b5363;border-radius:12px}.controls{display:grid;gap:12px}label{display:grid;gap:6px}select,button{font:inherit;padding:10px 14px;border:1px solid #4b5363;border-radius:8px;background:#333944;color:inherit}button{cursor:pointer}button:disabled{opacity:.4;cursor:default}button.primary{background:#61afef;color:#17212b;border-color:#61afef}.actions{display:flex;gap:10px}.actions button{flex:1}#status{padding:12px;border:1px solid #4b5363;border-radius:8px;white-space:pre-wrap}code{overflow-wrap:anywhere}.note{font-size:12px}@media(max-width:620px){main{padding:18px}.layout{grid-template-columns:1fr}canvas{max-width:300px;margin:auto}}
+  </style>
+</head>
+<body><main><h1>实时时钟 → Android 相机</h1><p>使用电脑当前时间生成 960 × 1280 画面流。秒数、毫秒、帧号和移动标记都实时变化，不采集屏幕、摄像头或麦克风。</p>
+<div class="layout"><canvas id="clock" width="960" height="1280" aria-label="实时时钟画面"></canvas><div class="controls">
+<label>目标设备<select id="device" aria-label="目标设备"></select></label>
+<div class="actions"><button class="primary" id="start" disabled>开始时钟推流</button><button id="stop" disabled>停止推流</button></div>
+<div id="status" role="status">正在读取设备…</div>
+<p>在 WebADB 的 Android Chrome 扫码验收页面打开相机，核对手机收到的当前时间、帧号和下方二维码。</p>
+<p class="note">手动开始后会接管该设备的共享视频源。关闭本页会停止本页推流；异常断线由服务端心跳超时清理。</p>
+<code>WEBADB-LIVE-CLOCK-960x1280</code>
+</div></div></main>
+<script>
+const canvas=document.getElementById('clock'),context=canvas.getContext('2d',{alpha:false});
+const device=document.getElementById('device'),start=document.getElementById('start'),stop=document.getElementById('stop'),status=document.getElementById('status');
+const producerId=crypto.randomUUID();
+let active=false,busy=false,generation=0,frames=0,frameTimer,heartbeatTimer,transportId='';
+const qr=new Image(); qr.src='./camera-clock-qr.svg';
+const zone=Intl.DateTimeFormat().resolvedOptions().timeZone;
+function draw(){
+ const now=new Date(),millis=String(now.getMilliseconds()).padStart(3,'0');
+ const time=now.toLocaleTimeString('en-GB',{hour12:false});
+ context.fillStyle='#21252b';context.fillRect(0,0,960,1280);
+ context.fillStyle='#61afef';context.font='500 30px "IBM Plex Mono",monospace';context.fillText('WEBADB / LIVE CLOCK',64,100);
+ context.fillStyle='#abb2bf';context.font='30px "IBM Plex Mono",monospace';context.fillText(now.toLocaleDateString('en-CA')+'  '+zone,64,170);
+ context.fillStyle='#ffffff';context.font='600 156px "IBM Plex Mono",monospace';context.fillText(time,64,370);
+ context.fillStyle='#98c379';context.font='500 64px "IBM Plex Mono",monospace';context.fillText('.'+millis,70,460);
+ context.fillStyle='#abb2bf';context.font='30px "IBM Plex Mono",monospace';context.fillText('PHONE ACK  '+String(frames).padStart(6,'0'),64,560);
+ context.fillStyle='#3b414c';context.fillRect(64,610,832,18);
+ context.fillStyle='#e5c07b';context.fillRect(64+(now.getSeconds()+now.getMilliseconds()/1000)/60*800,597,32,44);
+ if(qr.complete&&qr.naturalWidth){context.imageSmoothingEnabled=false;context.drawImage(qr,275,700,410,410);context.imageSmoothingEnabled=true;}
+ context.fillStyle='#abb2bf';context.font='24px "IBM Plex Mono",monospace';context.fillText('WEBADB-LIVE-CLOCK-960x1280',244,1170);
+}
+async function api(path,method,body){
+ const response=await fetch(path,{method,headers:{'Content-Type':'application/json'},body:body===undefined?undefined:JSON.stringify(body),signal:AbortSignal.timeout(25000)});
+ if(!response.ok)throw new Error((await response.json()).message||`HTTP ${response.status}`);
+ return response.json();
+}
+function path(suffix=''){return `/api/system-camera${suffix}?transportId=${encodeURIComponent(transportId)}`;}
+async function halt(){
+ const owned=active;active=false;generation++;clearTimeout(frameTimer);clearInterval(heartbeatTimer);stop.disabled=true;start.disabled=!device.value;device.disabled=false;
+ if(owned){await api(path(),'DELETE',{producerId});status.textContent='时钟推流已停止';}
+}
+async function frame(token){
+ if(!active||token!==generation)return;
+ try{
+  draw();const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',.9));
+  if(!active||token!==generation)return;
+  const response=await fetch(path('/frame'),{method:'POST',headers:{'Content-Type':'image/jpeg','x-source-id':producerId},body:blob,signal:AbortSignal.timeout(10000)});
+  if(!response.ok)throw new Error((await response.json()).message||'发送失败');
+  const result=await response.json();if(!active||token!==generation)return;
+  frames=result.frames;status.textContent=`实时推流中 · 手机已确认 ${frames} 帧\n${new Date().toLocaleString()} · 960 × 1280`;
+  frameTimer=setTimeout(()=>frame(token),80);
+ }catch(error){status.textContent=error.message;await halt().catch(()=>{});status.textContent=error.message;}
+}
+start.onclick=async()=>{
+ if(busy||active||!device.value)return;busy=true;start.disabled=true;transportId=device.value;device.disabled=true;status.textContent='正在连接共享摄像头…';
+ try{await api(path(),'POST',{producerId,sourceName:'实时时钟 HTML',sourceKind:'video'});active=true;frames=0;stop.disabled=false;const token=++generation;
+ heartbeatTimer=setInterval(()=>{void api(path('/heartbeat'),'POST',{producerId}).catch(()=>{});},3000);void frame(token);
+ }catch(error){status.textContent=error.message;device.disabled=false;start.disabled=false;}finally{busy=false;}
+};
+stop.onclick=()=>{void halt().catch(error=>{status.textContent=error.message;});};
+window.addEventListener('pagehide',()=>{if(active)void fetch(path(),{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({producerId}),keepalive:true});});
+setInterval(draw,33);void document.fonts.ready.then(draw);
+fetch('/api/app-sessions/devices').then(response=>response.json()).then(devices=>{
+ device.replaceChildren(...devices.map(item=>new Option(`${item.model||item.serial} · ${item.transportId}`,item.transportId)));
+ start.disabled=!devices.length;status.textContent=devices.length?'就绪，点击开始推流':'没有已连接设备';
+}).catch(error=>{status.textContent=error.message;});
+</script></body></html>

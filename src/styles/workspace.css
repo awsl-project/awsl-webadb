@@ -1,0 +1,1176 @@
+.dex-topbar {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 64px;
+  padding: 0 32px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  z-index: 5;
+  border-bottom: 1px solid var(--oh-line);
+  background: color-mix(in srgb, var(--oh-bg) 85%, transparent);
+  backdrop-filter: blur(18px);
+}
+.desk-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0;
+  color: var(--oh-text);
+  background: transparent;
+  box-shadow: none;
+}
+.brand-mark {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  position: relative;
+  border: 1px solid var(--oh-blue);
+  border-radius: 9px;
+  font:
+    600 18px "IBM Plex Mono",
+    monospace;
+  color: var(--oh-blue);
+}
+.brand-mark > span {
+  position: absolute;
+  top: -6px;
+  right: -5px;
+  padding: 0 2px;
+  background: var(--oh-bg);
+  font-size: 13px;
+}
+.desk-brand > strong {
+  font-size: 16px;
+  letter-spacing: -0.5px;
+}
+.desk-brand > strong > span {
+  color: var(--oh-muted);
+  font-weight: 400;
+  margin-left: 5px;
+}
+.dex-topbar .desktop-status {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  justify-content: flex-end;
+  color: var(--oh-muted);
+}
+.dex-topbar .desktop-status strong {
+  color: var(--oh-text);
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.connection-banner {
+  position: absolute;
+  z-index: 8;
+  top: 76px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: calc(100% - 32px);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 14px;
+  border: 1px solid var(--oh-line);
+  border-radius: 10px;
+  color: var(--oh-amber);
+  background: var(--oh-panel);
+  box-shadow: 0 4px 12px var(--oh-shadow);
+  font-size: 12px;
+}
+.connection-banner button {
+  white-space: nowrap;
+  padding: 4px 8px;
+  min-height: 28px;
+  font-size: 12px;
+}
+.dex-home-icons {
+  top: 96px;
+  bottom: 104px;
+  align-content: start;
+  overflow-y: auto;
+}
+.dex-clock-widget > div:first-child .desktop-eyebrow {
+  font:
+    500 10px "IBM Plex Mono",
+    monospace;
+  letter-spacing: 1.8px;
+  margin-bottom: 10px;
+  color: var(--oh-accent-text);
+}
+.dex-home-app-icon.system {
+  border-radius: 18px;
+}
+.dex-home-icons > button > span:last-child {
+  max-width: 108px;
+}
+.dex-launcher-backdrop,
+.dex-system-panel-backdrop {
+  z-index: 10000;
+}
+.dex-launcher-surface {
+  position: relative;
+}
+.overlay-close {
+  position: absolute;
+  z-index: 2;
+  top: 22px;
+  right: 20px;
+  width: 32px;
+  height: 32px;
+  min-height: 32px;
+  padding: 0;
+  border-radius: 8px;
+  background: var(--oh-bg-deep);
+  color: var(--oh-muted);
+  box-shadow: none;
+}
+.drawer-heading {
+  padding-right: 44px;
+}
+.dex-app-drawer {
+  display: flex;
+  flex-direction: column;
+}
+.dex-app-drawer .apps-scroll-area {
+  flex: 1;
+  min-height: 0;
+}
+.apps-filter-tabs {
+  display: flex;
+  gap: 6px;
+  padding: 0 24px;
+  flex-wrap: wrap;
+}
+.apps-filter-tabs button {
+  min-height: 30px;
+  padding: 5px 12px;
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 500;
+  background: transparent;
+  color: var(--oh-muted);
+  box-shadow: none;
+}
+.apps-filter-tabs button.active {
+  color: var(--oh-accent-text);
+  background: var(--oh-hover);
+}
+.apps-launch-hint {
+  color: var(--oh-muted);
+  font-size: 11px;
+  padding: 0 24px;
+  margin: 10px 0 0;
+}
+.apps-search {
+  order: -1;
+}
+.dex-app-drawer .drawer-search {
+  order: initial;
+}
+.android-app-card {
+  animation-duration: 0.2s;
+  animation-delay: 0s !important;
+}
+.dex-system-panel.controls {
+  width: min(640px, calc(100vw - 40px));
+}
+.dex-system-panel.settings {
+  width: min(580px, calc(100vw - 40px));
+}
+.dex-system-panel.connect {
+  width: min(580px, calc(100vw - 40px));
+}
+.dex-system-content {
+  min-height: 0;
+  overflow: auto;
+}
+.feature-empty {
+  flex: 1;
+  min-height: 180px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 32px 24px;
+  text-align: center;
+  color: var(--oh-muted);
+}
+.feature-empty > .material-symbols-rounded {
+  font-size: 42px;
+  color: var(--oh-blue);
+  opacity: 0.7;
+}
+.feature-empty h2,
+.feature-empty strong {
+  margin: 0;
+  color: var(--oh-text);
+  font-size: 17px;
+}
+.feature-empty p {
+  max-width: 320px;
+  margin: 0;
+  line-height: 1.8;
+  font-size: 12px;
+}
+.feature-empty button {
+  margin-top: 8px;
+}
+.inline-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0;
+  padding: 12px;
+  color: var(--oh-red);
+  background: color-mix(in srgb, var(--oh-red) 9%, transparent);
+  border: 1px solid color-mix(in srgb, var(--oh-red) 25%, transparent);
+  border-radius: 8px;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.inline-error > span:not(.material-symbols-rounded) {
+  flex: 1;
+}
+.inline-error button {
+  min-height: 28px;
+  font-size: 12px;
+  white-space: nowrap;
+  padding: 4px 10px;
+}
+.mode-hint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--oh-muted);
+}
+.mode-hint .material-symbols-rounded {
+  font-size: 18px;
+  color: var(--oh-accent-text);
+  flex-shrink: 0;
+}
+.connection-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+.connection-heading h1 {
+  font-size: 24px;
+  margin: 8px 0;
+  letter-spacing: -0.7px;
+}
+.connection-heading p,
+.connection-explanation {
+  color: var(--oh-muted);
+  font-size: 12px;
+  line-height: 1.8;
+  margin: 0;
+}
+.connection-guide {
+  margin-top: 24px;
+  padding-top: 18px;
+  border-top: 1px solid var(--oh-line);
+}
+.connection-guide h2,
+.connect-surface h2 {
+  margin: 0;
+  font-size: 14px;
+}
+.connection-guide ol {
+  list-style: none;
+  counter-reset: connection-step;
+  padding: 0;
+  display: grid;
+  gap: 16px;
+}
+.connection-guide li {
+  counter-increment: connection-step;
+  display: grid;
+  grid-template-columns: 24px 1fr;
+  column-gap: 10px;
+}
+.connection-guide li::before {
+  content: counter(connection-step, decimal-leading-zero);
+  grid-row: span 2;
+  color: var(--oh-accent-text);
+  font:
+    12px "IBM Plex Mono",
+    monospace;
+  padding-top: 3px;
+}
+.connection-guide strong {
+  font-size: 12px;
+  font-weight: 500;
+}
+.connection-guide li span,
+.connection-guide p {
+  color: var(--oh-muted);
+  font-size: 11px;
+  line-height: 1.9;
+}
+.connection-guide code {
+  color: var(--oh-text);
+  font-size: 11px;
+}
+.connect-page {
+  display: block;
+  padding: 24px;
+}
+.connect-page .connect-mode-switch {
+  margin-bottom: 18px;
+}
+.connect-page .connect-mode-switch > button {
+  flex: 1;
+  min-height: 40px;
+  gap: 8px;
+  color: var(--oh-muted);
+  background: transparent;
+  box-shadow: none;
+  font-size: 12px;
+}
+.connect-page .connect-mode-switch > button.active {
+  color: var(--oh-accent-text);
+  background: var(--oh-hover);
+}
+.connect-page .device-card {
+  width: 100%;
+}
+.connect-page .device-card:disabled {
+  opacity: 0.8;
+}
+.connect-page .connect-surface {
+  display: grid;
+  gap: 16px;
+  padding: 20px;
+}
+.connect-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+.connect-actions button {
+  font-size: 12px;
+}
+.files-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  gap: 0;
+  padding: 12px 16px 0;
+}
+.files-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.files-toolbar > button {
+  min-height: 34px;
+}
+.files-address {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+  background: var(--oh-bg-deep);
+  border: 1px solid var(--oh-line);
+  border-radius: 8px;
+  padding: 0 4px 0 10px;
+}
+.files-address > .material-symbols-rounded {
+  color: var(--oh-muted);
+  font-size: 18px;
+}
+.files-address input {
+  min-width: 0;
+  width: 100%;
+  padding: 8px 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  font:
+    12px "IBM Plex Mono",
+    monospace;
+  box-shadow: none;
+}
+.files-address:focus-within {
+  border-color: var(--oh-blue);
+}
+.files-locations {
+  display: flex;
+  gap: 4px;
+  padding: 12px 0;
+  flex-shrink: 0;
+  overflow: auto;
+}
+.files-locations button {
+  min-height: 30px;
+  gap: 6px;
+  padding: 6px 10px;
+  flex-shrink: 0;
+  border-radius: 6px;
+  font-size: 11px;
+  background: transparent;
+  color: var(--oh-muted);
+  box-shadow: none;
+}
+.files-locations button.active {
+  color: var(--oh-accent-text);
+  background: var(--oh-hover);
+}
+.files-locations .material-symbols-rounded {
+  font-size: 17px;
+}
+.files-filterbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--oh-line);
+  flex-shrink: 0;
+}
+.files-search {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex: 1;
+  min-width: 0;
+  color: var(--oh-muted);
+}
+.files-search .material-symbols-rounded {
+  font-size: 18px;
+}
+.files-search input {
+  min-width: 0;
+  padding: 6px 0;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  font-size: 12px;
+}
+.files-filterbar select {
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--oh-line);
+  color: var(--oh-muted);
+  background: var(--oh-panel);
+  font: inherit;
+  font-size: 11px;
+}
+.files-hidden {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+  font-size: 11px;
+  color: var(--oh-muted);
+}
+.files-hidden input {
+  width: 13px;
+  height: 13px;
+  accent-color: var(--oh-blue);
+}
+.files-page .breadcrumb-bar {
+  flex-shrink: 0;
+  min-height: 38px;
+}
+.files-page .file-list {
+  flex: 1;
+  padding: 0 0 8px;
+  gap: 2px;
+  box-shadow: none;
+}
+.files-page .file-row {
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  min-height: 57px;
+  border-radius: 7px;
+  padding: 0 8px;
+  background: transparent;
+}
+.files-page .file-row:hover {
+  background: var(--oh-hover);
+}
+.file-entry {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 9px 0;
+  text-align: left;
+  background: transparent;
+  color: var(--oh-text);
+  box-shadow: none;
+}
+.file-entry:hover:not(:disabled) {
+  background: transparent;
+  transform: none;
+}
+.file-entry .file-icon {
+  background: transparent;
+  width: 28px;
+  height: 30px;
+  font-size: 25px;
+  flex-shrink: 0;
+}
+.file-entry .file-main {
+  gap: 3px;
+}
+.file-entry strong {
+  font-size: 12px;
+  font-weight: 500;
+}
+.file-entry .file-main > span {
+  font-size: 10px;
+}
+.files-status {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 32px;
+  border-top: 1px solid var(--oh-line);
+  font-size: 10px;
+  color: var(--oh-muted);
+  flex-shrink: 0;
+}
+.files-status > span:first-child {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.files-status progress {
+  max-width: 120px;
+  height: 5px;
+  accent-color: var(--oh-blue);
+}
+.screen-preview {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+.screen-preview > header,
+.screen-preview > footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--oh-line);
+}
+.screen-preview > header button,
+.screen-preview > footer button {
+  font-size: 11px;
+  min-height: 30px;
+  padding: 6px 10px;
+}
+.screen-preview > footer {
+  border-top: 1px solid var(--oh-line);
+  border-bottom: 0;
+  color: var(--oh-muted);
+  font-size: 10px;
+}
+.screen-preview-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  padding: 12px;
+  justify-content: center;
+  background: var(--oh-bg-deep);
+}
+.screen-preview-body > img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 6px;
+}
+.window-titlebar {
+  touch-action: none;
+}
+.window-actions {
+  flex-shrink: 0;
+}
+.desktop-window {
+  max-width: 100vw;
+  max-height: calc(100dvh - 112px);
+}
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--oh-blue);
+  outline-offset: 3px;
+}
+button:disabled {
+  cursor: not-allowed;
+}
+.dialog-backdrop {
+  z-index: 20000;
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+@media (max-width: 900px) {
+  .dex-topbar {
+    display: flex;
+    padding: 0 16px;
+    height: 56px;
+    gap: 12px;
+  }
+  .dex-topbar .desktop-status {
+    display: none;
+  }
+  .desk-brand {
+    margin-right: auto;
+  }
+  .desk-brand > strong {
+    font-size: 14px;
+  }
+  .dex-home-icons {
+    top: 88px;
+    bottom: 90px;
+  }
+  .dex-system-panel.controls,
+  .dex-system-panel.settings,
+  .dex-system-panel.connect {
+    width: calc(100vw - 20px);
+    max-height: calc(100dvh - 100px);
+  }
+  .connection-heading h1 {
+    font-size: 21px;
+  }
+  .connect-page {
+    padding: 20px 16px;
+  }
+  .mobile-shell .desktop-window,
+  .mobile-shell .desktop-window.file-manager-window,
+  .mobile-shell .desktop-window.mirror-manager-window {
+    top: 62px !important;
+    bottom: 78px !important;
+    height: auto !important;
+    max-height: none;
+  }
+  .files-page {
+    padding: 8px 10px 0;
+  }
+  .files-hidden {
+    font-size: 10px;
+  }
+  .files-filterbar {
+    gap: 7px;
+  }
+  .files-toolbar .tonal-button {
+    padding: 7px;
+    min-width: 34px;
+  }
+  .files-toolbar .tonal-button > span:last-child {
+    display: none;
+  }
+  .files-address {
+    gap: 5px;
+    padding-left: 8px;
+  }
+  .apps-filter-tabs {
+    padding: 0 16px;
+    gap: 4px;
+  }
+  .apps-filter-tabs button {
+    padding: 5px 9px;
+  }
+  .apps-launch-hint {
+    padding: 0 16px;
+    font-size: 10px;
+  }
+  .drawer-heading {
+    padding-right: 40px;
+  }
+  .overlay-close {
+    right: 12px;
+    top: 15px;
+  }
+  .connection-banner {
+    top: 64px;
+    width: max-content;
+    font-size: 11px;
+  }
+}
+.dex-topbar {
+  width: auto;
+  max-width: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+.desk-brand {
+  flex-shrink: 0;
+  border: 0;
+}
+.desk-brand .brand-mark {
+  background: transparent;
+  box-shadow: none;
+}
+.dex-topbar .desktop-status {
+  max-width: none;
+  width: auto;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  margin-left: auto;
+}
+.dex-home-app-icon.system,
+.dex-launcher-button {
+  background: var(--oh-panel);
+  color: var(--oh-accent-text);
+  border: 1px solid var(--oh-line-strong);
+  box-shadow: 0 4px 14px var(--oh-shadow);
+}
+.update-notice {
+  position: fixed;
+  right: 20px;
+  bottom: 90px;
+  z-index: 25000;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border: 1px solid var(--oh-line);
+  border-radius: 10px;
+  color: var(--oh-text);
+  background: var(--oh-panel);
+  box-shadow: var(--oh-window-shadow);
+  font-size: 12px;
+}
+.update-notice button {
+  font-size: 11px;
+  min-height: 28px;
+  padding: 5px 8px;
+}
+.dex-home-app-icon:has(img) > span,
+.android-app-icon:has(img) > .android-app-fallback {
+  opacity: 0;
+}
+.dex-home-app-icon:has(img),
+.android-app-icon:has(img) {
+  background: var(--oh-panel);
+}
+.apps-search input:focus-visible,
+.files-address input:focus-visible,
+.files-search input:focus-visible {
+  outline: none;
+}
+.apps-search:focus-within,
+.files-search:focus-within {
+  outline: 2px solid var(--oh-blue);
+  outline-offset: 3px;
+}
+.system-camera-window {
+  position: fixed;
+  z-index: 100000;
+  top: 76px;
+  right: 24px;
+  width: min(400px, calc(100vw - 32px));
+  max-height: calc(100dvh - 110px);
+  overflow: auto;
+  border: 1px solid var(--oh-line-strong);
+  border-radius: 14px;
+  padding: 20px;
+  background: var(--oh-panel);
+  color: var(--oh-text);
+  box-shadow: var(--oh-window-shadow);
+}
+.system-camera-window[hidden] {
+  display: none;
+}
+.system-camera-window > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.system-camera-window > header strong {
+  font-size: 15px;
+}
+.system-camera-window > header button {
+  display: grid;
+  place-items: center;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  min-height: 32px;
+  border-radius: 8px;
+  font-size: 22px;
+}
+.system-camera-window > p {
+  color: var(--oh-muted);
+  font-size: 12px;
+  line-height: 1.7;
+  margin: 12px 0;
+}
+.file-camera-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.camera-output-spec {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 11px;
+  color: var(--oh-muted);
+}
+.camera-output-spec strong {
+  color: var(--oh-text);
+  font-variant-numeric: tabular-nums;
+}
+.file-camera-preview {
+  position: relative;
+  aspect-ratio: 3 / 4;
+  width: min(100%, 240px);
+  margin: 0 auto;
+  border: 1px solid var(--oh-line-strong);
+  border-radius: 10px;
+  overflow: hidden;
+  background: #000;
+}
+.file-camera-preview > img,
+.file-camera-preview > video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+.file-camera-preview > [hidden] {
+  display: none;
+}
+.camera-preview-empty {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: #a0a6b0;
+  font-size: 12px;
+}
+.camera-preview-empty .material-symbols-rounded {
+  font-size: 34px;
+}
+.camera-preview-empty small {
+  color: #77808d;
+  font-size: 10px;
+}
+.camera-stream-status {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  right: 8px;
+  display: block;
+  padding: 6px 9px;
+  background: #20252ce8;
+  border: 1px solid #464c56;
+  border-radius: 6px;
+  color: #dcdfe4;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+.camera-stream-status.live {
+  color: #a8d08d;
+  border-color: #567d3b;
+}
+.file-camera-selection {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  min-width: 0;
+}
+.file-camera-panel .file-camera-picker {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 38px;
+  padding: 0 12px;
+  border: 1px solid var(--oh-line-strong);
+  border-radius: 8px;
+  color: var(--oh-text);
+  cursor: pointer;
+  font-size: 12px;
+  position: relative;
+}
+.file-camera-picker input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  padding: 0;
+}
+.file-camera-picker:focus-within {
+  outline: 2px solid var(--oh-blue);
+  outline-offset: 2px;
+}
+.file-camera-picker.disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.file-camera-picker .material-symbols-rounded {
+  font-size: 18px;
+}
+.file-camera-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  font-size: 11px;
+  color: var(--oh-muted);
+}
+.file-camera-actions {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+.file-camera-panel .file-camera-actions button {
+  display: inline-flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 40px;
+  min-height: 40px;
+  padding: 0 10px;
+  border: 1px solid var(--oh-line-strong);
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1;
+  white-space: nowrap;
+}
+.file-camera-actions button.camera-start {
+  background: var(--oh-blue);
+  border-color: var(--oh-blue);
+  color: #141b23;
+}
+.file-camera-actions .material-symbols-rounded {
+  font-size: 18px;
+}
+.camera-help {
+  color: var(--oh-muted);
+  font-size: 11px;
+  line-height: 1.65;
+  margin: 0;
+}
+.app-stream-layout {
+  position: relative;
+}
+.app-inspector {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 48px;
+  z-index: 3;
+  width: min(340px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  overflow: auto;
+  border-left: 1px solid var(--oh-line-strong);
+  background: var(--oh-panel);
+  color: var(--oh-text);
+  box-shadow: -8px 0 24px var(--oh-shadow);
+}
+.app-inspector > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.app-inspector > header button {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  font-size: 20px;
+}
+.app-inspector > code {
+  user-select: text;
+  font-size: 10px;
+  overflow-wrap: anywhere;
+}
+.app-inspector small {
+  color: var(--oh-muted);
+  font-size: 10px;
+}
+.inspector-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.app-inspector button {
+  border-radius: 6px;
+  min-height: 32px;
+  padding: 6px 8px;
+  font-size: 11px;
+}
+.app-inspector input,
+.app-inspector textarea {
+  width: 100%;
+  padding: 8px;
+  font-size: 12px;
+  border: 1px solid var(--oh-line-strong);
+  border-radius: 6px;
+  background: var(--oh-field);
+  color: var(--oh-text);
+}
+.app-inspector textarea {
+  min-height: 64px;
+  resize: vertical;
+}
+.app-inspector details {
+  font-size: 12px;
+}
+.app-inspector summary {
+  cursor: pointer;
+  padding: 6px 0;
+}
+.inspector-coordinate-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.inspector-coordinate-grid label {
+  display: grid;
+  gap: 4px;
+  font-size: 10px;
+}
+.inspector-elements {
+  min-height: 100px;
+  max-height: 220px;
+  overflow: auto;
+  flex: 1 0 160px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.inspector-elements button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  gap: 4px;
+  min-height: auto;
+  flex-shrink: 0;
+  border: 1px solid var(--oh-line);
+}
+.inspector-elements button.selected {
+  border-color: var(--oh-blue);
+  background: var(--oh-select);
+}
+.inspector-elements code {
+  font-size: 9px;
+  overflow-wrap: anywhere;
+}
+.inspector-elements p {
+  font-size: 12px;
+  color: var(--oh-muted);
+}
+
+.system-camera-window > header button {
+  background: transparent;
+  color: var(--oh-muted);
+  border: 1px solid var(--oh-line);
+}
+.file-camera-panel .file-camera-actions button {
+  background: transparent;
+  color: var(--oh-text);
+}
+.file-camera-panel .file-camera-actions .camera-start {
+  background: var(--oh-blue);
+  border-color: var(--oh-blue);
+  color: #141b23;
+}
+.app-inspector button {
+  background: transparent;
+  color: var(--oh-text);
+  border: 1px solid var(--oh-line-strong);
+}
+.app-inspector > * {
+  flex-shrink: 0;
+}
+.camera-source-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  padding: 3px;
+  gap: 3px;
+  border: 1px solid var(--oh-line);
+  border-radius: 9px;
+  background: var(--oh-hover);
+}
+.camera-source-tabs button {
+  min-height: 34px;
+  border-radius: 6px;
+  padding: 6px;
+  font-size: 12px;
+  color: var(--oh-muted);
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+.camera-source-tabs button[aria-pressed="true"] {
+  color: var(--oh-text);
+  background: var(--oh-panel);
+  box-shadow: 0 1px 4px var(--oh-shadow);
+}
+.camera-active-source {
+  font-size: 11px;
+  color: var(--oh-muted);
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.camera-url-field {
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--oh-text);
+}
+.camera-url-field input,
+.camera-url-field select {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--oh-line-strong);
+  border-radius: 8px;
+  padding: 10px;
+  background: var(--oh-panel);
+  color: var(--oh-text);
+  font-size: 12px;
+}
+.camera-url-field small {
+  color: var(--oh-muted);
+  font-size: 10px;
+}
+
+.file-camera-panel button:hover:not(:disabled) {
+  transform: none;
+}
+
+.camera-url-fields {
+  display: grid;
+  gap: 12px;
+}

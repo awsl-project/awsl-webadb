@@ -11,7 +11,7 @@ on:
         type: string
 
 permissions:
-  contents: read
+  contents: write
   packages: write
 
 env:
@@ -35,8 +35,20 @@ jobs:
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
 
+        with:
+          bun-version: 1.4.3
+
       - name: Install dependencies
         run: bun install --frozen-lockfile
+
+      - name: Type check
+        run: bun run check
+
+      - name: Install FFmpeg for media regression tests
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
+      - name: Run regression tests
+        run: bun test
 
       - name: Build frontend
         run: bun run build
@@ -46,6 +58,10 @@ jobs:
           mkdir -p .release
           bun build --compile --minify --target=bun-linux-x64-modern ./server/index.ts --outfile .release/awsl-webadb-linux-amd64
           bun build --compile --minify --target=bun-linux-arm64 ./server/index.ts --outfile .release/awsl-webadb-linux-arm64
+          bun build --compile --minify --target=bun-linux-x64-baseline ./cli/index.ts --outfile .release/webadb-linux-amd64
+          bun build --compile --minify --target=bun-linux-arm64 ./cli/index.ts --outfile .release/webadb-linux-arm64
+          bun build --compile --minify --target=bun-darwin-x64-baseline ./cli/index.ts --outfile .release/webadb-macos-amd64
+          bun build --compile --minify --target=bun-darwin-arm64 ./cli/index.ts --outfile .release/webadb-macos-arm64
 
       - name: Log in to the Container registry
         uses: docker/login-action@v3
@@ -71,3 +87,14 @@ jobs:
           tags: |
             ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:${{ steps.image.outputs.tag }}
             ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:latest
+
+      - name: Publish CLI release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ steps.image.outputs.tag }}
+        run: |
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release upload "$RELEASE_TAG" .release/webadb-* --clobber
+          else
+            gh release create "$RELEASE_TAG" .release/webadb-* --title "$RELEASE_TAG" --generate-notes
+          fi

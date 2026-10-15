@@ -4,3 +4,6 @@ dev-dist
 .github
 .DS_Store
 *.log
+
+bin
+*.bun-build

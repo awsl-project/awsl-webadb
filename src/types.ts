@@ -1,5 +1,8 @@
 import type { AdbServerClient } from "@yume-chan/adb";
-import type { AdbScrcpyClient, AdbScrcpyOptionsLatest } from "@yume-chan/adb-scrcpy";
+import type {
+  AdbScrcpyClient,
+  AdbScrcpyOptionsLatest,
+} from "@yume-chan/adb-scrcpy";
 import type { WebCodecsVideoDecoder } from "@yume-chan/scrcpy-decoder-webcodecs";
 
 import type { adbClient } from "./lib/adb-client";
@@ -34,10 +37,17 @@ export interface ToastState {
   tone: "info" | "success" | "error";
 }
 
-export type PanelView = "apps" | "mirror" | "controls" | "connect" | "files";
+export type PanelView =
+  | "apps"
+  | "mirror"
+  | "controls"
+  | "settings"
+  | "connect"
+  | "files";
 
 export interface InstalledApp {
   packageName: string;
+  component?: string;
   name: string;
   icon: string;
   hue: number;

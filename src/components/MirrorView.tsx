@@ -103,7 +103,7 @@ export function MirrorSidebar({
             aria-label={mirrorRunning ? "重新连接镜像" : "开始镜像"}
             title={mirrorRunning ? "重新连接镜像" : "开始镜像"}
           >
-            <span className="material-symbols-rounded">
+            <span aria-hidden="true" className="material-symbols-rounded">
               {mirrorPending ? "progress_activity" : "play_arrow"}
             </span>
           </button>
@@ -114,21 +114,21 @@ export function MirrorSidebar({
             aria-label="停止"
             title="停止"
           >
-            <span className="material-symbols-rounded">stop</span>
+            <span aria-hidden="true" className="material-symbols-rounded">
+              stop
+            </span>
           </button>
           <div ref={mirrorQualityMenuRef} className="screen-menu-anchor">
             <button
               className={`ghost-button screen-icon-button ${
                 mirrorQualityMenuOpen ? "active" : ""
               }`}
-              onClick={() =>
-                setMirrorQualityMenuOpen(!mirrorQualityMenuOpen)
-              }
+              onClick={() => setMirrorQualityMenuOpen(!mirrorQualityMenuOpen)}
               disabled={Boolean(mirrorPending)}
               aria-label={`画质 ${mirrorQualityConfig.label}`}
               title={`画质 ${mirrorQualityConfig.label}`}
             >
-              <span className="material-symbols-rounded">
+              <span aria-hidden="true" className="material-symbols-rounded">
                 {mirrorQualityConfig.icon}
               </span>
             </button>
@@ -150,7 +150,10 @@ export function MirrorSidebar({
                     onClick={() => onUpdateQuality(quality)}
                     disabled={Boolean(mirrorPending)}
                   >
-                    <span className="material-symbols-rounded">
+                    <span
+                      aria-hidden="true"
+                      className="material-symbols-rounded"
+                    >
                       {config.icon}
                     </span>
                     <span>{config.label}</span>
@@ -171,7 +174,9 @@ export function MirrorSidebar({
             aria-label="返回 (Esc)"
             title="返回 (Esc)"
           >
-            <span className="material-symbols-rounded">arrow_back</span>
+            <span aria-hidden="true" className="material-symbols-rounded">
+              arrow_back
+            </span>
           </button>
           <button
             className="ghost-button screen-icon-button"
@@ -180,7 +185,9 @@ export function MirrorSidebar({
             aria-label="主页 (Home)"
             title="主页 (Home)"
           >
-            <span className="material-symbols-rounded">home</span>
+            <span aria-hidden="true" className="material-symbols-rounded">
+              home
+            </span>
           </button>
           <button
             className="ghost-button screen-icon-button"
@@ -189,7 +196,9 @@ export function MirrorSidebar({
             aria-label="最近任务"
             title="最近任务"
           >
-            <span className="material-symbols-rounded">apps</span>
+            <span aria-hidden="true" className="material-symbols-rounded">
+              apps
+            </span>
           </button>
           <button
             className="ghost-button screen-icon-button"
@@ -198,7 +207,9 @@ export function MirrorSidebar({
             aria-label="旋转"
             title="旋转"
           >
-            <span className="material-symbols-rounded">screen_rotation</span>
+            <span aria-hidden="true" className="material-symbols-rounded">
+              screen_rotation
+            </span>
           </button>
         </div>
       </div>
@@ -206,12 +217,36 @@ export function MirrorSidebar({
       <div className="screen-sidebar-group">
         <div className="screen-icon-column">
           {[
-            { label: "音量减", icon: "volume_down", command: ["input", "keyevent", "25"] },
-            { label: "静音", icon: "volume_off", command: ["input", "keyevent", "164"] },
-            { label: "音量加", icon: "volume_up", command: ["input", "keyevent", "24"] },
-            { label: "电源键", icon: "power_settings_new", command: ["input", "keyevent", "26"] },
-            { label: "通知栏", icon: "notifications", command: ["cmd", "statusbar", "expand-notifications"] },
-            { label: "快捷设置", icon: "instant_mix", command: ["cmd", "statusbar", "expand-settings"] },
+            {
+              label: "音量减",
+              icon: "volume_down",
+              command: ["input", "keyevent", "25"],
+            },
+            {
+              label: "静音",
+              icon: "volume_off",
+              command: ["input", "keyevent", "164"],
+            },
+            {
+              label: "音量加",
+              icon: "volume_up",
+              command: ["input", "keyevent", "24"],
+            },
+            {
+              label: "电源键",
+              icon: "power_settings_new",
+              command: ["input", "keyevent", "26"],
+            },
+            {
+              label: "通知栏",
+              icon: "notifications",
+              command: ["cmd", "statusbar", "expand-notifications"],
+            },
+            {
+              label: "快捷设置",
+              icon: "instant_mix",
+              command: ["cmd", "statusbar", "expand-settings"],
+            },
           ].map((action) => (
             <button
               key={action.label}
@@ -222,7 +257,9 @@ export function MirrorSidebar({
               title={action.label}
               type="button"
             >
-              <span className="material-symbols-rounded">{action.icon}</span>
+              <span aria-hidden="true" className="material-symbols-rounded">
+                {action.icon}
+              </span>
             </button>
           ))}
           <button
@@ -233,7 +270,9 @@ export function MirrorSidebar({
             title="设备截图"
             type="button"
           >
-            <span className="material-symbols-rounded">screenshot_monitor</span>
+            <span aria-hidden="true" className="material-symbols-rounded">
+              screenshot_monitor
+            </span>
           </button>
         </div>
       </div>
@@ -250,6 +289,7 @@ interface MirrorDisplayProps {
   onPointerDown: (event: ReactPointerEvent<HTMLCanvasElement>) => void;
   onPointerMove: (event: ReactPointerEvent<HTMLCanvasElement>) => void;
   onPointerUp: (event: ReactPointerEvent<HTMLCanvasElement>) => void;
+  onWheel?: (event: WheelEvent) => void;
   onKeyDown?: (event: ReactKeyboardEvent<HTMLCanvasElement>) => void;
   onPaste?: (event: ReactClipboardEvent<HTMLCanvasElement>) => void;
   onRetry?: () => void;
@@ -267,6 +307,7 @@ export function MirrorDisplay({
   onPointerDown,
   onPointerMove,
   onPointerUp,
+  onWheel,
   onKeyDown,
   onPaste,
   onRetry,
@@ -285,6 +326,20 @@ export function MirrorDisplay({
     : mirrorRunning && message === connectedMessage
       ? ""
       : message;
+
+  const wheelRef = useRef(onWheel);
+  wheelRef.current = onWheel;
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || !mirrorRunning) return;
+    const handleWheel = (event: WheelEvent) => {
+      if (event.ctrlKey || !wheelRef.current) return;
+      event.preventDefault();
+      wheelRef.current(event);
+    };
+    canvas.addEventListener("wheel", handleWheel, { passive: false });
+    return () => canvas.removeEventListener("wheel", handleWheel);
+  }, [canvasRef, mirrorRunning]);
 
   // Track container size
   useEffect(() => {
@@ -394,6 +449,7 @@ export function MirrorDisplay({
         width={activeMirrorViewport.width}
         height={activeMirrorViewport.height}
         tabIndex={0}
+        aria-label="Android 交互画面"
         className={`mirror-canvas ${mirrorRunning ? "live" : ""}`}
         style={mirrorCanvasStyle}
         onPointerDown={(event) => {
@@ -417,12 +473,14 @@ export function MirrorDisplay({
           <span>{mirrorNotice}</span>
         </div>
       ) : null}
-      {!mirrorRunning ? (
+      {!mirrorRunning && !mirrorPending ? (
         <div className="mirror-empty">
           <strong>{emptyLabel}</strong>
           {onRetry ? (
             <button onClick={onRetry} type="button">
-              <span className="material-symbols-rounded">refresh</span>
+              <span aria-hidden="true" className="material-symbols-rounded">
+                refresh
+              </span>
               重新启动
             </button>
           ) : null}

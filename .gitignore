@@ -3,3 +3,7 @@ dist
 dev-dist
 .DS_Store
 *.log
+
+bin/
+.release/
+*.bun-build

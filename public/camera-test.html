@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="color-scheme" content="dark light" />
+    <title>WebADB 摄像头扫码验收</title>
+    <style>
+      * { box-sizing: border-box; }
+      body { margin: 0; padding: 24px 16px; background: #20252c; color: #dcdfe4; font: 15px/1.65 sans-serif; }
+      main { max-width: 720px; margin: auto; }
+      small { color: #61afef; letter-spacing: .15em; font: 12px monospace; }
+      h1 { font-size: 25px; margin: 8px 0; }
+      p { color: #a8afb9; }
+      video { width: 100%; max-height: 55vh; display: block; background: #101318; border-radius: 12px; object-fit: contain; }
+      .toolbar { display: flex; gap: 10px; flex-wrap: wrap; margin: 16px 0; }
+      button, select { font: inherit; border-radius: 8px; padding: 10px 14px; color: #dcdfe4; border: 1px solid #424b58; background: #303844; }
+      button:first-of-type { background: #266cb2; border-color: #3985ce; }
+      button:disabled { opacity: .4; }
+      select { flex: 1; min-width: 160px; max-width: 100%; }
+      button:focus-visible, select:focus-visible { outline: 2px solid #61afef; outline-offset: 3px; }
+      .status { padding: 12px; border: 1px solid #424b58; border-radius: 8px; margin: 12px 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+      #result { font-family: monospace; min-height: 70px; }
+      .note { font-size: 12px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <small>WEBADB / CAMERA ACCEPTANCE</small>
+      <h1>摄像头扫码验收</h1>
+      <p>此页面使用真实的 Android 摄像头接口。请检查画面是否与电脑上选择的文件一致，再核对扫码结果。</p>
+      <video id="preview" autoplay muted playsinline aria-label="Android 摄像头画面"></video>
+      <div class="toolbar">
+        <select id="camera" aria-label="选择摄像头"><option value="">默认后置摄像头</option></select>
+        <button id="start">打开摄像头</button>
+        <button id="stop" disabled>停止</button>
+      </div>
+      <div class="status" id="status" role="status">尚未打开摄像头</div>
+      <strong>二维码内容</strong>
+      <div class="status" id="result" role="status">等待扫描</div>
+      <p class="note">只在本页识别和显示二维码，不上传画面，不自动打开扫码链接。普通局域网 HTTP 不能申请摄像头，请使用 HTTPS，或通过 ADB 转发后打开手机 localhost 地址。</p>
+    </main>
+    <script>
+      const video = document.getElementById('preview');
+      const camera = document.getElementById('camera');
+      const start = document.getElementById('start');
+      const stop = document.getElementById('stop');
+      const status = document.getElementById('status');
+      const result = document.getElementById('result');
+      let stream;
+      let generation = 0;
+      let detector;
+      let timer;
+      let pending = false;
+      const messages = {
+        NotAllowedError: '摄像头权限未允许，请在 Chrome 地址栏的网站权限中允许摄像头。',
+        NotFoundError: '没有找到可用摄像头。',
+        NotReadableError: '摄像头暂不可用。请检查系统相机隐私开关、隐身模式及 Chrome 相机权限，也可能正被其他应用占用。',
+        OverconstrainedError: '所选摄像头不可用，请重新选择。',
+      };
+      function halt() {
+        generation++;
+        clearTimeout(timer);
+        stream?.getTracks().forEach(track => track.stop());
+        stream = undefined;
+        video.srcObject = null;
+        stop.disabled = true;
+        start.disabled = pending;
+        status.textContent = '摄像头已停止';
+      }
+      async function scan(token) {
+        if (token !== generation || !stream) return;
+        if (detector && video.readyState >= 2) {
+          try {
+            const codes = await detector.detect(video);
+            if (token !== generation) return;
+            if (codes.length) result.textContent = [...new Set(codes.map(code => code.rawValue))].join('\n\n');
+          } catch (error) {
+            if (token === generation) result.textContent = '二维码识别失败：' + error.message;
+          }
+        }
+        timer = setTimeout(() => scan(token), 250);
+      }
+      async function open() {
+        if (pending) return;
+        halt();
+        pending = true;
+        start.disabled = true;
+        const token = generation;
+        status.textContent = '请允许 Chrome 使用摄像头…';
+        try {
+          const next = await navigator.mediaDevices.getUserMedia({audio: false, video: camera.value
+            ? {deviceId: {exact: camera.value}}
+            : {facingMode: {ideal: 'environment'}, width: {ideal: 960}, height: {ideal: 1280}}});
+          if (token !== generation) { next.getTracks().forEach(track => track.stop()); return; }
+          stream = next;
+          video.srcObject = stream;
+          await video.play();
+          if (token !== generation) return;
+          const track = stream.getVideoTracks()[0];
+          const settings = track.getSettings();
+          status.textContent = `正在读取：${track.label || '摄像头'}\n${settings.width || '?'} × ${settings.height || '?'} · ${settings.frameRate || '?'} fps`;
+          track.addEventListener('ended', () => { if (token === generation) halt(); }, {once: true});
+          const devices = (await navigator.mediaDevices.enumerateDevices()).filter(device => device.kind === 'videoinput');
+          if (token !== generation) return;
+          camera.replaceChildren(new Option('默认后置摄像头', ''), ...devices.map((device, index) => new Option(device.label || `摄像头 ${index + 1}`, device.deviceId)));
+          camera.value = settings.deviceId || '';
+          stop.disabled = false;
+          result.textContent = detector ? '等待扫描' : '此浏览器没有 BarcodeDetector，仍可核对相机画面。';
+          void scan(token);
+        } catch (error) {
+          if (token === generation) {
+            halt();
+            status.textContent = messages[error.name] || `${error.name}: ${error.message}`;
+          }
+        } finally {
+          pending = false;
+          start.disabled = false;
+        }
+      }
+      start.addEventListener('click', open);
+      stop.addEventListener('click', halt);
+      camera.addEventListener('change', () => { if (stream) void open(); });
+      window.addEventListener('pagehide', halt);
+      document.addEventListener('visibilitychange', () => { if (document.hidden) halt(); });
+      navigator.mediaDevices?.addEventListener('devicechange', () => { if (stream) halt(); });
+      if (!isSecureContext || !navigator.mediaDevices?.getUserMedia) {
+        start.disabled = true;
+        status.textContent = '当前地址不能使用摄像头。请通过 HTTPS 或手机 localhost 打开本页。';
+      }
+      if ('BarcodeDetector' in window) {
+        BarcodeDetector.getSupportedFormats().then(formats => {
+          if (formats.includes('qr_code')) detector = new BarcodeDetector({formats: ['qr_code']});
+        }).catch(() => {});
+      }
+    </script>
+  </body>
+</html>

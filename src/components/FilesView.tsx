@@ -1,7 +1,5 @@
-import { useEffect, type RefObject } from "react";
-
+import { useEffect, useMemo, useState, type RefObject } from "react";
 import { LinuxFileType, type AdbSync } from "@yume-chan/adb";
-
 import type { DeviceRecord } from "../types";
 import { formatFileSize, formatFileTime, getParentDevicePath } from "../utils";
 
@@ -10,13 +8,15 @@ interface FilesViewProps {
   filesPath: string;
   filesEntries: AdbSync.OpenDir.Entry[];
   filesPending: string;
-  fileUploadDialogOpen: boolean;
+  filesError: string;
+  transferProgress: number | null;
   setFileUploadDialogOpen: (open: boolean) => void;
   uploadInputRef: RefObject<HTMLInputElement | null>;
   onRefresh: (path?: string, silent?: boolean) => Promise<void>;
   onOpen: (entry: AdbSync.OpenDir.Entry) => Promise<void>;
   onDownload: (entry: AdbSync.OpenDir.Entry) => Promise<void>;
   onUpload: (files: Iterable<File> | ArrayLike<File> | null) => Promise<void>;
+  onConnect: () => void;
 }
 
 export function FilesView({
@@ -24,198 +24,333 @@ export function FilesView({
   filesPath,
   filesEntries,
   filesPending,
-  fileUploadDialogOpen,
+  filesError,
+  transferProgress,
   setFileUploadDialogOpen,
   uploadInputRef,
   onRefresh,
   onOpen,
   onDownload,
   onUpload,
+  onConnect,
 }: FilesViewProps) {
-  // Clipboard paste → upload
+  const [pathInput, setPathInput] = useState(filesPath);
+  const [query, setQuery] = useState("");
+  const [sort, setSort] = useState("name");
+  const [showHidden, setShowHidden] = useState(false);
+  const busy = Boolean(filesPending);
   useEffect(() => {
-    if (!fileUploadDialogOpen) {
-      return;
-    }
+    setPathInput(filesPath);
+    setQuery("");
+  }, [filesPath, selectedDevice?.serial]);
+  const entries = useMemo(
+    () =>
+      filesEntries
+        .filter(
+          (entry) =>
+            (showHidden || !entry.name.startsWith(".")) &&
+            entry.name.toLocaleLowerCase().includes(query.toLocaleLowerCase()),
+        )
+        .sort((left, right) => {
+          const folders =
+            Number(right.type === LinuxFileType.Directory) -
+            Number(left.type === LinuxFileType.Directory);
+          if (folders) return folders;
+          if (sort === "size" && left.size !== right.size)
+            return left.size > right.size ? -1 : 1;
+          if (sort === "time" && left.mtime !== right.mtime)
+            return left.mtime > right.mtime ? -1 : 1;
+          return left.name.localeCompare(right.name, "zh-CN", {
+            numeric: true,
+          });
+        }),
+    [filesEntries, query, showHidden, sort],
+  );
 
-    const handlePaste = (event: ClipboardEvent) => {
-      const files = Array.from(event.clipboardData?.items ?? [])
-        .map((item) => item.getAsFile())
-        .filter((file): file is File => Boolean(file));
-
-      if (!files.length) {
-        return;
-      }
-
-      event.preventDefault();
-      void onUpload(files);
-    };
-
-    window.addEventListener("paste", handlePaste);
-
-    return () => {
-      window.removeEventListener("paste", handlePaste);
-    };
-  }, [fileUploadDialogOpen, onUpload]);
-
-  if (!selectedDevice) {
+  if (!selectedDevice)
     return (
       <section className="utility-page">
-        <div className="utility-head">
-          <div>
-            <strong>文件管理</strong>
-          </div>
+        <div className="feature-empty">
+          <span aria-hidden="true" className="material-symbols-rounded">
+            folder_off
+          </span>
+          <h2>文件，触手可及</h2>
+          <p>连接 Android 设备后，浏览存储空间并下载文件到电脑。</p>
+          <button onClick={onConnect} type="button">
+            连接设备
+          </button>
         </div>
-        <div className="utility-empty">先在连接设备页选择一台设备。</div>
       </section>
     );
-  }
 
   return (
-    <section className="utility-page">
-      <div
-        className="progress-bar-container"
-        style={{ visibility: filesPending ? "visible" : "hidden" }}
-      >
-        <div className="progress-bar-indeterminate" />
-      </div>
-      <div className="utility-head">
-        <div>
-          <strong>文件管理</strong>
-        </div>
-        <div className="page-actions toolbar-row">
-          <button
-            className="ghost-button slim-button icon-only-button"
-            onClick={() => {
-              void onRefresh();
-            }}
-            disabled={Boolean(filesPending)}
-            aria-label="刷新"
-            title="刷新"
-          >
-            <span className="material-symbols-rounded">refresh</span>
-          </button>
-          <button
-            className="ghost-button slim-button icon-only-button"
-            onClick={() => {
-              void onRefresh(getParentDevicePath(filesPath));
-            }}
-            disabled={filesPath === "/" || Boolean(filesPending)}
-            aria-label="上级目录"
-            title="上级目录"
-          >
-            <span className="material-symbols-rounded">arrow_back</span>
-          </button>
-          <button
-            className="ghost-button slim-button icon-only-button"
-            onClick={() => setFileUploadDialogOpen(true)}
-            disabled={Boolean(filesPending)}
-            aria-label="上传文件"
-            title="上传文件"
-          >
-            <span className="material-symbols-rounded">drive_folder_upload</span>
-          </button>
+    <section className="utility-page files-page" aria-busy={busy}>
+      <div className="files-toolbar">
+        <button
+          className="ghost-button icon-only-button"
+          onClick={() => void onRefresh(getParentDevicePath(filesPath))}
+          disabled={filesPath === "/" || busy}
+          aria-label="上级目录"
+          title="上级目录"
+          type="button"
+        >
+          <span aria-hidden="true" className="material-symbols-rounded">
+            arrow_upward
+          </span>
+        </button>
+        <form
+          className="files-address"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (!busy) void onRefresh(pathInput);
+          }}
+        >
+          <span aria-hidden="true" className="material-symbols-rounded">
+            folder_open
+          </span>
           <input
-            ref={uploadInputRef}
-            className="hidden-input"
-            type="file"
-            multiple
-            onChange={(event) => {
-              void onUpload(event.target.files);
-            }}
+            aria-label="目录路径"
+            value={pathInput}
+            onChange={(event) => setPathInput(event.target.value)}
+            spellCheck={false}
+            disabled={busy}
           />
-          <nav className="breadcrumb-bar" aria-label="路径导航">
-            {filesPath
-              .split("/")
-              .filter(Boolean)
-              .map((segment, index, segments) => {
-                const path = "/" + segments.slice(0, index + 1).join("/");
-                return (
-                  <span key={path} className="breadcrumb-item">
-                    {index > 0 ? (
-                      <span className="breadcrumb-sep material-symbols-rounded">
-                        chevron_right
-                      </span>
-                    ) : null}
-                    <button
-                      className="ghost-button breadcrumb-button"
-                      onClick={() => {
-                        void onRefresh(path);
-                      }}
-                      disabled={Boolean(filesPending)}
-                      type="button"
-                    >
-                      {segment}
-                    </button>
-                  </span>
-                );
-              })}
-            {filesPath === "/" ? (
-              <button
-                className="ghost-button breadcrumb-button"
-                onClick={() => {
-                  void onRefresh("/");
-                }}
-                disabled={Boolean(filesPending)}
-                type="button"
-              >
-                /
-              </button>
-            ) : null}
-          </nav>
-          <span className="breadcrumb-device">{selectedDevice.serial}</span>
-        </div>
+          <button
+            type="submit"
+            className="ghost-button icon-only-button"
+            disabled={busy}
+            aria-label="转到目录"
+          >
+            <span aria-hidden="true" className="material-symbols-rounded">
+              arrow_forward
+            </span>
+          </button>
+        </form>
+        <button
+          className="ghost-button icon-only-button"
+          onClick={() => void onRefresh()}
+          disabled={busy}
+          aria-label="刷新文件"
+          title="刷新文件"
+          type="button"
+        >
+          <span
+            aria-hidden="true"
+            className={`material-symbols-rounded ${busy ? "spinning" : ""}`}
+          >
+            refresh
+          </span>
+        </button>
+        <button
+          className="tonal-button"
+          onClick={() => setFileUploadDialogOpen(true)}
+          disabled={busy}
+          title="上传文件"
+          type="button"
+        >
+          <span aria-hidden="true" className="material-symbols-rounded">
+            upload
+          </span>
+          <span>上传</span>
+        </button>
+        <input
+          ref={uploadInputRef}
+          className="hidden-input"
+          aria-label="选择上传文件"
+          type="file"
+          multiple
+          disabled={busy}
+          onChange={(event) => void onUpload(event.target.files)}
+        />
       </div>
-
-      <div className="file-list">
-        {filesEntries.length === 0 && !filesPending ? (
-          <div className="utility-empty">这个目录当前没有文件。</div>
-        ) : null}
-
-        {filesEntries.map((entry) => {
-          const isDirectory = entry.type === LinuxFileType.Directory;
-
-          return (
-            <div
-              key={`${filesPath}/${entry.name}`}
-              className="file-row"
-              role="button"
-              tabIndex={0}
-              onClick={() => {
-                void onOpen(entry);
-              }}
-              onKeyDown={(event) => {
-                if (event.key === "Enter" || event.key === " ") {
-                  event.preventDefault();
-                  void onOpen(entry);
-                }
-              }}
-            >
-              <span className="file-icon material-symbols-rounded">
-                {isDirectory ? "folder" : "draft"}
-              </span>
-              <span className="file-main">
-                <strong>{entry.name}</strong>
-                <span>
-                  {isDirectory
-                    ? "目录"
-                    : `${formatFileSize(entry.size)} · ${formatFileTime(entry.mtime)}`}
+      <nav className="files-locations" aria-label="常用目录">
+        {[
+          ["内部存储", "/sdcard", "smartphone"],
+          ["下载", "/sdcard/Download", "download"],
+          ["相机", "/sdcard/DCIM", "photo_camera"],
+          ["图片", "/sdcard/Pictures", "image"],
+          ["根目录", "/", "dns"],
+        ].map(([label, path, icon]) => (
+          <button
+            key={path}
+            className={filesPath === path ? "active" : ""}
+            onClick={() => void onRefresh(path)}
+            disabled={busy}
+            type="button"
+          >
+            <span aria-hidden="true" className="material-symbols-rounded">
+              {icon}
+            </span>
+            {label}
+          </button>
+        ))}
+      </nav>
+      <div className="files-filterbar">
+        <label className="files-search">
+          <span aria-hidden="true" className="material-symbols-rounded">
+            search
+          </span>
+          <input
+            placeholder="搜索当前目录"
+            aria-label="搜索当前目录"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+          />
+        </label>
+        <select
+          aria-label="文件排序"
+          value={sort}
+          onChange={(event) => setSort(event.target.value)}
+        >
+          <option value="name">名称</option>
+          <option value="time">最近修改</option>
+          <option value="size">文件大小</option>
+        </select>
+        <label className="files-hidden">
+          <input
+            type="checkbox"
+            checked={showHidden}
+            onChange={(event) => setShowHidden(event.target.checked)}
+          />
+          隐藏文件
+        </label>
+      </div>
+      <nav className="breadcrumb-bar" aria-label="路径导航">
+        <button
+          className="ghost-button breadcrumb-button"
+          disabled={busy}
+          onClick={() => void onRefresh("/")}
+          type="button"
+        >
+          /
+        </button>
+        {filesPath
+          .split("/")
+          .filter(Boolean)
+          .map((segment, index, segments) => {
+            const path = "/" + segments.slice(0, index + 1).join("/");
+            return (
+              <span className="breadcrumb-item" key={path}>
+                <span
+                  aria-hidden="true"
+                  className="breadcrumb-sep material-symbols-rounded"
+                >
+                  chevron_right
                 </span>
+                <button
+                  className="ghost-button breadcrumb-button"
+                  disabled={busy}
+                  aria-current={path === filesPath ? "location" : undefined}
+                  onClick={() => void onRefresh(path)}
+                  type="button"
+                >
+                  {segment}
+                </button>
               </span>
-              {!isDirectory ? (
+            );
+          })}
+      </nav>
+      {filesError ? (
+        <div className="inline-error" role="alert">
+          <span aria-hidden="true" className="material-symbols-rounded">
+            error
+          </span>
+          <span>{filesError}</span>
+          <button
+            onClick={() => void onRefresh(pathInput)}
+            disabled={busy}
+            type="button"
+          >
+            重试
+          </button>
+        </div>
+      ) : null}
+      <div className="file-list">
+        {!entries.length && !busy && !filesError ? (
+          <div className="feature-empty">
+            <span aria-hidden="true" className="material-symbols-rounded">
+              {query ? "search_off" : "folder_open"}
+            </span>
+            <strong>{query ? "没有匹配的文件" : "此目录为空"}</strong>
+            <p>
+              {query
+                ? "试试其他名称，或清空搜索。"
+                : "可使用路径栏访问其他目录。"}
+            </p>
+          </div>
+        ) : null}
+        {busy && !filesEntries.length ? (
+          <div className="feature-empty" role="status">
+            <span
+              aria-hidden="true"
+              className="material-symbols-rounded spinning"
+            >
+              progress_activity
+            </span>
+            <strong>{filesPending}</strong>
+          </div>
+        ) : null}
+        {entries.map((entry) => {
+          const directory = entry.type === LinuxFileType.Directory;
+          const link = entry.type === LinuxFileType.Link;
+          return (
+            <div className="file-row" key={entry.name}>
+              <button
+                className="file-entry"
+                onClick={() => void onOpen(entry)}
+                disabled={busy}
+                type="button"
+                title={
+                  directory
+                    ? `打开 ${entry.name}`
+                    : link
+                      ? `访问链接 ${entry.name}`
+                      : `下载 ${entry.name}`
+                }
+              >
+                <span
+                  aria-hidden="true"
+                  className="file-icon material-symbols-rounded"
+                >
+                  {directory
+                    ? "folder"
+                    : link
+                      ? "link"
+                      : /\.(png|jpg|jpeg|webp|gif|heic)$/i.test(entry.name)
+                        ? "image"
+                        : /\.(mp4|mkv|webm)$/i.test(entry.name)
+                          ? "movie"
+                          : "draft"}
+                </span>
+                <span className="file-main">
+                  <strong>{entry.name}</strong>
+                  <span>
+                    {directory
+                      ? "文件夹"
+                      : link
+                        ? "符号链接"
+                        : formatFileSize(entry.size)}{" "}
+                    · {formatFileTime(entry.mtime)}
+                  </span>
+                </span>
+              </button>
+              {entry.type === LinuxFileType.File ? (
                 <button
                   className="ghost-button file-action"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    void onDownload(entry);
-                  }}
+                  onClick={() => void onDownload(entry)}
+                  disabled={busy}
                   aria-label={`下载 ${entry.name}`}
                   type="button"
                 >
-                  <span className="material-symbols-rounded">download</span>
+                  <span aria-hidden="true" className="material-symbols-rounded">
+                    download
+                  </span>
                 </button>
               ) : (
-                <span className="file-action material-symbols-rounded">
+                <span
+                  aria-hidden="true"
+                  className="file-action material-symbols-rounded"
+                >
                   chevron_right
                 </span>
               )}
@@ -223,6 +358,21 @@ export function FilesView({
           );
         })}
       </div>
+      <footer className="files-status" role="status">
+        <span>
+          {filesPending ||
+            `${entries.length} 项${entries.length !== filesEntries.length ? ` / 共 ${filesEntries.length} 项` : ""}`}
+        </span>
+        {transferProgress !== null ? (
+          <progress
+            max={100}
+            value={transferProgress}
+            aria-label="文件传输进度"
+          />
+        ) : (
+          <span>ADB 已连接</span>
+        )}
+      </footer>
     </section>
   );
 }

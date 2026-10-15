@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: "autoUpdate",
+      registerType: "prompt",
       includeAssets: ["pwa-icon.svg", "pwa-icon-192.png", "pwa-icon-512.png"],
       manifest: {
         id: "/",
@@ -14,8 +14,8 @@ export default defineConfig({
         short_name: "WebADB",
         lang: "zh-CN",
         description: "通过浏览器管理、启动并控制 Android 设备与应用。",
-        theme_color: "#07100F",
-        background_color: "#07100F",
+        theme_color: "#282c34",
+        background_color: "#282c34",
         display: "standalone",
         display_override: ["window-controls-overlay", "standalone"],
         orientation: "any",
@@ -38,17 +38,14 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ["**/*.{js,css,html,ico,png,svg,bin}"],
+        globPatterns: ["**/*.{js,css,html,ico,png,svg,bin,woff2}"],
         navigateFallback: "index.html",
-      },
-      devOptions: {
-        enabled: true,
-        type: "module",
+        navigateFallbackDenylist: [/^\/api\//, /^\/ws\//],
       },
     }),
   ],
   server: {
-    host: "0.0.0.0",
+    host: process.env.HOST ?? "127.0.0.1",
     port: 5173,
     proxy: {
       "/api": "http://127.0.0.1:3000",

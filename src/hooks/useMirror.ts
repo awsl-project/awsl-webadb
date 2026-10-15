@@ -6,7 +6,7 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from "react";
 
-import { AdbScrcpyClient, AdbScrcpyOptionsLatest } from "@yume-chan/adb-scrcpy";
+import { AdbScrcpyOptionsLatest } from "@yume-chan/adb-scrcpy";
 import {
   AndroidKeyCode,
   type AndroidKeyCode as AndroidKeyCodeValue,
@@ -14,7 +14,6 @@ import {
   AndroidMotionEventAction,
   AndroidMotionEventButton,
   type AndroidMotionEventAction as AndroidMotionEventActionValue,
-  DefaultServerPath,
   ScrcpyPointerId,
 } from "@yume-chan/scrcpy";
 import {
@@ -29,10 +28,8 @@ import {
   type MirrorQuality,
 } from "../types";
 import { adbClient } from "../lib/adb-client";
-import {
-  pushScrcpyServer,
-  scrcpyServerVersion,
-} from "../lib/scrcpy-server";
+import { startScrcpyServer, scrcpyServerVersion } from "../lib/scrcpy-server";
+import { ANDROID_KEYS, videoPoint, wheelScroll } from "../lib/android-input";
 import { formatError } from "../utils";
 
 function getPointerId(event: ReactPointerEvent<HTMLCanvasElement>) {
@@ -58,6 +55,7 @@ export function useMirror(
     null,
   );
 
+  const generationRef = useRef(0);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const mirrorSessionRef = useRef<MirrorSession | null>(null);
   const activePointerIdRef = useRef<bigint | null>(null);
@@ -71,6 +69,10 @@ export function useMirror(
   const mirrorQualityConfig = MIRROR_QUALITY_CONFIG[mirrorQuality];
 
   const stopMirrorSession = useCallback(async () => {
+    generationRef.current += 1;
+    resumeAfterBackgroundRef.current = false;
+    setMirrorStartRequested(false);
+    setMirrorPending("");
     const current = mirrorSessionRef.current;
     mirrorSessionRef.current = null;
     clipboardSyncTokenRef.current += 1;
@@ -187,12 +189,15 @@ export function useMirror(
 
   const startMirrorSession = useCallback(
     async (canvas: HTMLCanvasElement) => {
+      const generation = generationRef.current + 1;
+      const assertCurrent = () => {
+        if (generation !== generationRef.current)
+          throw new Error("镜像启动已取消");
+      };
       if (!WebCodecsVideoDecoder.isSupported) {
         onMessage("当前浏览器不支持 WebCodecs，无法启用 Screen Mirror。");
         return;
       }
-
-      setMirrorPending("启动中");
 
       let adb: AdbConnection | null = null;
       let client: MirrorSession["client"] | null = null;
@@ -202,6 +207,8 @@ export function useMirror(
       let session: MirrorSession | null = null;
       try {
         await stopMirrorSession();
+        assertCurrent();
+        setMirrorPending("启动中");
 
         if (!selectedTransportId) {
           throw new Error("请先选择设备");
@@ -210,13 +217,12 @@ export function useMirror(
         adb = await adbClient.createAdb({
           transportId: BigInt(selectedTransportId),
         });
-        await pushScrcpyServer(adb);
-
+        assertCurrent();
         const videoBitRate = isCompactViewport
           ? Math.min(mirrorQualityConfig.videoBitRate, 3_000_000)
           : mirrorQualityConfig.videoBitRate;
         const maxSize = isCompactViewport
-          ? Math.min(mirrorQualityConfig.maxSize, 840)
+          ? Math.min(mirrorQualityConfig.maxSize || 840, 840)
           : mirrorQualityConfig.maxSize;
 
         const options = new AdbScrcpyOptionsLatest(
@@ -228,19 +234,17 @@ export function useMirror(
             tunnelForward: true,
             clipboardAutosync: true,
             powerOn: true,
-            cleanup: false,
+            cleanup: true,
             maxSize,
             videoBitRate,
           },
           { version: scrcpyServerVersion },
         );
 
-        client = await AdbScrcpyClient.start(
-          adb,
-          DefaultServerPath,
-          options,
-        );
+        client = await startScrcpyServer(adb, options, assertCurrent);
+        assertCurrent();
         const videoStream = await client.videoStream;
+        assertCurrent();
         if (!videoStream) {
           throw new Error("scrcpy 未返回视频流");
         }
@@ -249,11 +253,9 @@ export function useMirror(
           codec: videoStream.metadata.codec,
           renderer,
         });
-        removeSizeListener = videoStream.sizeChanged(
-          ({ width, height }) => {
-            setMirrorViewport({ width, height });
-          },
-        );
+        removeSizeListener = videoStream.sizeChanged(({ width, height }) => {
+          setMirrorViewport({ width, height });
+        });
 
         setMirrorViewport({
           width: videoStream.width || videoStream.metadata.width || 0,
@@ -273,16 +275,24 @@ export function useMirror(
         mirrorSessionRef.current = session;
         startClipboardAutosync(session);
 
-        void videoStream.stream.pipeTo(decoder.writable, {
-          signal: abortController.signal,
-        }).catch((error) => {
-          if (mirrorSessionRef.current?.client !== client) {
-            return;
-          }
+        void videoStream.stream
+          .pipeTo(decoder.writable, {
+            signal: abortController.signal,
+          })
+          .then(() => {
+            if (mirrorSessionRef.current?.client === client) {
+              void stopMirrorSession();
+              onMessage("镜像连接已结束");
+            }
+          })
+          .catch((error) => {
+            if (mirrorSessionRef.current?.client !== client) {
+              return;
+            }
 
-          void stopMirrorSession();
-          onMessage(formatError(error));
-        });
+            void stopMirrorSession();
+            onMessage(formatError(error));
+          });
       } catch (error) {
         if (session && mirrorSessionRef.current === session) {
           await stopMirrorSession();
@@ -293,9 +303,9 @@ export function useMirror(
           await client?.close().catch(() => undefined);
           await adb?.close().catch(() => undefined);
         }
-        onMessage(formatError(error));
+        if (generationRef.current === generation) onMessage(formatError(error));
       } finally {
-        setMirrorPending("");
+        if (generationRef.current === generation) setMirrorPending("");
       }
     },
     [
@@ -336,18 +346,22 @@ export function useMirror(
         return;
       }
 
-      await controller.injectKeyCode({
-        action: AndroidKeyEventAction.Down,
-        keyCode,
-        repeat: 0,
-        metaState: 0,
-      });
-      await controller.injectKeyCode({
-        action: AndroidKeyEventAction.Up,
-        keyCode,
-        repeat: 0,
-        metaState: 0,
-      });
+      try {
+        await controller.injectKeyCode({
+          action: AndroidKeyEventAction.Down,
+          keyCode,
+          repeat: 0,
+          metaState: 0,
+        });
+        await controller.injectKeyCode({
+          action: AndroidKeyEventAction.Up,
+          keyCode,
+          repeat: 0,
+          metaState: 0,
+        });
+      } catch (error) {
+        onMessage(formatError(error));
+      }
     },
     [onMessage],
   );
@@ -360,29 +374,12 @@ export function useMirror(
         return null;
       }
 
-      const rect = canvas.getBoundingClientRect();
-      const scale = Math.min(
-        rect.width / viewport.width,
-        rect.height / viewport.height,
+      return videoPoint(
+        event.clientX,
+        event.clientY,
+        canvas.getBoundingClientRect(),
+        viewport,
       );
-      const renderedWidth = viewport.width * scale;
-      const renderedHeight = viewport.height * scale;
-      const offsetX = (rect.width - renderedWidth) / 2;
-      const offsetY = (rect.height - renderedHeight) / 2;
-      const rawX =
-        ((event.clientX - rect.left - offsetX) / renderedWidth) * viewport.width;
-      const rawY =
-        ((event.clientY - rect.top - offsetY) / renderedHeight) *
-        viewport.height;
-      const x = Math.min(Math.max(rawX, 0), viewport.width);
-      const y = Math.min(Math.max(rawY, 0), viewport.height);
-
-      return {
-        pointerX: Math.round(x),
-        pointerY: Math.round(y),
-        videoWidth: viewport.width,
-        videoHeight: viewport.height,
-      };
     },
     [mirrorViewport],
   );
@@ -402,27 +399,29 @@ export function useMirror(
         return;
       }
 
-      await controller.injectTouch({
-        action,
-        pointerId: getPointerId(event),
-        pressure: action === AndroidMotionEventAction.Up ? 0 : 1,
-        actionButton:
-          action === AndroidMotionEventAction.Up
-            ? AndroidMotionEventButton.None
-            : AndroidMotionEventButton.Primary,
-        buttons:
-          action === AndroidMotionEventAction.Up
-            ? AndroidMotionEventButton.None
-            : AndroidMotionEventButton.Primary,
-        ...point,
-      });
+      await controller
+        .injectTouch({
+          action,
+          pointerId: getPointerId(event),
+          pressure: action === AndroidMotionEventAction.Up ? 0 : 1,
+          actionButton:
+            action === AndroidMotionEventAction.Up
+              ? AndroidMotionEventButton.None
+              : AndroidMotionEventButton.Primary,
+          buttons:
+            action === AndroidMotionEventAction.Up
+              ? AndroidMotionEventButton.None
+              : AndroidMotionEventButton.Primary,
+          ...point,
+        })
+        .catch((error) => onMessage(formatError(error)));
     },
-    [getTouchPosition],
+    [getTouchPosition, onMessage],
   );
 
   const handlePointerDown = useCallback(
     async (event: ReactPointerEvent<HTMLCanvasElement>) => {
-      if (!mirrorRunning) {
+      if (!mirrorRunning || event.button !== 0) {
         return;
       }
 
@@ -466,9 +465,30 @@ export function useMirror(
     [sendTouch],
   );
 
+  const handleWheel = useCallback(
+    (event: WheelEvent) => {
+      const canvas = canvasRef.current;
+      const controller = mirrorSessionRef.current?.client.controller;
+      if (!canvas || !controller || !mirrorViewport) return;
+      const point = videoPoint(
+        event.clientX,
+        event.clientY,
+        canvas.getBoundingClientRect(),
+        mirrorViewport,
+      );
+      if (point)
+        void controller
+          .injectScroll({ ...point, ...wheelScroll(event) })
+          .catch((error) => onMessage(formatError(error)));
+    },
+    [mirrorViewport, onMessage],
+  );
+
   const rotateDevice = useCallback(() => {
-    void mirrorSessionRef.current?.client.controller?.rotateDevice();
-  }, []);
+    void mirrorSessionRef.current?.client.controller
+      ?.rotateDevice()
+      .catch((error) => onMessage(formatError(error)));
+  }, [onMessage]);
 
   // Handle deferred mirror start after canvas is available
   useEffect(() => {
@@ -505,6 +525,7 @@ export function useMirror(
     }
 
     const handlePaste = (event: ClipboardEvent) => {
+      if (event.defaultPrevented || event.target !== canvasRef.current) return;
       const content = event.clipboardData?.getData("text");
       if (!content) {
         return;
@@ -541,6 +562,7 @@ export function useMirror(
       }
 
       const target = event.target;
+      if (target !== canvasRef.current || event.defaultPrevented) return;
       if (
         target instanceof HTMLInputElement ||
         target instanceof HTMLTextAreaElement ||
@@ -549,20 +571,26 @@ export function useMirror(
         return;
       }
 
-      let keyCode: AndroidKeyCodeValue | null = null;
-
-      if (event.key === "Escape") {
-        keyCode = AndroidKeyCode.AndroidBack;
-      } else if (event.key === "Home") {
-        keyCode = AndroidKeyCode.AndroidHome;
-      }
-
-      if (!keyCode) {
+      if (event.isComposing || event.ctrlKey || event.metaKey || event.altKey)
+        return;
+      const keyCode =
+        event.key === "Home"
+          ? AndroidKeyCode.AndroidHome
+          : ANDROID_KEYS[event.key];
+      if (keyCode === undefined) {
+        if (event.key.length === 1) {
+          event.preventDefault();
+          void controller
+            .injectText(event.key)
+            .catch((error) => onMessage(formatError(error)));
+        }
         return;
       }
 
       event.preventDefault();
-      void pressAndroidKey(keyCode);
+      void pressAndroidKey(keyCode).catch((error) =>
+        onMessage(formatError(error)),
+      );
     };
 
     window.addEventListener("keydown", handleKeyDown);
@@ -594,8 +622,16 @@ export function useMirror(
         if (!document.hidden || !mirrorSessionRef.current) {
           return;
         }
-        resumeAfterBackgroundRef.current = true;
-        void stopMirrorSession();
+        const stopping = stopMirrorSession();
+        const generation = generationRef.current;
+        void stopping.then(() => {
+          if (generationRef.current !== generation) return;
+          if (document.hidden) {
+            resumeAfterBackgroundRef.current = true;
+          } else if (canvasRef.current) {
+            void startMirrorSession(canvasRef.current);
+          }
+        });
       }, 10_000);
     };
 
@@ -609,13 +645,13 @@ export function useMirror(
     };
   }, [startMirrorSession, stopMirrorSession]);
 
-  // Cleanup on unmount
   useEffect(() => {
+    void stopMirrorSession();
     return () => {
       resumeAfterBackgroundRef.current = false;
       void stopMirrorSession();
     };
-  }, []);
+  }, [selectedTransportId, stopMirrorSession]);
 
   return {
     mirrorPending,
@@ -636,6 +672,7 @@ export function useMirror(
     handlePointerDown,
     handlePointerMove,
     handlePointerUp,
+    handleWheel,
     AndroidKeyCode,
   };
 }

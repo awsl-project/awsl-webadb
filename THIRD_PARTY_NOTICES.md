@@ -26,7 +26,21 @@ furnished to do so, subject to the following conditions:
 ## scrcpy server binary
 
 - 来源: Genymobile/scrcpy
-- 分发方式: 通过 `@yume-chan/fetch-scrcpy-server` 下载 `scrcpy server 3.3.3`
+- 分发方式: 通过 `@yume-chan/fetch-scrcpy-server` 下载 `scrcpy server 4.1`
 - 许可证: Apache License 2.0
 
 项目运行时使用公开发行的 `scrcpy server` 二进制，许可证文本随 `@yume-chan/fetch-scrcpy-server` 包中的 `scrcpy.LICENSE` 提供。
+
+## 本地字体与图标
+
+- Material Symbols Rounded：Google，Apache-2.0；许可证位于 `public/fonts/LICENSE-material-icons.txt`。
+- IBM Plex Sans / IBM Plex Mono：IBM，SIL Open Font License 1.1；许可证位于 `public/fonts/LICENSE-ibm-plex.txt`。
+- Android 资源表读取实现依据 [AOSP ResourceTypes.h](https://android.googlesource.com/platform/frameworks/base/+/refs/heads/main/libs/androidfw/include/androidfw/ResourceTypes.h) 的格式定义，支持稀疏索引、16 位偏移与 compact 条目。
+
+## Android 摄像头 helper 构建工具
+
+`android/camera` 为本项目实现，运行时调用 Android VirtualDevice / VirtualCamera 系统 API。构建需要 Android 16 API stubs（或 Robolectric android-all）及 R8 / D8；这些工具和 Android framework 代码不包含在生成的 helper JAR 中。R8 来源于 Google，采用 BSD 3-Clause 许可证；Android framework API 来自 AOSP，采用 Apache-2.0 许可证。
+
+## FFmpeg
+
+后端调用独立的 FFmpeg 可执行文件进行媒体解码、等比缩放及 JPEG 编码。容器使用 Debian 官方仓库的 FFmpeg 软件包；本机安装的版本由运行环境提供。FFmpeg 的许可证依构建配置为 LGPL 或 GPL，容器内可通过 `ffmpeg -L` 查看对应声明；软件包版权与源代码获取信息见 `/usr/share/doc/ffmpeg/copyright` 和 Debian 对应版本的源包。项目未将 FFmpeg 静态链接进 CLI 或后端二进制。详见 [FFmpeg Legal](https://ffmpeg.org/legal.html) 与 [Debian FFmpeg source](https://sources.debian.org/src/ffmpeg/)。
