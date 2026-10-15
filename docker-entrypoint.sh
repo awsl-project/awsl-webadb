@@ -5,4 +5,4 @@ mkdir -p "${HOME}/.android"
 
 adb -a start-server
 
-exec ./awsl-webadb
+exec ./awsl-webadb serve

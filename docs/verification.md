@@ -51,3 +51,12 @@
 ## 隐私恢复与清理
 
 已确认小米隐身模式的 secure 设置与系统属性均为 1，Chrome 主设备 CAMERA 权限恢复为未授权、UID AppOps 为 ignore。手机主屏保持黑屏 / Dozing。每次会话只移除自己的临时 JAR、伴生关联、虚拟显示和 ADB reverse，不触碰其他调试会话；服务器正常退出后再次检查残留。
+
+## v0.3.1 统一程序
+
+- `awsl-webadb --help`、`--version`、`serve` 与原客户端命令共用同一个入口；端口越界、未知服务参数和端口占用均返回非零退出码。
+- 已交叉编译 Linux amd64 / arm64 与 macOS amd64 / arm64 四份包含前端资源的二进制。本机只运行 macOS arm64；Intel 版本为有效 x86_64 Mach-O，但当前电脑没有对应执行环境，未宣称已运行验证。Linux amd64 的运行验证由发布 CI 完成。
+- macOS arm64 二进制从空目录启动服务端，再用同一文件的客户端查询会话；核对全部 23 个内置文件与构建目录字节一致，包括网页、脚本、字体、scrcpy server 与手机 helper。非允许来源返回 403。
+- 从临时空目录用统一程序连接 USB 手机，打开计算器成功；读取 159 个元素，保存 45,119 字节 JPEG 与 44,178 字节 XML，关闭会话和服务后伴生关联、临时 JAR 已释放，隐身模式保持开启。
+- Homebrew Formula 使用四个平台的 SHA256SUMS 生成，Ruby 语法通过；临时放入本机现有 tap 后，Homebrew 元数据解析选中了 macOS arm64 地址、校验和、FFmpeg 依赖及正确的后台服务命令。测试后移除临时 Formula，未更改已安装应用或启动新的系统服务。
+- 自动更新 tap 参考同组织 maxx 的流程，使用 `HOMEBREW_TAP_TOKEN`；尚未配置令牌时明确跳过并提供手动重跑入口，不能将其描述成已发布到 tap。

@@ -1,4 +1,4 @@
-name: Docker Image CI
+name: Build and Release
 
 on:
   push:
@@ -9,6 +9,9 @@ on:
       tag:
         required: false
         type: string
+    secrets:
+      HOMEBREW_TAP_TOKEN:
+        required: false
 
 permissions:
   contents: write
@@ -54,14 +57,21 @@ jobs:
         run: bun run build
 
       - name: Prepare release artifacts
+        env:
+          RELEASE_TAG: ${{ steps.image.outputs.tag }}
         run: |
+          node -e 'const {version} = require("./package.json"); if (process.env.RELEASE_TAG !== `v${version}`) throw new Error("Release tag does not match package version");'
           mkdir -p .release
-          bun build --compile --minify --target=bun-linux-x64-modern ./server/index.ts --outfile .release/awsl-webadb-linux-amd64
-          bun build --compile --minify --target=bun-linux-arm64 ./server/index.ts --outfile .release/awsl-webadb-linux-arm64
-          bun build --compile --minify --target=bun-linux-x64-baseline ./cli/index.ts --outfile .release/webadb-linux-amd64
-          bun build --compile --minify --target=bun-linux-arm64 ./cli/index.ts --outfile .release/webadb-linux-arm64
-          bun build --compile --minify --target=bun-darwin-x64-baseline ./cli/index.ts --outfile .release/webadb-macos-amd64
-          bun build --compile --minify --target=bun-darwin-arm64 ./cli/index.ts --outfile .release/webadb-macos-arm64
+          bun build --compile --minify --asset ./dist --target=bun-linux-x64-baseline ./cli/index.ts --outfile .release/awsl-webadb-linux-amd64
+          bun build --compile --minify --asset ./dist --target=bun-linux-arm64 ./cli/index.ts --outfile .release/awsl-webadb-linux-arm64
+          bun build --compile --minify --asset ./dist --target=bun-darwin-x64-baseline ./cli/index.ts --outfile .release/awsl-webadb-macos-amd64
+          bun build --compile --minify --asset ./dist --target=bun-darwin-arm64 ./cli/index.ts --outfile .release/awsl-webadb-macos-arm64
+          (cd .release && sha256sum awsl-webadb-* > SHA256SUMS)
+          node scripts/homebrew-formula.mjs "$RELEASE_TAG" .release/SHA256SUMS > .release/awsl-webadb.rb
+          ruby -c .release/awsl-webadb.rb
+
+      - name: Verify standalone server and client
+        run: node scripts/smoke-binary.mjs .release/awsl-webadb-linux-amd64
 
       - name: Log in to the Container registry
         uses: docker/login-action@v3
@@ -88,13 +98,21 @@ jobs:
             ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:${{ steps.image.outputs.tag }}
             ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:latest
 
-      - name: Publish CLI release
+      - name: Publish standalone binaries
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_TAG: ${{ steps.image.outputs.tag }}
         run: |
           if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
-            gh release upload "$RELEASE_TAG" .release/webadb-* --clobber
+            gh release upload "$RELEASE_TAG" .release/awsl-webadb-* .release/SHA256SUMS .release/awsl-webadb.rb --clobber
           else
-            gh release create "$RELEASE_TAG" .release/webadb-* --title "$RELEASE_TAG" --generate-notes
+            gh release create "$RELEASE_TAG" .release/awsl-webadb-* .release/SHA256SUMS .release/awsl-webadb.rb --title "$RELEASE_TAG" --generate-notes
           fi
+
+  update-homebrew:
+    needs: build-and-push-image
+    uses: ./.github/workflows/update-homebrew.yml
+    with:
+      tag: ${{ inputs.tag || github.ref_name }}
+    secrets:
+      HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}

@@ -1,3 +1,11 @@
+# v0.3.1
+
+- 合并为单一 `awsl-webadb` 程序：`serve` 启动服务端，其余命令作为本机或远程客户端，兼容现有网页与后台推流。
+- 内置前端、字体、scrcpy server 和手机 helper，从空目录也可直接运行；不需要另外分发 `dist` 或 Bun 运行时。
+- CI 同时生成 Linux x64 / arm64、macOS x64 / arm64 四份统一程序，发布 SHA256SUMS，并对编译后二进制进行服务端与客户端冒烟测试。
+- 容器只保留一份可执行文件，保留原 `webadb` 命令的兼容软链接。
+- 参考 maxx 的发布流程新增 Homebrew Formula 生成与 tap 更新 workflow，支持按架构下载安装及 `brew services`。自动更新需要配置 `HOMEBREW_TAP_TOKEN`。
+
 # v0.3.0
 
 - CLI 与网页共用后端应用会话，支持无浏览器启动、截图、XML / JSON 元素、点击、滑动、文字和按键操作。

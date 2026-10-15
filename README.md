@@ -15,7 +15,7 @@
 
 ## 本机运行
 
-需要 Bun、Android Platform Tools，以及已允许 USB 调试的手机。文件摄像头还需要后端安装 FFmpeg（可用 `FFMPEG_PATH` 指定可执行文件）；容器已包含 FFmpeg：
+需要 Bun 1.4.3 或更新版本、Android Platform Tools，以及已允许 USB 调试的手机。文件摄像头还需要后端安装 FFmpeg（可用 `FFMPEG_PATH` 指定可执行文件）；容器已包含 FFmpeg：
 
 ```bash
 bun install
@@ -42,24 +42,40 @@ bun run start
 
 ## CLI
 
-CLI 只需要后端运行，不需要浏览器。可以运行 `bun run serve`，或连接现有的生产服务。
+`awsl-webadb` 是同时包含服务端和客户端的单个可执行文件，不需要额外安装 Bun、Node.js 或 `node_modules`。网页、字体、scrcpy server 与手机 helper 均内置，复制二进制后可从任意目录启动。运行服务端的电脑仍需 ADB server；媒体推流需要 FFmpeg。
 
 ```bash
-bun run cli devices
-bun run cli open com.miui.calculator --device 1
-bun run cli sessions
-bun run cli screenshot SESSION --output app.jpg
-bun run cli xml SESSION --output app.xml
-bun run cli elements SESSION
-bun run cli click SESSION --text "1"
-bun run cli click SESSION --resource-id com.example:id/button
-bun run cli click SESSION --description "确定"
-bun run cli click SESSION --node e12
-bun run cli tap SESSION 100 200
-bun run cli swipe SESSION 100 800 100 200 --duration 300
-bun run cli text SESSION "你好" --resource-id com.example:id/input
-bun run cli key SESSION BACK
-bun run cli close SESSION
+# 终端一：启动服务端，提供网页、API 与后台推流
+adb start-server
+awsl-webadb serve --host 127.0.0.1 --port 3000
+
+# 终端二：同一个可执行文件作为客户端
+awsl-webadb devices
+awsl-webadb --url http://127.0.0.1:3000 sessions
+
+# 查看帮助和版本
+awsl-webadb --help
+awsl-webadb --version
+```
+
+`serve` 还接受 `--adb-host`、`--adb-port`、`--ffmpeg` 和 `--static-dir`；也兼容原来的环境变量。网页地址默认为 `http://127.0.0.1:3000`。服务端需要持续运行，客户端命令执行完就退出；远程客户端通过 `--url` 或 `WEBADB_URL` 连接同一服务。源码开发也可用 `bun run serve` 和 `bun run cli …`。
+
+```bash
+awsl-webadb devices
+awsl-webadb open com.miui.calculator --device 1
+awsl-webadb sessions
+awsl-webadb screenshot SESSION --output app.jpg
+awsl-webadb xml SESSION --output app.xml
+awsl-webadb elements SESSION
+awsl-webadb click SESSION --text "1"
+awsl-webadb click SESSION --resource-id com.example:id/button
+awsl-webadb click SESSION --description "确定"
+awsl-webadb click SESSION --node e12
+awsl-webadb tap SESSION 100 200
+awsl-webadb swipe SESSION 100 800 100 200 --duration 300
+awsl-webadb text SESSION "你好" --resource-id com.example:id/input
+awsl-webadb key SESSION BACK
+awsl-webadb close SESSION
 ```
 
 `SESSION` 是 `open` 返回的会话 ID，`--device` 使用 `devices` 返回的 transport ID。只有一台设备时可省略。通过 `--url http://host:3000` 或 `WEBADB_URL` 指定服务。`open --width 1080 --height 1920` 可设置显示尺寸；再次打开同一设备上的同一应用会复用会话并同步焦点。
@@ -68,7 +84,16 @@ bun run cli close SESSION
 
 浏览器关闭不会结束后端应用会话。没有读取或操作的应用会话在 15 分钟后自动释放；关闭窗口或 CLI `close` 会立即释放。服务器退出时清理本次创建的显示、临时 JAR、伴生关联和端口转发，不解锁或点亮手机主屏。
 
-构建独立 CLI：`bun run build:cli`，输出 `bin/webadb`。GitHub Release 提供 Linux x64 / arm64 和 macOS x64 / arm64 客户端，它们连接同一个后端 API。
+构建统一程序：`bun run build:binary`（`build:cli` 为兼容别名），输出 `bin/awsl-webadb`。GitHub Release 同时提供四份二进制及 `SHA256SUMS`：
+
+| 平台 | 文件 |
+| --- | --- |
+| Linux x64 | `awsl-webadb-linux-amd64` |
+| Linux arm64 | `awsl-webadb-linux-arm64` |
+| macOS Intel | `awsl-webadb-macos-amd64` |
+| macOS Apple Silicon | `awsl-webadb-macos-arm64` |
+
+下载对应文件后 `chmod +x` 并重命名为 `awsl-webadb`；每份文件都兼具服务端与客户端能力。构建冒烟检查：`node scripts/smoke-binary.mjs bin/awsl-webadb`，从空目录核对服务、客户端、参数、来源限制及所有内置资源。
 
 ## 文件摄像头
 
@@ -77,15 +102,15 @@ bun run cli close SESSION
 同一设备的 WebADB 应用窗口共享前后虚拟摄像头，两者使用相同输入源；手机主屏应用保持原有摄像头行为。正式来源由后端 FFmpeg 解码并持有，关闭网页或 CLI、收起面板及关闭应用窗口后继续推流。其他客户端能看到共享来源、暂停状态和手机确认的帧数，可以切换、暂停或停止。后台服务必须持续运行；设备断开、停止推流或服务退出时释放本次资源。启停相机会重建虚拟设备中的应用显示，应用是否保留页面取决于其自身行为。
 
 ```bash
-bun run cli camera start ./image.png
-bun run cli camera start ./video.mp4
-bun run cli camera start https://host/video.mp4 --kind video
-bun run cli camera start rtsp://host/live --kind stream
-bun run cli camera start https://host/live.m3u8 --kind stream
-bun run cli camera status
-bun run cli camera pause
-bun run cli camera resume
-bun run cli camera stop
+awsl-webadb camera start ./image.png
+awsl-webadb camera start ./video.mp4
+awsl-webadb camera start https://host/video.mp4 --kind video
+awsl-webadb camera start rtsp://host/live --kind stream
+awsl-webadb camera start https://host/live.m3u8 --kind stream
+awsl-webadb camera status
+awsl-webadb camera pause
+awsl-webadb camera resume
+awsl-webadb camera stop
 ```
 
 `camera start` 成功后立即返回，服务后台继续供帧。多设备用 `--device` 选择；CLI 链接必须用 `--kind image|video|stream` 明确指定类型。本地文件先流式上传到运行后端的电脑，停止或切换后删除临时副本；原文件不会写入手机。视频流暂停时冻结送往手机的画面，恢复后读取最新帧。
@@ -117,8 +142,27 @@ docker run --rm \
   ghcr.io/awsl-project/awsl-webadb:latest
 ```
 
-容器自动启动 ADB server，使用 Wi-Fi 设备，不支持 USB 直通。持久化目录保存 ADB 授权密钥与配对缓存。也可以用 `docker compose up --build`。镜像内含独立 `webadb` CLI，可通过 `docker exec CONTAINER /app/webadb devices` 调用。
+容器自动启动 ADB server，使用 Wi-Fi 设备，不支持 USB 直通。持久化目录保存 ADB 授权密钥与配对缓存。也可以用 `docker compose up --build`。镜像与独立发行版使用同一个程序，可通过 `docker exec CONTAINER /app/awsl-webadb devices` 调用客户端；保留 `/app/webadb` 兼容软链接。
 
 发布流水线运行类型检查、回归测试和前端构建，然后生成 CLI、构建 Linux amd64 / arm64 镜像并发布 GitHub Release。字体和图标本地提供，增加图标后运行 `scripts/fetch-fonts.py`。PWA 离线只提供页面，设备操作仍需后端连接。
 
 开源依赖与构建工具说明见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+
+## Homebrew 发布集成
+
+本项目使用 Formula 安装命令行程序；同组织的 maxx 为桌面应用，使用 Cask。发布流程按系统和 CPU 架构选择上述四份二进制，用 `SHA256SUMS` 生成 `awsl-webadb.rb`，随 Release 一起提供。Formula 安装 FFmpeg，并提供 `brew services` 服务定义；ADB 按平台单独安装。
+
+当 Formula 已更新到 `awsl-project/homebrew-awsl` 后，使用：
+
+```bash
+brew install awsl-project/awsl/awsl-webadb
+# macOS 安装 ADB；Linux 使用发行版的软件包管理器安装 adb
+brew install --cask android-platform-tools
+adb start-server
+brew services start awsl-project/awsl/awsl-webadb
+awsl-webadb devices
+```
+
+仓库的 `HOMEBREW_TAP_TOKEN` secret 需要具备 `awsl-project/homebrew-awsl` 的 Contents 写入权限，才能在发布成功后自动更新 `Formula/awsl-webadb.rb`。可使用授予本仓库访问权限的同名组织 secret。未配置时明确跳过自动更新，不影响二进制与容器发布；配置后可手动运行 **Update Homebrew Formula** workflow，传入已发布版本补更新。不要将 token 写入源码或聊天。
+
+参考：[maxx 的 Homebrew 更新流程](https://github.com/awsl-project/maxx/blob/main/.github/workflows/update-homebrew.yml)、[Homebrew Formula 与服务定义](https://docs.brew.sh/Formula-Cookbook#service-files)。

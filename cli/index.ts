@@ -2,6 +2,7 @@
 import { writeFile, stat } from "node:fs/promises";
 import { createReadStream } from "node:fs";
 import { resolve } from "node:path";
+import { version } from "../package.json";
 
 const args = process.argv.slice(2);
 const options = new Map<string, string>();
@@ -12,8 +13,8 @@ for (let index = 0; index < args.length; index++) {
     positional.push(arg);
     continue;
   }
-  if (arg === "--help") {
-    options.set("help", "true");
+  if (arg === "--help" || arg === "--version") {
+    options.set(arg.slice(2), "true");
     continue;
   }
   if (!args[index + 1] || args[index + 1]!.startsWith("--")) {
@@ -23,28 +24,33 @@ for (let index = 0; index < args.length; index++) {
   options.set(arg.slice(2), args[++index]!);
 }
 const [command, id, ...values] = positional;
-const usage = `WebADB CLI — 无需浏览器，直接操作单个 Android 应用
+const usage = `awsl-webadb ${version} — 同一个程序作为服务端或客户端
 
-bun run cli devices
-bun run cli open com.miui.calculator [--device 1] [--width 1080 --height 1920]
-bun run cli sessions
-bun run cli screenshot SESSION --output app.jpg
-bun run cli xml SESSION [--output app.xml]
-bun run cli elements SESSION
-bun run cli tap SESSION X Y
-bun run cli click SESSION --text "打开摄像头"
-bun run cli click SESSION --resource-id com.example:id/button
-bun run cli click SESSION --node e12
-bun run cli swipe SESSION X Y END_X END_Y [--duration 300]
-bun run cli text SESSION "输入内容" [--resource-id com.example:id/input]
-bun run cli key SESSION BACK|HOME|ENTER|KEYCODE
-bun run cli close SESSION
+awsl-webadb serve [--host 127.0.0.1] [--port 3000]
+  [--adb-host 127.0.0.1] [--adb-port 5037]
+  [--static-dir PATH] [--ffmpeg PATH]
+服务端提供网页、API 和后台推流；客户端不需要打开浏览器。
 
-bun run cli camera start ./image.png [--device 1]
-bun run cli camera start ./video.mp4 [--device 1]
-bun run cli camera start https://host/live.m3u8 --kind image|video|stream
-bun run cli camera status [--device 1]
-bun run cli camera pause|resume|stop [--device 1]
+awsl-webadb devices
+awsl-webadb open com.miui.calculator [--device 1] [--width 1080 --height 1920]
+awsl-webadb sessions
+awsl-webadb screenshot SESSION --output app.jpg
+awsl-webadb xml SESSION [--output app.xml]
+awsl-webadb elements SESSION
+awsl-webadb tap SESSION X Y
+awsl-webadb click SESSION --text "打开摄像头"
+awsl-webadb click SESSION --resource-id com.example:id/button
+awsl-webadb click SESSION --node e12
+awsl-webadb swipe SESSION X Y END_X END_Y [--duration 300]
+awsl-webadb text SESSION "输入内容" [--resource-id com.example:id/input]
+awsl-webadb key SESSION BACK|HOME|ENTER|KEYCODE
+awsl-webadb close SESSION
+
+awsl-webadb camera start ./image.png [--device 1]
+awsl-webadb camera start ./video.mp4 [--device 1]
+awsl-webadb camera start https://host/live.m3u8 --kind image|video|stream
+awsl-webadb camera status [--device 1]
+awsl-webadb camera pause|resume|stop [--device 1]
 推流由后端后台运行，CLI 退出与关闭网页不会停止。
 
 --url http://127.0.0.1:3000 指定服务（或 WEBADB_URL）
@@ -87,10 +93,38 @@ const selector = () => {
   }
   return result;
 };
-try {
+async function main() {
+  if (options.has("version")) {
+    console.log(version);
+    return;
+  }
   if (!command || options.has("help") || command === "help") {
     console.log(usage);
     process.exit(0);
+  }
+  if (command === "serve") {
+    if (id) throw new Error("serve 不接受位置参数，请使用 --host、--port 等选项");
+    const variables: Record<string, string> = {
+      host: "HOST",
+      port: "PORT",
+      "adb-host": "ADB_SERVER_HOST",
+      "adb-port": "ADB_SERVER_PORT",
+      "static-dir": "STATIC_DIR",
+      ffmpeg: "FFMPEG_PATH",
+    };
+    for (const [key, value] of options) {
+      const variable = variables[key];
+      if (!variable) throw new Error(`serve 不支持 --${key}`);
+      if (key === "port" || key === "adb-port") {
+        const port = numeric(value, key);
+        if (port < 1 || port > 65535) throw new Error(`${key} 应在 1–65535 范围内`);
+      }
+      process.env[variable] =
+        key === "static-dir" || key === "ffmpeg" ? resolve(value) : value;
+    }
+    process.env.NODE_ENV ??= "production";
+    await import("../server/index");
+    return;
   }
   if (command === "devices") {
     console.log(
@@ -286,6 +320,10 @@ try {
     };
   } else throw new Error(`未知命令：${command}\n${usage}`);
   console.log(await (await request(path + "/action", "POST", action)).text());
+}
+
+try {
+  await main();
 } catch (error) {
   console.error(error instanceof Error ? error.message : String(error));
   process.exitCode = 1;

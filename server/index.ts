@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 import { createServer } from "node:http";
-import { resolve } from "node:path";
+import { extname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import net from "node:net";
 
@@ -26,23 +27,25 @@ const webHost = process.env.HOST ?? "127.0.0.1";
 const adbHost = process.env.ADB_SERVER_HOST ?? "127.0.0.1";
 const adbPort = toInteger(process.env.ADB_SERVER_PORT, 5037);
 const adbTarget = `${adbHost}:${adbPort}`;
+const production =
+  fileURLToPath(import.meta.url).startsWith("/$bunfs/") ||
+  process.env.NODE_ENV === "production";
 const allowedOrigins = new Set(
   (
     process.env.ALLOWED_ORIGINS ??
-    (process.env.NODE_ENV === "production"
-      ? ""
-      : "http://localhost:5173,http://127.0.0.1:5173")
+    (production ? "" : "http://localhost:5173,http://127.0.0.1:5173")
   )
     .split(",")
     .map((origin) => origin.trim())
     .filter(Boolean),
 );
 const sourceDistDir = resolve(fileURLToPath(new URL("../dist", import.meta.url)));
+const embeddedDistDir = resolve(fileURLToPath(new URL("./dist", import.meta.url)));
 const distDir = process.env.STATIC_DIR
   ? resolve(process.env.STATIC_DIR)
-  : existsSync(sourceDistDir)
-    ? sourceDistDir
-    : resolve("dist");
+  : [sourceDistDir, embeddedDistDir, resolve("dist")].find((path) =>
+      existsSync(resolve(path, "index.html")),
+    ) ?? resolve("dist");
 
 const connector = new AdbServerNodeTcpConnector({
   host: adbHost,
@@ -123,11 +126,10 @@ app.use("/api", (request, response, next) => {
   next();
 });
 
-app.get("/camera-test.html", (_req, res) =>
-  res.sendFile(
-    resolve(
-      process.env.NODE_ENV === "production" ? distDir : "public",
-      "camera-test.html",
+app.get("/camera-test.html", async (_req, res) =>
+  res.type("html").send(
+    await readFile(
+      resolve(production ? distDir : "public", "camera-test.html"),
     ),
   ),
 );
@@ -135,7 +137,7 @@ installAppSessions(
   app,
   adbClient,
   resolve(
-    process.env.NODE_ENV === "production" ? distDir : "public",
+    production ? distDir : "public",
     "camera/webadb-camera.jar",
   ),
   webPort,
@@ -692,12 +694,27 @@ app.use(
   },
 );
 
-if (existsSync(distDir)) {
+if (distDir.startsWith("/$bunfs/")) {
+  app.get(/^(?!\/api\/|\/ws\/).*/, async (request, response) => {
+    let path = resolve(distDir, `.${decodeURIComponent(request.path)}`);
+    if (path !== distDir && !path.startsWith(distDir + "/")) {
+      response.sendStatus(400);
+      return;
+    }
+    if (path === distDir || !existsSync(path)) path = resolve(distDir, "index.html");
+    response.type(extname(path)).send(await readFile(path));
+  });
+} else if (existsSync(distDir)) {
   app.use(express.static(distDir));
   app.get(/^(?!\/api\/).*/, (_request, response) => {
     response.sendFile(resolve(distDir, "index.html"));
   });
 }
+
+server.on("error", (error) => {
+  console.error(`服务启动失败：${error.message}`);
+  process.exit(1);
+});
 
 server.listen(webPort, webHost, () => {
   console.log(`ADB bridge ready at http://${webHost}:${webPort}`);
