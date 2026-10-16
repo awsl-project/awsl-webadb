@@ -53,6 +53,7 @@ export interface InstalledApp {
   hue: number;
   system: boolean;
   iconUrl?: string;
+  metadataReady?: boolean;
 }
 
 export interface DeviceSnapshot {

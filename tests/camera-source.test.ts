@@ -10,7 +10,7 @@ import {
   openCameraUrl,
   type CameraUrlSource,
 } from "../server/camera-source";
-
+import { CAMERA_FORMATS, cameraFormat } from "../shared/camera-formats";
 
 test("media sources accept network protocols and reject local or executable inputs", () => {
   for (const value of [
@@ -49,10 +49,11 @@ test("MJPEG parser preserves frames across split markers, chunks and concatenate
   ).toThrow("2 MB");
 });
 
-
 test("URL sources require an explicit supported media type", async () => {
   for (const kind of [undefined, "auto", "html"])
-    await expect(openCameraUrl("https://host/media", kind)).rejects.toThrow("链接类型");
+    await expect(openCameraUrl("https://host/media", kind)).rejects.toThrow(
+      "链接类型",
+    );
 });
 
 const ffmpeg =
@@ -80,7 +81,10 @@ async function collect(source: CameraUrlSource, count: number) {
 mediaTest(
   "background still image repeats after decoder exit and keeps portrait padding",
   async () => {
-    const frame = await collect(await openCameraFile(fixture, "image"), 3);
+    const frame = await collect(
+      await openCameraFile(fixture, "image", "red.png", "3:4"),
+      3,
+    );
     const decoded = spawnSync(
       "ffmpeg",
       [
@@ -109,6 +113,92 @@ mediaTest(
     expect(at(480, 100).every((value) => value < 20)).toBe(true);
     expect(at(480, 640)[0]).toBeGreaterThan(230);
     expect(at(480, 640)[1]).toBeLessThan(30);
+  },
+);
+mediaTest("each output ratio is encoded into the actual frames", async () => {
+  for (const format of CAMERA_FORMATS) {
+    const source = await openCameraFile(
+      fixture,
+      "image",
+      "red.png",
+      format.value,
+    );
+    const dimensions = { width: source.width, height: source.height };
+    const frame = await collect(source, 1);
+    const probe = spawnSync(
+      "ffprobe",
+      [
+        "-v",
+        "error",
+        "-show_entries",
+        "stream=width,height,sample_aspect_ratio",
+        "-of",
+        "json",
+        "pipe:0",
+      ],
+      { input: frame },
+    );
+    expect(probe.status).toBe(0);
+    const actual = JSON.parse(probe.stdout.toString()).streams[0];
+    expect(actual.width).toBe(dimensions.width);
+    expect(actual.height).toBe(dimensions.height);
+    expect(actual.sample_aspect_ratio).toBe("1:1");
+    if (format.value === "original") {
+      expect(dimensions).toEqual({ width: 16, height: 8 });
+      expect(Math.max(actual.width, actual.height)).toBeLessThanOrEqual(1280);
+    } else {
+      expect(dimensions).toEqual({
+        width: format.width,
+        height: format.height,
+      });
+    }
+  }
+});
+
+test("unknown camera ratios are rejected before opening media", async () => {
+  expect(cameraFormat().value).toBe("original");
+  expect(() => cameraFormat("2:5")).toThrow("比例");
+  await expect(
+    openCameraFile(fixture, "image", "red.png", "bad"),
+  ).rejects.toThrow("比例");
+});
+
+mediaTest(
+  "original ratio bounds large video and normalizes non-square pixels",
+  async () => {
+    const folder = await mkdtemp(join(tmpdir(), "webadb-camera-aspect-"));
+    try {
+      const file = join(folder, "wide.mp4");
+      const generated = spawnSync("ffmpeg", [
+        "-hide_banner",
+        "-loglevel",
+        "error",
+        "-loop",
+        "1",
+        "-i",
+        fixture,
+        "-vf",
+        "scale=1920:1080,setsar=2",
+        "-t",
+        "0.2",
+        "-r",
+        "12",
+        "-c:v",
+        "libx264",
+        "-pix_fmt",
+        "yuv420p",
+        file,
+      ]);
+      expect(generated.status).toBe(0);
+      const source = await openCameraFile(file, "video");
+      expect({ width: source.width, height: source.height }).toEqual({
+        width: 1280,
+        height: 360,
+      });
+      expect((await collect(source, 1)).length).toBeGreaterThan(100);
+    } finally {
+      await rm(folder, { recursive: true, force: true });
+    }
   },
 );
 mediaTest(

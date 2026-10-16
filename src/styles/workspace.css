@@ -455,7 +455,7 @@ button:disabled {
   .mobile-shell .desktop-window.file-manager-window,
   .mobile-shell .desktop-window.mirror-manager-window {
     position: fixed;
-    inset: 0 0 var(--mobile-dock-height) !important;
+    inset: 0 0 0 !important;
     width: auto !important;
     height: auto !important;
     min-width: 0;
@@ -505,16 +505,10 @@ button:disabled {
   box-shadow: none;
   margin-left: auto;
 }
-.dex-launcher-button {
-  background: var(--oh-panel);
-  color: var(--oh-accent-text);
-  border: 1px solid var(--oh-line-strong);
-  box-shadow: 0 4px 14px var(--oh-shadow);
-}
 .update-notice {
   position: fixed;
   right: 20px;
-  bottom: 90px;
+  bottom: 16px;
   z-index: 25000;
   display: flex;
   align-items: center;

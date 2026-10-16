@@ -18,6 +18,7 @@ import type {
   SessionSnapshot,
 } from "../../shared/sessions";
 import { formatError } from "../utils";
+import type { CameraAspect } from "../../shared/camera-formats";
 import { useDeviceAudio } from "./useDeviceAudio";
 
 export interface AppWindow extends DesktopWindowState {
@@ -540,10 +541,10 @@ export function useAppWindows(
     [transportId],
   );
   const startCameraFile = useCallback(
-    (file: File, kind: "image" | "video") =>
+    (file: File, kind: "image" | "video", aspect: CameraAspect) =>
       cameraOperation(async () => {
         const response = await fetch(
-          `/api/system-camera/file?transportId=${encodeURIComponent(transportId)}&kind=${kind}&name=${encodeURIComponent(file.name)}`,
+          `/api/system-camera/file?transportId=${encodeURIComponent(transportId)}&kind=${kind}&name=${encodeURIComponent(file.name)}&aspect=${encodeURIComponent(aspect)}`,
           {
             method: "POST",
             headers: { "Content-Type": "application/octet-stream" },
@@ -557,12 +558,12 @@ export function useAppWindows(
     [cameraOperation, transportId],
   );
   const startCameraUrl = useCallback(
-    (url: string, kind: "image" | "video" | "stream") =>
+    (url: string, kind: "image" | "video" | "stream", aspect: CameraAspect) =>
       cameraOperation(() =>
         sessionRequest(
           `/api/system-camera/url?transportId=${encodeURIComponent(transportId)}`,
           "POST",
-          { url, kind },
+          { url, kind, aspect },
         ),
       ),
     [cameraOperation, transportId],

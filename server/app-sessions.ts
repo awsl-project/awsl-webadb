@@ -104,6 +104,7 @@ export function installAppSessions(
     let state = cameras.get(transportId);
     if (state) return state;
     state = {
+      aspect: "original",
       transportId,
       enabled: false,
       sourceName: "",
@@ -147,6 +148,8 @@ export function installAppSessions(
             if (shuttingDown) throw new Error("服务正在关闭");
           },
           new Response(bytes).body!,
+          cameraFor(transportId).width,
+          cameraFor(transportId).height,
         );
         void helper.disconnected
           .then(() =>
@@ -308,15 +311,30 @@ export function installAppSessions(
       await closeDevice(session.transportId);
     emit();
   };
-  const setCamera = async (transportId: string, enabled: boolean) => {
+  const setCamera = async (
+    transportId: string,
+    enabled: boolean,
+    size = {
+      width: cameraFor(transportId).width,
+      height: cameraFor(transportId).height,
+    },
+  ) => {
     const camera = cameraFor(transportId);
     if (!enabled) await stopSource(transportId);
-    if (camera.enabled === enabled) return;
+    if (
+      camera.enabled === enabled &&
+      camera.width === size.width &&
+      camera.height === size.height
+    )
+      return;
     const open = [...sessions.values()].filter(
       (item) => item.transportId === transportId,
     );
     const oldEnabled = camera.enabled;
+    const oldSize = { width: camera.width, height: camera.height };
     camera.enabled = enabled;
+    camera.width = size.width;
+    camera.height = size.height;
     const previous = await devices.get(transportId)?.catch(() => undefined);
     if (previous)
       for (const item of open)
@@ -332,6 +350,7 @@ export function installAppSessions(
     } catch (error) {
       await closeDevice(transportId);
       camera.enabled = oldEnabled;
+      Object.assign(camera, oldSize);
       try {
         if (open.length || oldEnabled) {
           const restored = await device(transportId);
@@ -375,8 +394,12 @@ export function installAppSessions(
     cleanup: () => Promise<void>,
   ) => {
     await stopSource(transportId);
-    await setCamera(transportId, true);
+    await setCamera(transportId, true, source);
     const camera = cameraFor(transportId);
+    camera.aspect = source.aspect;
+    camera.preview = undefined;
+    camera.frames = 0;
+    camera.lastFrameAt = 0;
     camera.producerId = crypto.randomUUID();
     camera.managedBy = "server";
     camera.paused = false;
@@ -467,6 +490,7 @@ export function installAppSessions(
             source = await openCameraUrl(
               req.body?.url,
               req.body?.kind,
+              req.body?.aspect,
             );
           else {
             const kind = req.query.kind;
@@ -496,7 +520,7 @@ export function installAppSessions(
             const name = basename(
               String(req.query.name || "本地媒体").replaceAll("\\", "/"),
             ).slice(0, 200);
-            source = await openCameraFile(file, kind, name);
+            source = await openCameraFile(file, kind, name, req.query.aspect);
           }
           await enqueue(async () => {
             if (shuttingDown) throw new Error("服务正在关闭");
@@ -577,7 +601,11 @@ export function installAppSessions(
           throw new Error("视频源标识无效");
         await stopSource(transportId);
         camera.lastSeen = Date.now();
-        await setCamera(transportId, true);
+        await setCamera(transportId, true, {
+          width: CAMERA_WIDTH,
+          height: CAMERA_HEIGHT,
+        });
+        camera.aspect = "3:4";
         camera.managedBy = "browser";
         camera.paused = false;
         camera.error = "";

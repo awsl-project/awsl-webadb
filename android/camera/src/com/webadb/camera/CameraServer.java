@@ -47,10 +47,17 @@ public final class CameraServer implements AutoCloseable {
     private VirtualDisplay display;
     private VirtualCamera front;
     private VirtualCamera back;
+    private final int cameraWidth;
+    private final int cameraHeight;
     private String associationMac;
     private final java.util.concurrent.atomic.AtomicBoolean closed = new java.util.concurrent.atomic.AtomicBoolean();
 
-    private CameraServer(Context context) { this.context = context; displayThread.start(); }
+    private CameraServer(Context context, int cameraWidth, int cameraHeight) {
+        this.context = context;
+        this.cameraWidth = cameraWidth;
+        this.cameraHeight = cameraHeight;
+        displayThread.start();
+    }
 
     private static void command(String... args) throws Exception {
         Process process = new ProcessBuilder(args).redirectErrorStream(true).start();
@@ -191,7 +198,7 @@ public final class CameraServer implements AutoCloseable {
 
     private VirtualCamera createCamera(String name, int facing) {
         return device.createVirtualCamera(new VirtualCameraConfig.Builder(name)
-                .addStreamConfig(960, 1280, PixelFormat.RGBA_8888, 30)
+                .addStreamConfig(cameraWidth, cameraHeight, PixelFormat.RGBA_8888, 30)
                 .setSensorOrientation(0).setLensFacing(facing)
                 .setVirtualCameraCallback(Runnable::run, new CameraStreams(name)).build());
     }
@@ -252,8 +259,8 @@ public final class CameraServer implements AutoCloseable {
             BitmapFactory.Options bounds = new BitmapFactory.Options();
             bounds.inJustDecodeBounds = true;
             BitmapFactory.decodeByteArray(bytes, 0, bytes.length, bounds);
-            if (bounds.outWidth != 960 || bounds.outHeight != 1280) {
-                throw new IllegalArgumentException("输入帧必须为 960 × 1280");
+            if (bounds.outWidth != cameraWidth || bounds.outHeight != cameraHeight) {
+                throw new IllegalArgumentException("输入帧必须为 " + cameraWidth + " × " + cameraHeight);
             }
             replacement = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
             if (replacement == null) throw new IllegalArgumentException("无法解码输入帧");
@@ -431,17 +438,22 @@ public final class CameraServer implements AutoCloseable {
     }
 
     public static void main(String[] args) throws Exception {
-        if (args.length != 4 || !args[0].matches("webadb-camera-[a-f0-9-]{36}")
+        if ((args.length != 4 && args.length != 6) || !args[0].matches("webadb-camera-[a-f0-9-]{36}")
                 || !(args[3].equals("camera") || args[3].equals("display"))) {
             throw new IllegalArgumentException("无效的摄像头启动参数");
         }
         int width = Integer.parseInt(args[1]);
         int height = Integer.parseInt(args[2]);
+        int cameraWidth = args.length == 6 ? Integer.parseInt(args[4]) : 960;
+        int cameraHeight = args.length == 6 ? Integer.parseInt(args[5]) : 1280;
+        if (cameraWidth < 2 || cameraHeight < 2 || cameraWidth > 1280 || cameraHeight > 1280
+                || cameraWidth % 2 != 0 || cameraHeight % 2 != 0)
+            throw new IllegalArgumentException("摄像头尺寸无效");
         if (width < 320 || height < 320 || width > 2560 || height > 2560) {
             throw new IllegalArgumentException("应用显示尺寸无效");
         }
         try (LocalServerSocket listener = new LocalServerSocket(args[0]);
-                CameraServer server = new CameraServer(Probe.context())) {
+                CameraServer server = new CameraServer(Probe.context(), cameraWidth, cameraHeight)) {
             Runtime.getRuntime().addShutdownHook(new Thread(server::close, "webadb-cleanup"));
             System.out.println("WEBADB_CAMERA_LISTENING");
             Thread watchdog = new Thread(() -> {

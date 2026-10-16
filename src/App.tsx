@@ -30,8 +30,8 @@ import {
   DialogTitle,
 } from "./components/ui/dialog";
 import { cn } from "./lib/utils";
+import { formatError } from "./utils";
 
-import { AppIconImage } from "./components/AppIconImage";
 import type { DesktopPreferences } from "./components/DesktopSettingsView";
 
 import {
@@ -44,6 +44,7 @@ import { Toast } from "./components/Toast";
 import { UploadDialog } from "./components/UploadDialog";
 
 import { WorkspaceHome } from "./components/WorkspaceHome";
+import { WorkspaceToolbar } from "./components/WorkspaceToolbar";
 
 const ControlsView = lazy(() =>
   import("./components/ControlsView").then((module) => ({
@@ -101,7 +102,6 @@ const DEFAULT_DESKTOP_PREFERENCES: DesktopPreferences = {
   theme: "system",
   wallpaper: "ocean",
   iconSize: "standard",
-  dockSize: "standard",
   reduceMotion: false,
 };
 const DESKTOP_APP_PRIORITY = [
@@ -199,9 +199,6 @@ function readDesktopPreferences() {
       iconSize: ["compact", "standard", "large"].includes(stored.iconSize ?? "")
         ? (stored.iconSize as DesktopPreferences["iconSize"])
         : DEFAULT_DESKTOP_PREFERENCES.iconSize,
-      dockSize: ["compact", "standard"].includes(stored.dockSize ?? "")
-        ? (stored.dockSize as DesktopPreferences["dockSize"])
-        : DEFAULT_DESKTOP_PREFERENCES.dockSize,
       reduceMotion: Boolean(stored.reduceMotion),
     };
   } catch {
@@ -228,6 +225,8 @@ export default function App() {
     deviceId: string;
     packages: string[] | null;
   }>({ deviceId: "", packages: null });
+  const favoritesVersion = useRef(0);
+  const favoritesSaving = useRef(false);
   const [desktopPreferences, setDesktopPreferences] = useState(
     readDesktopPreferences,
   );
@@ -265,7 +264,6 @@ export default function App() {
       zIndex: 20,
     };
   });
-  const [clock, setClock] = useState(() => new Date());
   const filesDeviceRef = useRef("");
   const topZIndexRef = useRef(100);
   const nextZIndex = useCallback(() => {
@@ -358,16 +356,48 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    const controller = new AbortController();
+    const local = readDesktopPackages(desktopDeviceId);
     setDesktopPreference({
       deviceId: desktopDeviceId,
-      packages: readDesktopPackages(desktopDeviceId),
+      packages: local,
     });
-  }, [desktopDeviceId]);
-
-  useEffect(() => {
-    const timer = window.setInterval(() => setClock(new Date()), 30_000);
-    return () => window.clearInterval(timer);
-  }, []);
+    if (!desktopDeviceId) return;
+    const endpoint = `/api/favorites?device=${encodeURIComponent(desktopDeviceId)}`;
+    const sync = async () => {
+      const version = favoritesVersion.current;
+      try {
+        const response = await fetch(endpoint, { signal: controller.signal });
+        if (!response.ok) throw new Error("读取收藏失败");
+        const data = await response.json();
+        if (controller.signal.aborted || version !== favoritesVersion.current)
+          return;
+        if (Array.isArray(data.packages)) {
+          writeDesktopPackages(desktopDeviceId, data.packages);
+          setDesktopPreference({
+            deviceId: desktopDeviceId,
+            packages: data.packages,
+          });
+        } else if (local) {
+          const saved = await fetch(endpoint, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ packages: local }),
+            signal: controller.signal,
+          });
+          if (!saved.ok) throw new Error("保存收藏失败");
+        }
+      } catch (error) {
+        if (!controller.signal.aborted) showMessage(formatError(error));
+      }
+    };
+    void sync();
+    window.addEventListener("focus", sync);
+    return () => {
+      controller.abort();
+      window.removeEventListener("focus", sync);
+    };
+  }, [desktopDeviceId, showMessage]);
 
   useEffect(() => {
     try {
@@ -493,6 +523,13 @@ export default function App() {
   const currentDesktopPackages = new Set(
     desktopPackages ?? defaultDesktopApps.map((app) => app.packageName),
   );
+  useEffect(() => {
+    void apps.loadMetadata(
+      launcherOpen
+        ? apps.apps.map((app) => app.packageName)
+        : [...currentDesktopPackages],
+    );
+  }, [apps.apps, apps.loadMetadata, launcherOpen, desktopPackages]);
 
   const mirrorContent = (
     <div className="mirror-window-layout">
@@ -551,7 +588,8 @@ export default function App() {
         onLaunch={handleLaunchApp}
         onConnect={() => focusWindow("connect")}
         desktopPackages={currentDesktopPackages}
-        onToggleDesktop={(packageName) => {
+        onToggleDesktop={async (packageName) => {
+          if (favoritesSaving.current) return;
           if (!desktopDeviceId) {
             showMessage("请先连接 Android 设备");
             return;
@@ -571,8 +609,26 @@ export default function App() {
           const next = current.includes(packageName)
             ? current.filter((item) => item !== packageName)
             : [...current, packageName];
-          writeDesktopPackages(desktopDeviceId, next);
-          setDesktopPreference({ deviceId: desktopDeviceId, packages: next });
+          favoritesVersion.current++;
+          favoritesSaving.current = true;
+          try {
+            const response = await fetch(
+              `/api/favorites?device=${encodeURIComponent(desktopDeviceId)}`,
+              {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ packages: next }),
+              },
+            );
+            if (!response.ok) throw new Error("保存收藏失败");
+            writeDesktopPackages(desktopDeviceId, next);
+            setDesktopPreference({ deviceId: desktopDeviceId, packages: next });
+          } catch (error) {
+            showMessage(formatError(error));
+            return;
+          } finally {
+            favoritesSaving.current = false;
+          }
           showMessage(
             `${app?.name ?? packageName}${next.includes(packageName) ? " 已添加到桌面" : " 已从桌面移除"}`,
           );
@@ -629,11 +685,6 @@ export default function App() {
         preferences={desktopPreferences}
         onChange={setDesktopPreferences}
         onReset={() => setDesktopPreferences(DEFAULT_DESKTOP_PREFERENCES)}
-        onOpenCamera={() => {
-          setLauncherOpen(false);
-          setSystemPanel(null);
-          setSystemCameraOpen(true);
-        }}
       />
     ),
   };
@@ -949,7 +1000,6 @@ export default function App() {
       data-theme={resolvedTheme}
       data-wallpaper={desktopPreferences.wallpaper}
       data-icon-size={desktopPreferences.iconSize}
-      data-dock-size={desktopPreferences.dockSize}
       onKeyDown={(event) => {
         const target = event.target;
         if (
@@ -962,11 +1012,11 @@ export default function App() {
       }}
     >
       <section className="desktop-workspace dex-desktop">
-        <header className="dex-topbar">
+        <header className="dex-topbar inset-x-0 top-0 grid h-[124px] grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-2 px-4 py-2 min-[901px]:h-16 min-[901px]:grid-cols-[auto_1fr_auto] min-[901px]:gap-x-6 min-[901px]:px-8 min-[901px]:py-0">
           <Button
             variant="unstyled"
             size="unstyled"
-            className="desk-brand"
+            className="desk-brand mr-0"
             onClick={() => {
               appWindows.minimizeAll();
               setFileWindow((current) => ({ ...current, minimized: true }));
@@ -980,59 +1030,39 @@ export default function App() {
             <span className="brand-mark">
               W<span>↗</span>
             </span>
-            <strong>
+            <strong className="hidden min-[500px]:block">
               WebADB<span className="hidden sm:inline">Desk</span>
             </strong>
           </Button>
-          <div className="ml-auto flex min-w-0 items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className={cn(
-                "h-11 px-3",
-                appWindows.cameraEnabled && "text-[var(--oh-green)]",
-              )}
-              onClick={openSystemCamera}
-              type="button"
-              aria-label="打开系统摄像头"
-              aria-expanded={systemCameraOpen}
-            >
-              <Icon className="ui-icon" aria-hidden="true" name="camera_alt" />
-              <span className="hidden sm:inline">
-                {appWindows.cameraEnabled
-                  ? appWindows.camera?.paused
-                    ? "已暂停"
-                    : "推流中"
-                  : "摄像头"}
-              </span>
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-11 min-w-0 shrink gap-2 px-2"
-              onClick={() => focusWindow("connect")}
-              type="button"
-              aria-label="管理设备连接"
-            >
-              <span
-                className={`connection-light ${selectedDeviceName ? "online" : ""}`}
-              />
-              <span className="hidden text-xs text-muted-foreground min-[901px]:inline">
-                {devicesHook.connectionError
-                  ? "服务离线"
-                  : selectedDeviceName
-                    ? "已连接"
-                    : "未连接"}
-              </span>
-              <strong className="max-w-20 truncate text-xs sm:max-w-48">
-                {selectedDeviceName || "连接设备"}
-              </strong>
-              <Icon className="hidden sm:inline-flex" name="expand_more" />
-            </Button>
-          </div>
+          <WorkspaceToolbar
+            deviceName={selectedDeviceName ?? undefined}
+            snapshot={controls.snapshot}
+            connectionError={Boolean(devicesHook.connectionError)}
+            camera={appWindows.camera}
+            onOpenCamera={openSystemCamera}
+            cameraOpen={systemCameraOpen}
+            activeView={
+              launcherOpen
+                ? "apps"
+                : (systemPanel ??
+                  (!appWindows.activeId &&
+                  !mirrorWindow.minimized &&
+                  mirrorWindow.open
+                    ? "mirror"
+                    : !appWindows.activeId &&
+                        !fileWindow.minimized &&
+                        fileWindow.open
+                      ? "files"
+                      : undefined))
+            }
+            onOpen={focusWindow}
+          />
         </header>
         {devicesHook.connectionError ? (
-          <div className="connection-banner" role="status">
+          <div
+            className="connection-banner top-[132px] min-[901px]:top-[72px]"
+            role="status"
+          >
             <Icon aria-hidden="true" className="ui-icon" name="cloud_off" />
             <span>连接服务不可用，正在自动重试</span>
             <Button
@@ -1048,16 +1078,11 @@ export default function App() {
 
         <WorkspaceHome
           deviceName={selectedDeviceName ?? undefined}
-          snapshot={controls.snapshot}
           apps={desktopApps}
-          appCount={apps.apps.length}
           pending={apps.appsPending}
           runningPackages={appWindows.runningPackages}
-          cameraEnabled={appWindows.cameraEnabled}
           iconSize={desktopPreferences.iconSize}
-          cameraPaused={Boolean(appWindows.camera?.paused)}
           onOpen={focusWindow}
-          onOpenCamera={openSystemCamera}
           onLaunch={handleLaunchApp}
         />
 
@@ -1145,187 +1170,6 @@ export default function App() {
 
         {panelDialog}
         {appWindowNodes}
-
-        <footer className="dex-dock">
-          <nav className="dex-dock-navigation" aria-label="桌面导航">
-            <Button
-              variant="unstyled"
-              size="unstyled"
-              onClick={() => {
-                if (appWindows.activeId)
-                  void appWindows.pressBack(appWindows.activeId);
-                else if (panelView === "mirror")
-                  void mirror.pressAndroidKey(AndroidKeyCode.AndroidBack);
-              }}
-              disabled={
-                !appWindows.activeId &&
-                !(
-                  panelView === "mirror" &&
-                  mirror.mirrorRunning &&
-                  !mirrorWindow.minimized
-                )
-              }
-              type="button"
-              aria-label="返回"
-            >
-              <Icon
-                aria-hidden="true"
-                className="ui-icon"
-                name="arrow_back_ios_new"
-              />
-            </Button>
-            <Button
-              variant="unstyled"
-              size="unstyled"
-              onClick={() => {
-                appWindows.minimizeAll();
-                setFileWindow((current) => ({ ...current, minimized: true }));
-                setMirrorWindow((current) => ({ ...current, minimized: true }));
-                setLauncherOpen(false);
-                setSystemPanel(null);
-              }}
-              type="button"
-              aria-label="桌面"
-            >
-              <Icon aria-hidden="true" className="ui-icon" name="circle" />
-            </Button>
-          </nav>
-          <div className="dex-running-apps">
-            {mirrorWindow.open ? (
-              <Button
-                variant="unstyled"
-                size="unstyled"
-                className={
-                  !mirrorWindow.minimized &&
-                  panelView === "mirror" &&
-                  !appWindows.activeId
-                    ? "active"
-                    : ""
-                }
-                onClick={() => {
-                  if (
-                    !mirrorWindow.minimized &&
-                    panelView === "mirror" &&
-                    !appWindows.activeId
-                  ) {
-                    setMirrorWindow((current) => ({
-                      ...current,
-                      minimized: true,
-                    }));
-                    return;
-                  }
-                  focusWindow("mirror");
-                }}
-                title="手机镜像"
-                type="button"
-              >
-                <Icon
-                  aria-hidden="true"
-                  className="ui-icon"
-                  name="phone_android"
-                />
-              </Button>
-            ) : null}
-            {fileWindow.open ? (
-              <Button
-                variant="unstyled"
-                size="unstyled"
-                className={
-                  !fileWindow.minimized && panelView === "files" ? "active" : ""
-                }
-                onClick={() => {
-                  if (
-                    !fileWindow.minimized &&
-                    panelView === "files" &&
-                    !appWindows.activeId
-                  ) {
-                    setFileWindow((current) => ({
-                      ...current,
-                      minimized: true,
-                    }));
-                    return;
-                  }
-                  focusWindow("files");
-                }}
-                title="文件管理"
-                type="button"
-              >
-                <Icon aria-hidden="true" className="ui-icon" name="folder" />
-              </Button>
-            ) : null}
-            {appWindows.windows.map((appWindow) => (
-              <Button
-                variant="unstyled"
-                size="unstyled"
-                key={appWindow.id}
-                className={appWindows.activeId === appWindow.id ? "active" : ""}
-                onClick={() => appWindows.toggleWindow(appWindow.id)}
-                title={appWindow.app.name}
-                type="button"
-              >
-                <span>{appWindow.app.name.trim().slice(0, 1)}</span>
-                <AppIconImage src={appWindow.app.iconUrl} />
-              </Button>
-            ))}
-          </div>
-          <Button
-            variant="unstyled"
-            size="unstyled"
-            className={`dex-launcher-button ${launcherOpen ? "active" : ""}`}
-            onClick={() => {
-              setSystemPanel(null);
-              setLauncherOpen((open) => !open);
-            }}
-            aria-label="应用中心"
-            type="button"
-          >
-            <Icon aria-hidden="true" className="ui-icon" name="apps" />
-          </Button>
-          <div className="dex-dock-status">
-            <Button
-              variant="unstyled"
-              size="unstyled"
-              onClick={() => focusWindow("connect")}
-              title="设备连接"
-              aria-label="设备连接"
-              type="button"
-            >
-              <Icon aria-hidden="true" className="ui-icon" name="smartphone" />
-            </Button>
-            <Button
-              variant="unstyled"
-              size="unstyled"
-              onClick={() => focusWindow("settings")}
-              title="桌面设置"
-              aria-label="桌面设置"
-              type="button"
-            >
-              <Icon aria-hidden="true" className="ui-icon" name="settings" />
-            </Button>
-            <Button
-              variant="unstyled"
-              size="unstyled"
-              className="dex-clock-button"
-              aria-label="设备控制"
-              onClick={() => focusWindow("controls")}
-              type="button"
-            >
-              <strong>
-                {clock.toLocaleTimeString("zh-CN", {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                  hour12: false,
-                })}
-              </strong>
-              <span>
-                {clock.toLocaleDateString("zh-CN", {
-                  month: "2-digit",
-                  day: "2-digit",
-                })}
-              </span>
-            </Button>
-          </div>
-        </footer>
       </section>
 
       {files.fileUploadDialogOpen ? (

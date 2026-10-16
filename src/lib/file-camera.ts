@@ -53,6 +53,8 @@ export async function createFileCamera(
   camera: boolean,
   assertCurrent: () => void,
   helperSource?: ReadableStream<Uint8Array>,
+  cameraWidth = 960,
+  cameraHeight = 1280,
 ): Promise<FileCameraSession> {
   const name = `webadb-camera-${crypto.randomUUID()}`;
   const path = `/data/local/tmp/${name}.jar`;
@@ -133,6 +135,8 @@ export async function createFileCamera(
       String(width),
       String(height),
       camera ? "camera" : "display",
+      String(cameraWidth),
+      String(cameraHeight),
     ]);
     const output = process.output.getReader();
     const decoder = new TextDecoder();

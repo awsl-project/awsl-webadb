@@ -60,7 +60,7 @@ awsl-webadb --help
 awsl-webadb --version
 ```
 
-`serve` 还接受 `--adb-host`、`--adb-port`、`--ffmpeg` 和 `--static-dir`；也兼容原来的环境变量。网页地址默认为 `http://127.0.0.1:3000`。服务端需要持续运行，客户端命令执行完就退出；远程客户端通过 `--url` 或 `WEBADB_URL` 连接同一服务。源码开发也可用 `bun run serve` 和 `bun run cli …`。
+`serve` 还接受 `--adb-host`、`--adb-port`、`--ffmpeg`、`--static-dir` 和 `--data-dir`；也兼容原来的环境变量。网页地址默认为 `http://127.0.0.1:3000`。服务端需要持续运行，客户端命令执行完就退出；远程客户端通过 `--url` 或 `WEBADB_URL` 连接同一服务。源码开发也可用 `bun run serve` 和 `bun run cli …`。
 
 ```bash
 awsl-webadb devices
@@ -97,15 +97,18 @@ awsl-webadb close SESSION
 
 下载对应文件后 `chmod +x` 并重命名为 `awsl-webadb`；每份文件都兼具服务端与客户端能力。构建冒烟检查：`node scripts/smoke-binary.mjs bin/awsl-webadb`，从空目录核对服务、客户端、参数、来源限制及所有内置资源。
 
+应用名称和图标按设备、包名、语言保存到服务端磁盘，读取时命中缓存就直接使用，超过 **7 天**再从手机读取。首页只加载常用图标，打开全部应用时再读取其他名称与图标。收藏列表按设备永久保存；首次使用会迁移该浏览器已有的收藏，其他浏览器在打开页面或重新聚焦时读取服务端收藏。默认目录是 `~/.local/share/awsl-webadb`，可用 `serve --data-dir PATH` 或 `WEBADB_DATA_DIR` 指定；`metadata/` 是可删除的缓存，`favorites/` 是不设有效期的收藏数据。
+
 ## 文件摄像头
 
-在桌面或设置中打开“系统摄像头”，选择“图片”“视频”或“媒体链接”，手动开始推流。媒体链接接受 HTTP(S) 图片 / 视频直链和 HLS、RTSP、RTMP 视频流，不接受普通网页地址。输入链接时必须选择“图片直链”“视频直链”或“实时视频流”，按明确类型处理。图片持续发送静止画面，视频循环播放，暂停时保留当前帧。输出固定为 **960 × 1280（宽 × 高，竖屏 3:4）**：按长边等比缩放，居中补黑，不拉伸、不裁剪。没有音轨，原始文件不复制到手机存储。
+在首页工具栏打开“摄像头”，选择“图片”“视频”或“媒体链接”，手动开始推流。媒体链接接受 HTTP(S) 图片 / 视频直链和 HLS、RTSP、RTMP 视频流，不接受普通网页地址。输入链接时必须选择“图片直链”“视频直链”或“实时视频流”，按明确类型处理。图片持续发送静止画面，视频循环播放，暂停时保留当前帧。输出默认使用**原始比例**：跟随媒体画面比例，最长边不超过 1280，不放大小图；编码尺寸取偶数，最多产生一个像素的取整差异。也可选择 **3:4（960 × 1280）、4:3（1280 × 960）、9:16（720 × 1280）、16:9（1280 × 720）、1:1（1280 × 1280）**；固定比例等比缩放、居中补黑，不拉伸、不裁剪。预览、后台 JPEG 和 Android 虚拟摄像头使用同一输出尺寸。比例选择在下一次开始或切换推流时生效；尺寸变化会重建虚拟摄像头及其应用显示，正在使用相机的应用可能需要重新打开相机。实时流在本次推流期间尺寸固定，来源尺寸变化时需重新开始。没有音轨，原始文件不复制到手机存储。
 
 同一设备的 WebADB 应用窗口共享前后虚拟摄像头，两者使用相同输入源；手机主屏应用保持原有摄像头行为。正式来源由后端 FFmpeg 解码并持有，关闭网页或 CLI、收起面板及关闭应用窗口后继续推流。其他客户端能看到共享来源、暂停状态和手机确认的帧数，可以切换、暂停或停止。后台服务必须持续运行；设备断开、停止推流或服务退出时释放本次资源。启停相机会重建虚拟设备中的应用显示，应用是否保留页面取决于其自身行为。
 
 ```bash
 awsl-webadb camera start ./image.png
-awsl-webadb camera start ./video.mp4
+awsl-webadb camera start ./video.mp4 --aspect original
+awsl-webadb camera start ./video.mp4 --aspect 9:16
 awsl-webadb camera start https://host/video.mp4 --kind video
 awsl-webadb camera start rtsp://host/live --kind stream
 awsl-webadb camera start https://host/live.m3u8 --kind stream
@@ -115,7 +118,7 @@ awsl-webadb camera resume
 awsl-webadb camera stop
 ```
 
-`camera start` 成功后立即返回，服务后台继续供帧。多设备用 `--device` 选择；CLI 链接必须用 `--kind image|video|stream` 明确指定类型。本地文件先流式上传到运行后端的电脑，停止或切换后删除临时副本；原文件不会写入手机。视频流暂停时冻结送往手机的画面，恢复后读取最新帧。
+`camera start` 成功后立即返回，服务后台继续供帧。多设备用 `--device` 选择；CLI 链接必须用 `--kind image|video|stream` 明确指定类型；`--aspect original|3:4|4:3|9:16|16:9|1:1` 选择输出比例，默认 `original`。本地文件先流式上传到运行后端的电脑，停止或切换后删除临时副本；原文件不会写入手机。视频流暂停时冻结送往手机的画面，恢复后读取最新帧。
 
 内部联调页面 `camera-test.html` 用于在 Android Chrome 中检查相机画面，产品界面不提供该测试入口。开始推流后，在该页面打开摄像头并允许网站访问，使用真实 `getUserMedia()` 和 `BarcodeDetector` 核对画面与二维码。不会自动访问扫码链接。验收网页通过随机 ADB reverse 端口访问运行后端的电脑，要求 ADB server 与 WebADB 服务运行在同一台机器；远程容器需要自行保证该路径可达。
 

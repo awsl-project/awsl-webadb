@@ -11,11 +11,12 @@ import {
   Video,
 } from "lucide-react";
 import { formatError } from "../utils";
+import type { CameraState } from "../../shared/sessions";
 import {
-  CAMERA_HEIGHT,
-  CAMERA_WIDTH,
-  type CameraState,
-} from "../../shared/sessions";
+  CAMERA_FORMATS,
+  cameraFormat,
+  type CameraAspect,
+} from "../../shared/camera-formats";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { Input } from "./ui/input";
@@ -27,10 +28,15 @@ interface Props {
   enabled: boolean;
   camera?: CameraState;
   pending: boolean;
-  onStartFile: (file: File, kind: "image" | "video") => Promise<void>;
+  onStartFile: (
+    file: File,
+    kind: "image" | "video",
+    aspect: CameraAspect,
+  ) => Promise<void>;
   onStartUrl: (
     url: string,
     kind: "image" | "video" | "stream",
+    aspect: CameraAspect,
   ) => Promise<void>;
   onStop: () => Promise<void>;
   onPause: (paused: boolean) => Promise<void>;
@@ -59,16 +65,26 @@ export function FileCameraPanel({
     file: File;
     url: string;
     kind: "image" | "video";
+    width?: number;
+    height?: number;
   } | null>(null);
   const [urlKind, setUrlKind] = useState<"" | MediaKind>("");
   const [url, setUrl] = useState("");
+  const [aspect, setAspect] = useState<CameraAspect>(
+    camera?.aspect ?? "original",
+  );
+  useEffect(
+    () => setAspect(camera?.aspect ?? "original"),
+    [camera?.aspect, camera?.producerId],
+  );
   const [error, setError] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+  const previewUrl = source?.url;
   useEffect(
     () => () => {
-      if (source) URL.revokeObjectURL(source.url);
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
     },
-    [source],
+    [previewUrl],
   );
   const run = async (operation: () => Promise<void>) => {
     setError("");
@@ -79,6 +95,28 @@ export function FileCameraPanel({
     }
   };
   const selectedFile = source?.kind === kind ? source : null;
+  const format = cameraFormat(aspect);
+  const previewWidth = enabled
+    ? camera?.width
+    : format.width || selectedFile?.width;
+  const previewHeight = enabled
+    ? camera?.height
+    : format.height || selectedFile?.height;
+  const previewRatio =
+    previewWidth && previewHeight ? previewWidth / previewHeight : 1;
+  const previewLabel = enabled
+    ? `${camera?.width} × ${camera?.height}`
+    : format.value === "original"
+      ? "原始比例"
+      : format.value;
+  const rememberSize = (width: number, height: number) => {
+    if (!selectedFile || !width || !height) return;
+    setSource((current) =>
+      current?.url === selectedFile.url
+        ? { ...current, width, height }
+        : current,
+    );
+  };
   const canStart =
     running &&
     !pending &&
@@ -100,8 +138,8 @@ export function FileCameraPanel({
     if (!canStart) return;
     void run(() =>
       kind === "url"
-        ? onStartUrl(url.trim(), urlKind as MediaKind)
-        : onStartFile(selectedFile!.file, kind),
+        ? onStartUrl(url.trim(), urlKind as MediaKind, aspect)
+        : onStartFile(selectedFile!.file, kind, aspect),
     );
   };
   return (
@@ -238,17 +276,33 @@ export function FileCameraPanel({
               )}
             </TabsContent>
           </Tabs>
-          <div className="flex items-center gap-3 border-y border-border py-4">
-            <Camera className="size-5 shrink-0 text-muted-foreground" />
-            <div className="space-y-1">
-              <strong className="font-mono text-xs font-medium">
-                {CAMERA_WIDTH} × {CAMERA_HEIGHT}
-              </strong>
-              <p className="m-0 text-xs leading-relaxed text-muted-foreground">
-                竖屏 3:4 · 等比缩放补黑 · 无音频
-              </p>
-            </div>
-          </div>
+          <label className="grid gap-2 border-t border-border pt-4 text-xs">
+            <span className="flex items-center gap-2 font-medium">
+              <Camera className="size-4 text-muted-foreground" />
+              输出比例
+            </span>
+            <NativeSelect
+              aria-label="输出比例"
+              className="h-11 text-base sm:text-sm"
+              value={aspect}
+              disabled={pending}
+              onChange={(event) =>
+                setAspect(event.currentTarget.value as CameraAspect)
+              }
+            >
+              {CAMERA_FORMATS.map((item) => (
+                <NativeSelectOption key={item.value} value={item.value}>
+                  {item.label}
+                </NativeSelectOption>
+              ))}
+            </NativeSelect>
+            <span className="leading-relaxed text-muted-foreground">
+              {format.value === "original"
+                ? "跟随来源比例，最长边 1280，不额外补边。"
+                : `${format.width} × ${format.height} · 等比缩放补黑，不裁剪。`}
+              {enabled && " 下次推流时应用。"}
+            </span>
+          </label>
           {!running && (
             <p className="m-0 text-xs text-muted-foreground">
               连接设备后即可开始推流。
@@ -257,7 +311,7 @@ export function FileCameraPanel({
           {enabled && (
             <div className="space-y-2 rounded-lg border border-border bg-muted p-3">
               <p className="m-0 text-xs text-muted-foreground">
-                当前输出 · {currentType}
+                当前输出 · {currentType} · {camera?.width} × {camera?.height}
               </p>
               <p
                 className="m-0 truncate font-mono text-xs"
@@ -281,9 +335,17 @@ export function FileCameraPanel({
             <strong className="font-medium">
               {enabled ? "当前输出画面" : "画面预览"}
             </strong>
-            <span className="font-mono text-muted-foreground">3:4</span>
+            <span className="font-mono text-muted-foreground">
+              {previewLabel}
+            </span>
           </div>
-          <div className="flex aspect-[3/4] items-center justify-center overflow-hidden rounded-xl border border-border bg-[#15181d]">
+          <div
+            className="mx-auto flex max-w-full items-center justify-center overflow-hidden rounded-xl border border-border bg-[#15181d]"
+            style={{
+              aspectRatio: previewRatio,
+              width: Math.min(220, 300 * previewRatio),
+            }}
+          >
             {enabled && camera?.lastFrameAt ? (
               <img
                 className="size-full object-contain"
@@ -296,6 +358,12 @@ export function FileCameraPanel({
                   className="size-full object-contain"
                   src={selectedFile.url}
                   alt="待推流图片"
+                  onLoad={(event) =>
+                    rememberSize(
+                      event.currentTarget.naturalWidth,
+                      event.currentTarget.naturalHeight,
+                    )
+                  }
                 />
               ) : (
                 <video
@@ -305,6 +373,12 @@ export function FileCameraPanel({
                   playsInline
                   controls
                   preload="metadata"
+                  onLoadedMetadata={(event) =>
+                    rememberSize(
+                      event.currentTarget.videoWidth,
+                      event.currentTarget.videoHeight,
+                    )
+                  }
                 />
               )
             ) : (

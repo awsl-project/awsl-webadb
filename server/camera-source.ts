@@ -1,9 +1,12 @@
 import { basename } from "node:path";
 import { spawn } from "node:child_process";
-import { CAMERA_HEIGHT, CAMERA_WIDTH } from "../shared/sessions";
+import { cameraFormat, type CameraAspect } from "../shared/camera-formats";
 
 export type CameraUrlKind = "image" | "video" | "stream";
 export interface CameraUrlSource {
+  aspect: CameraAspect;
+  width: number;
+  height: number;
   name: string;
   kind: CameraUrlKind;
   start: (
@@ -60,6 +63,7 @@ export class JpegFrames {
 export async function openCameraUrl(
   value: unknown,
   requested: unknown,
+  aspect?: unknown,
 ): Promise<CameraUrlSource> {
   const url = mediaUrl(value);
   if (!["image", "video", "stream"].includes(String(requested)))
@@ -71,23 +75,46 @@ export async function openCameraUrl(
   display.password = "";
   display.search = "";
   display.hash = "";
-  return openMedia(url.href, requested as CameraUrlKind, display.href);
+  return openMedia(url.href, requested as CameraUrlKind, display.href, aspect);
 }
 
 export function openCameraFile(
   path: string,
   kind: "image" | "video",
   name = basename(path),
+  aspect?: unknown,
 ) {
-  return openMedia(path, kind, name, true);
+  return openMedia(path, kind, name, aspect, true);
+}
+
+function jpegSize(frame: Buffer) {
+  let offset = 2;
+  while (offset + 8 < frame.length && frame[offset] === 255) {
+    const marker = frame[offset + 1]!;
+    const length = frame.readUInt16BE(offset + 2);
+    if ([0xc0, 0xc1, 0xc2].includes(marker))
+      return {
+        width: frame.readUInt16BE(offset + 7),
+        height: frame.readUInt16BE(offset + 5),
+      };
+    if (length < 2) break;
+    offset += length + 2;
+  }
+  throw new Error("无法读取输出画面尺寸");
 }
 
 async function openMedia(
   input: string,
   kind: CameraUrlKind,
   name: string,
+  aspect: unknown,
   local = false,
 ): Promise<CameraUrlSource> {
+  const format = cameraFormat(aspect);
+  const sizing =
+    format.value === "original"
+      ? "scale=w='min(1280,iw)':h='min(1280,ih)':force_original_aspect_ratio=decrease:force_divisible_by=2"
+      : `scale=${format.width}:${format.height}:force_original_aspect_ratio=decrease:force_divisible_by=2,pad=${format.width}:${format.height}:(ow-iw)/2:(oh-ih)/2:color=black`;
   const args = [
     "-hide_banner",
     "-loglevel",
@@ -118,7 +145,7 @@ async function openMedia(
     "-filter_threads",
     "1",
     "-vf",
-    `scale=${CAMERA_WIDTH}:${CAMERA_HEIGHT}:force_original_aspect_ratio=decrease,pad=${CAMERA_WIDTH}:${CAMERA_HEIGHT}:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1${kind === "image" ? "" : ",fps=12"}`,
+    `scale=w='max(2,trunc(iw*sar/2)*2)':h=ih,setsar=1,${sizing},setsar=1${kind === "image" ? "" : ",fps=12"}`,
     "-c:v",
     "mjpeg",
     "-pix_fmt",
@@ -144,6 +171,7 @@ async function openMedia(
   let repeat: ReturnType<typeof setInterval> | undefined;
   let killTimer: ReturnType<typeof setTimeout> | undefined;
   let received = false;
+  let dimensions: { width: number; height: number } | undefined;
   let readyResolve: () => void = () => undefined;
   let readyReject: (error: Error) => void = () => undefined;
   const ready = new Promise<void>((resolve, reject) => {
@@ -193,6 +221,13 @@ async function openMedia(
     if (stopped) return;
     try {
       for (const frame of parser.push(chunk)) {
+        const size = jpegSize(frame);
+        if (
+          dimensions &&
+          (dimensions.width !== size.width || dimensions.height !== size.height)
+        )
+          throw new Error("媒体尺寸已变化，请重新开始推流");
+        dimensions = size;
         latest = frame;
         held = frame;
         received = true;
@@ -244,6 +279,8 @@ async function openMedia(
     clearTimeout(timeout);
   }
   return {
+    aspect: format.value,
+    ...dimensions!,
     name,
     kind,
     start: (onFrame, onError) => {

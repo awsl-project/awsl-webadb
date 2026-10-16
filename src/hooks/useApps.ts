@@ -13,6 +13,10 @@ export function useApps(
   const [appsError, setAppsError] = useState("");
   const requestRef = useRef<AbortController | null>(null);
   const actionRef = useRef(false);
+  const metadataRequests = useRef(new Set<string>());
+  const localeRef = useRef("zh-CN");
+  const appsRef = useRef(apps);
+  appsRef.current = apps;
   const deviceRef = useRef(selectedTransportId);
   deviceRef.current = selectedTransportId;
 
@@ -40,47 +44,9 @@ export function useApps(
         if (!response.ok) throw new Error(data.message || "应用列表读取失败");
         if (!current()) return;
         const nextApps: InstalledApp[] = data.apps;
+        localeRef.current = data.locale;
+        metadataRequests.current.clear();
         setApps(nextApps);
-        setAppsPending("读取名称与图标");
-        let index = 0;
-        await Promise.all(
-          Array.from({ length: 3 }, async () => {
-            while (index < nextApps.length && current()) {
-              const app = nextApps[index++];
-              const params = new URLSearchParams({
-                transportId: selectedTransportId,
-                package: app.packageName,
-                locale: data.locale,
-              });
-              try {
-                const detail = await fetch(`/api/app-metadata?${params}`, {
-                  signal: AbortSignal.any([
-                    controller.signal,
-                    AbortSignal.timeout(30_000),
-                  ]),
-                });
-                if (!detail.ok) continue;
-                const metadata = await detail.json();
-                if (!current()) return;
-                setApps((previous) =>
-                  previous.map((item) =>
-                    item.packageName === app.packageName
-                      ? {
-                          ...item,
-                          name: metadata.name || item.name,
-                          iconUrl: metadata.hasIcon
-                            ? `/api/app-icon?${params}`
-                            : undefined,
-                        }
-                      : item,
-                  ),
-                );
-              } catch {
-                if (!current()) return;
-              }
-            }
-          }),
-        );
         if (current() && !silent)
           onMessage(`已读取 ${nextApps.length} 个可启动应用`);
       } catch (error) {
@@ -93,6 +59,66 @@ export function useApps(
       }
     },
     [onMessage, selectedTransportId],
+  );
+
+  const loadMetadata = useCallback(
+    async (packages: string[]) => {
+      const controller = requestRef.current;
+      if (!selectedTransportId || !controller || controller.signal.aborted)
+        return;
+      const requested = new Set(packages);
+      const pending = appsRef.current.filter(
+        (app) =>
+          requested.has(app.packageName) &&
+          !app.metadataReady &&
+          !metadataRequests.current.has(app.packageName),
+      );
+      for (const app of pending) metadataRequests.current.add(app.packageName);
+      let index = 0;
+      const current = () =>
+        !controller.signal.aborted && deviceRef.current === selectedTransportId;
+      await Promise.all(
+        Array.from({ length: Math.min(3, pending.length) }, async () => {
+          while (index < pending.length && current()) {
+            const app = pending[index++];
+            const params = new URLSearchParams({
+              transportId: selectedTransportId,
+              package: app.packageName,
+              locale: localeRef.current,
+            });
+            try {
+              const response = await fetch(`/api/app-metadata?${params}`, {
+                signal: AbortSignal.any([
+                  controller.signal,
+                  AbortSignal.timeout(30_000),
+                ]),
+              });
+              if (!response.ok) continue;
+              const metadata = await response.json();
+              if (!current()) return;
+              params.set("v", String(metadata.version));
+              setApps((previous) =>
+                previous.map((item) =>
+                  item.packageName === app.packageName
+                    ? {
+                        ...item,
+                        name: metadata.name || item.name,
+                        metadataReady: true,
+                        iconUrl: metadata.hasIcon
+                          ? `/api/app-icon?${params}`
+                          : undefined,
+                      }
+                    : item,
+                ),
+              );
+            } catch {
+              if (!current()) return;
+            }
+          }
+        }),
+      );
+    },
+    [selectedTransportId],
   );
 
   const stopApp = useCallback(
@@ -124,5 +150,5 @@ export function useApps(
     return () => requestRef.current?.abort();
   }, [refreshApps]);
 
-  return { apps, appsPending, appsError, refreshApps, stopApp };
+  return { apps, appsPending, appsError, refreshApps, loadMetadata, stopApp };
 }

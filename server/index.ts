@@ -15,6 +15,13 @@ import SourceModule from "node-apk/build/lib/source.js";
 import { WebSocketServer } from "ws";
 
 import { PACKAGE_PATTERN, parseLauncherApps } from "../shared/apps";
+import {
+  readAppMetadata,
+  writeAppMetadata,
+  readFavorites,
+  writeFavorites,
+  type AppMetadata,
+} from "./app-cache";
 
 const Source =
   (SourceModule as typeof SourceModule & { default?: typeof SourceModule })
@@ -39,13 +46,17 @@ const allowedOrigins = new Set(
     .map((origin) => origin.trim())
     .filter(Boolean),
 );
-const sourceDistDir = resolve(fileURLToPath(new URL("../dist", import.meta.url)));
-const embeddedDistDir = resolve(fileURLToPath(new URL("./dist", import.meta.url)));
+const sourceDistDir = resolve(
+  fileURLToPath(new URL("../dist", import.meta.url)),
+);
+const embeddedDistDir = resolve(
+  fileURLToPath(new URL("./dist", import.meta.url)),
+);
 const distDir = process.env.STATIC_DIR
   ? resolve(process.env.STATIC_DIR)
-  : [sourceDistDir, embeddedDistDir, resolve("dist")].find((path) =>
+  : ([sourceDistDir, embeddedDistDir, resolve("dist")].find((path) =>
       existsSync(resolve(path, "index.html")),
-    ) ?? resolve("dist");
+    ) ?? resolve("dist"));
 
 const connector = new AdbServerNodeTcpConnector({
   host: adbHost,
@@ -53,10 +64,6 @@ const connector = new AdbServerNodeTcpConnector({
 });
 const adbClient = new AdbServerClient(connector);
 const trackedStates = ["device", "offline", "unauthorized"] as const;
-type AppMetadata = {
-  name?: string;
-  icon?: { data: Buffer; contentType: string };
-};
 const deviceMetadataCache = new Map<
   string,
   { value: AppMetadata; expiresAt: number }
@@ -64,6 +71,14 @@ const deviceMetadataCache = new Map<
 const deviceMetadataRequests = new Map<string, Promise<AppMetadata>>();
 const audioLeases = new Map<string, { leaseId: string; expiresAt: number }>();
 let deviceMetadataQueue = Promise.resolve();
+async function deviceSerial(transportId: string) {
+  const devices = await adbClient.getDevices(["device"]);
+  const serial = devices.find(
+    (device) => String(device.transportId) === transportId,
+  )?.serial;
+  if (!serial) throw new Error("设备未连接");
+  return serial;
+}
 const audioLeaseTtl = 15_000;
 
 const bridge = new WebSocketServer({
@@ -127,19 +142,18 @@ app.use("/api", (request, response, next) => {
 });
 
 app.get("/camera-test.html", async (_req, res) =>
-  res.type("html").send(
-    await readFile(
-      resolve(production ? distDir : "public", "camera-test.html"),
+  res
+    .type("html")
+    .send(
+      await readFile(
+        resolve(production ? distDir : "public", "camera-test.html"),
+      ),
     ),
-  ),
 );
 installAppSessions(
   app,
   adbClient,
-  resolve(
-    production ? distDir : "public",
-    "camera/webadb-camera.jar",
-  ),
+  resolve(production ? distDir : "public", "camera/webadb-camera.jar"),
   webPort,
 );
 
@@ -256,11 +270,69 @@ app.get("/api/apps", async (request, response) => {
       );
     }
     response.setHeader("Cache-Control", "no-store");
-    response.json({ apps, locale: locale.trim() || "zh-CN" });
+    const language = locale.trim() || "zh-CN";
+    const serial = await deviceSerial(transportId);
+    const hydrated = await Promise.all(
+      apps.map(async (app) => {
+        const key = `${serial}:${app.packageName}:${language}`;
+        const metadata =
+          deviceMetadataCache.get(key) ?? (await readAppMetadata(key));
+        if (!metadata || metadata.expiresAt <= Date.now()) return app;
+        setBoundedCache(deviceMetadataCache, key, metadata, 160);
+        const params = new URLSearchParams({
+          transportId,
+          package: app.packageName,
+          locale: language,
+          v: String(metadata.expiresAt),
+        });
+        return {
+          ...app,
+          name: metadata.value.name || app.name,
+          metadataReady: true,
+          iconUrl: metadata.value.icon ? `/api/app-icon?${params}` : undefined,
+        };
+      }),
+    );
+    response.json({ apps: hydrated, locale: language });
   } finally {
     await adb.close().catch(() => undefined);
   }
 });
+
+app.all(
+  "/api/favorites",
+  express.json({ limit: "8kb" }),
+  async (request, response) => {
+    const device = String(request.query.device ?? "");
+    if (!/^[a-zA-Z0-9_.:-]{1,160}$/.test(device)) {
+      response.status(400).json({ message: "设备标识无效" });
+      return;
+    }
+    response.setHeader("Cache-Control", "no-store");
+    if (request.method === "GET") {
+      response.json({ packages: await readFavorites(device) });
+      return;
+    }
+    if (request.method !== "PUT") {
+      response.sendStatus(405);
+      return;
+    }
+    const packages = request.body?.packages;
+    if (
+      !Array.isArray(packages) ||
+      packages.length > 12 ||
+      packages.some(
+        (value) => typeof value !== "string" || !PACKAGE_PATTERN.test(value),
+      )
+    ) {
+      response.status(400).json({ message: "收藏应为最多 12 个应用包名" });
+      return;
+    }
+    const saved = [...new Set<string>(packages)];
+    await writeFavorites(device, saved);
+    response.json({ packages: saved });
+  },
+);
 
 app.get(["/api/app-metadata", "/api/app-icon"], async (request, response) => {
   const packageName = String(request.query.package ?? "");
@@ -274,8 +346,9 @@ app.get(["/api/app-metadata", "/api/app-icon"], async (request, response) => {
     response.status(400).json({ message: "应用参数无效" });
     return;
   }
-  const cacheKey = `${transportId}:${packageName}:${locale}`;
-  let metadata = deviceMetadataCache.get(cacheKey);
+  const cacheKey = `${await deviceSerial(transportId)}:${packageName}:${locale}`;
+  let metadata =
+    deviceMetadataCache.get(cacheKey) ?? (await readAppMetadata(cacheKey));
   if (!metadata || metadata.expiresAt <= Date.now()) {
     if (
       !deviceMetadataRequests.has(cacheKey) &&
@@ -297,10 +370,9 @@ app.get(["/api/app-metadata", "/api/app-icon"], async (request, response) => {
     }
     try {
       const value = await pending;
-      metadata = {
-        value,
-        expiresAt: Date.now() + (value.name ? 300_000 : 30_000),
-      };
+      metadata = { value, expiresAt: Date.now() + 30_000 };
+      if (value.name || value.icon)
+        metadata.expiresAt = await writeAppMetadata(cacheKey, value);
       setBoundedCache(deviceMetadataCache, cacheKey, metadata, 160);
     } finally {
       deviceMetadataRequests.delete(cacheKey);
@@ -311,6 +383,7 @@ app.get(["/api/app-metadata", "/api/app-icon"], async (request, response) => {
     response.json({
       name: metadata.value.name,
       hasIcon: Boolean(metadata.value.icon),
+      version: metadata.expiresAt,
     });
     return;
   }
@@ -701,7 +774,8 @@ if (distDir.startsWith("/$bunfs/")) {
       response.sendStatus(400);
       return;
     }
-    if (path === distDir || !existsSync(path)) path = resolve(distDir, "index.html");
+    if (path === distDir || !existsSync(path))
+      path = resolve(distDir, "index.html");
     response.type(extname(path)).send(await readFile(path));
   });
 } else if (existsSync(distDir)) {

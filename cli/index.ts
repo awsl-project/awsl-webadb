@@ -3,6 +3,7 @@ import { writeFile, stat } from "node:fs/promises";
 import { createReadStream } from "node:fs";
 import { resolve } from "node:path";
 import { version } from "../package.json";
+import { cameraFormat } from "../shared/camera-formats";
 
 const args = process.argv.slice(2);
 const options = new Map<string, string>();
@@ -28,7 +29,7 @@ const usage = `awsl-webadb ${version} — 同一个程序作为服务端或客�
 
 awsl-webadb serve [--host 127.0.0.1] [--port 3000]
   [--adb-host 127.0.0.1] [--adb-port 5037]
-  [--static-dir PATH] [--ffmpeg PATH]
+  [--static-dir PATH] [--ffmpeg PATH] [--data-dir PATH]
 服务端提供网页、API 和后台推流；客户端不需要打开浏览器。
 
 awsl-webadb devices
@@ -49,6 +50,7 @@ awsl-webadb close SESSION
 awsl-webadb camera start ./image.png [--device 1]
 awsl-webadb camera start ./video.mp4 [--device 1]
 awsl-webadb camera start https://host/live.m3u8 --kind image|video|stream
+  [--aspect original|3:4|4:3|9:16|16:9|1:1] 默认 original，最长边 1280
 awsl-webadb camera status [--device 1]
 awsl-webadb camera pause|resume|stop [--device 1]
 推流由后端后台运行，CLI 退出与关闭网页不会停止。
@@ -103,7 +105,8 @@ async function main() {
     process.exit(0);
   }
   if (command === "serve") {
-    if (id) throw new Error("serve 不接受位置参数，请使用 --host、--port 等选项");
+    if (id)
+      throw new Error("serve 不接受位置参数，请使用 --host、--port 等选项");
     const variables: Record<string, string> = {
       host: "HOST",
       port: "PORT",
@@ -111,16 +114,20 @@ async function main() {
       "adb-port": "ADB_SERVER_PORT",
       "static-dir": "STATIC_DIR",
       ffmpeg: "FFMPEG_PATH",
+      "data-dir": "WEBADB_DATA_DIR",
     };
     for (const [key, value] of options) {
       const variable = variables[key];
       if (!variable) throw new Error(`serve 不支持 --${key}`);
       if (key === "port" || key === "adb-port") {
         const port = numeric(value, key);
-        if (port < 1 || port > 65535) throw new Error(`${key} 应在 1–65535 范围内`);
+        if (port < 1 || port > 65535)
+          throw new Error(`${key} 应在 1–65535 范围内`);
       }
       process.env[variable] =
-        key === "static-dir" || key === "ffmpeg" ? resolve(value) : value;
+        key === "static-dir" || key === "ffmpeg" || key === "data-dir"
+          ? resolve(value)
+          : value;
     }
     process.env.NODE_ENV ??= "production";
     await import("../server/index");
@@ -172,6 +179,7 @@ async function main() {
       if (!input)
         throw new Error("camera start 需要图片、视频文件路径或媒体链接");
       const kind = options.get("kind") || "auto";
+      const aspect = cameraFormat(options.get("aspect")).value;
       if (!["auto", "image", "video", "stream"].includes(kind))
         throw new Error("kind 应为 auto、image、video 或 stream");
       if (/^[a-z][a-z0-9+.-]*:\/\//i.test(input)) {
@@ -181,7 +189,7 @@ async function main() {
           await fetch(`${url}/api/system-camera/url${query}`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ url: input, kind }),
+            body: JSON.stringify({ url: input, kind, aspect }),
             signal: AbortSignal.timeout(30_000),
           }),
         );
@@ -199,6 +207,7 @@ async function main() {
           throw new Error("本地文件类型应为 image 或 video");
         const params = new URLSearchParams({
           kind: fileKind,
+          aspect,
           name: path.split(/[\\/]/).at(-1)!,
         });
         if (options.has("device"))

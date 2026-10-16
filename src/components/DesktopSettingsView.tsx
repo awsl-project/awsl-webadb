@@ -1,4 +1,4 @@
-import { Camera, RotateCcw } from "lucide-react";
+import { RotateCcw } from "lucide-react";
 import { Icon } from "./Icon";
 import { Button } from "./ui/button";
 import { Checkbox } from "./ui/checkbox";
@@ -8,7 +8,6 @@ export interface DesktopPreferences {
   theme: "system" | "dark" | "light";
   wallpaper: "ocean" | "mist" | "night";
   iconSize: "compact" | "standard" | "large";
-  dockSize: "compact" | "standard";
   reduceMotion: boolean;
 }
 
@@ -16,7 +15,6 @@ interface DesktopSettingsViewProps {
   preferences: DesktopPreferences;
   onChange: (preferences: DesktopPreferences) => void;
   onReset: () => void;
-  onOpenCamera: () => void;
 }
 
 const WALLPAPERS = [
@@ -35,7 +33,6 @@ export function DesktopSettingsView({
   preferences,
   onChange,
   onReset,
-  onOpenCamera,
 }: DesktopSettingsViewProps) {
   return (
     <section className="space-y-6 p-5 sm:p-6">
@@ -43,18 +40,6 @@ export function DesktopSettingsView({
         <Button variant="outline" size="sm" onClick={onReset}>
           <RotateCcw className="size-4" />
           恢复默认
-        </Button>
-      </div>
-      <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-border p-4">
-        <div className="min-w-0 flex-1">
-          <strong className="text-sm font-medium">系统摄像头</strong>
-          <p className="mt-1 mb-0 text-xs leading-relaxed text-muted-foreground">
-            使用图片、视频或媒体链接作为应用的摄像头输入。
-          </p>
-        </div>
-        <Button variant="outline" onClick={onOpenCamera}>
-          <Camera className="size-4" />
-          管理视频源
         </Button>
       </div>
       <section className="space-y-3" aria-label="外观主题">
@@ -138,29 +123,6 @@ export function DesktopSettingsView({
           {(["compact", "standard", "large"] as const).map((size) => (
             <ToggleGroupItem key={size} value={size} className="h-11 text-xs">
               {{ compact: "紧凑", standard: "标准", large: "大图标" }[size]}
-            </ToggleGroupItem>
-          ))}
-        </ToggleGroup>
-      </section>
-      <section className="space-y-3" aria-label="底部任务栏">
-        <h2 className="m-0 text-sm font-medium">底部任务栏</h2>
-        <ToggleGroup
-          type="single"
-          variant="outline"
-          spacing={2}
-          value={preferences.dockSize}
-          onValueChange={(value) => {
-            if (value)
-              onChange({
-                ...preferences,
-                dockSize: value as DesktopPreferences["dockSize"],
-              });
-          }}
-          aria-label="底部任务栏"
-        >
-          {(["compact", "standard"] as const).map((size) => (
-            <ToggleGroupItem key={size} value={size} className="h-11 text-xs">
-              {size === "compact" ? "紧凑" : "标准"}
             </ToggleGroupItem>
           ))}
         </ToggleGroup>

@@ -295,7 +295,7 @@ input:focus-visible {
 }
 
 .desktop-window.maximized {
-  inset: 48px 0 68px !important;
+  inset: 64px 0 0 !important;
   width: auto !important;
   height: auto !important;
   max-width: none;
@@ -443,96 +443,6 @@ input:focus-visible {
   border-radius: 8px;
 }
 
-.desktop-taskbar {
-  position: absolute;
-  inset: auto 0 0;
-  z-index: 10000;
-  height: 68px;
-  padding: 8px 14px;
-  display: grid;
-  grid-template-columns: 52px minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 12px;
-  background: rgba(6, 14, 13, 0.84);
-  border-top: 1px solid rgba(217, 240, 233, 0.08);
-  backdrop-filter: blur(24px) saturate(140%);
-}
-
-.taskbar-launcher,
-.taskbar-apps button {
-  min-height: 46px;
-  color: #d8e5e1;
-  background: rgba(255, 255, 255, 0.045);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 11px;
-  box-shadow: none;
-}
-
-.taskbar-launcher {
-  width: 48px;
-  padding: 0;
-  color: #07100f;
-  background: linear-gradient(145deg, #80eccd, #31bd93);
-}
-
-.taskbar-apps {
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: 7px;
-}
-
-.taskbar-apps button {
-  position: relative;
-  min-width: 48px;
-  padding: 0 13px;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.74rem;
-  font-weight: 600;
-}
-
-.taskbar-apps button:hover,
-.taskbar-apps button.active {
-  transform: none;
-  background: rgba(70, 224, 180, 0.11);
-  border-color: rgba(70, 224, 180, 0.18);
-}
-
-.taskbar-apps button.open::after {
-  content: "";
-  position: absolute;
-  left: 14px;
-  right: 14px;
-  bottom: 3px;
-  height: 2px;
-  border-radius: 2px;
-  background: var(--primary);
-}
-
-.taskbar-apps .ui-icon {
-  color: var(--primary);
-  font-size: 19px;
-}
-
-.taskbar-clock {
-  min-width: 64px;
-  display: grid;
-  gap: 2px;
-  justify-items: end;
-  font-family: "IBM Plex Mono", monospace;
-}
-
-.taskbar-clock strong {
-  font-size: 0.78rem;
-}
-
-.taskbar-clock span {
-  color: var(--muted);
-  font-size: 0.64rem;
-}
-
 .mobile-shell {
   grid-template-rows: 60px minmax(0, 1fr) calc(
       68px + env(safe-area-inset-bottom)
@@ -657,15 +567,8 @@ input:focus-visible {
 }
 
 @media (max-width: 1080px) and (min-width: 761px) {
-  .taskbar-apps button > span:last-child,
   .edition-tag {
     display: none;
-  }
-
-  .taskbar-apps button {
-    width: 48px;
-    padding: 0;
-    justify-content: center;
   }
 }
 

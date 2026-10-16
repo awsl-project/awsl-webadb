@@ -324,49 +324,6 @@ textarea:focus-visible {
   box-shadow: 0 0 0 3px var(--primary-soft);
 }
 
-.dex-dock-navigation,
-.dex-running-apps,
-.dex-dock-status {
-  border-color: var(--oh-line);
-  border-radius: 13px;
-  background: var(--oh-overlay);
-  box-shadow: 0 12px 38px var(--oh-shadow);
-  backdrop-filter: blur(26px) saturate(112%);
-}
-
-.dex-dock button {
-  color: var(--oh-text);
-  border-color: transparent;
-  background: transparent;
-}
-
-.dex-dock-navigation button:hover,
-.dex-dock-status > button:hover,
-.dex-running-apps button:hover {
-  color: var(--oh-blue);
-  background: var(--oh-hover);
-}
-
-.dex-running-apps button {
-  background: linear-gradient(145deg, var(--oh-cyan), var(--oh-blue));
-}
-
-.dex-running-apps button.active,
-.dex-launcher-button.active {
-  border-color: var(--oh-blue);
-  box-shadow: 0 0 0 3px var(--primary-soft);
-}
-
-.dex-launcher-button {
-  color: var(--oh-bg-deep) !important;
-  background: var(--oh-blue) !important;
-  box-shadow: none !important;
-}
-
-.dex-clock-button span {
-  color: var(--oh-muted);
-}
-
 .controls-page {
   background: var(--oh-bg);
 }
@@ -558,20 +515,6 @@ textarea:focus-visible {
         transparent 30%
       ),
       var(--oh-bg);
-  }
-
-  .dex-dock {
-    background: var(--oh-bg-deep);
-    border-top: 1px solid var(--oh-line);
-  }
-
-  .dex-dock-navigation,
-  .dex-running-apps,
-  .dex-dock-status {
-    border: 0;
-    background: transparent;
-    box-shadow: none;
-    backdrop-filter: none;
   }
 
   .mobile-shell .desktop-window,

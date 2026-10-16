@@ -1,3 +1,5 @@
+import type { CameraAspect } from "./camera-formats";
+
 export const CAMERA_WIDTH = 960;
 export const CAMERA_HEIGHT = 1280;
 
@@ -16,6 +18,7 @@ export interface AppSessionState {
 }
 
 export interface CameraState {
+  aspect: CameraAspect;
   transportId: string;
   enabled: boolean;
   sourceName: string;

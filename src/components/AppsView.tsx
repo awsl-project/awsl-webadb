@@ -64,10 +64,7 @@ export function AppsView({
   return (
     <section className="flex h-full min-h-0 flex-col" aria-label="应用列表">
       <div className="shrink-0 space-y-3 px-4 py-4 sm:px-6">
-        <header className="flex items-center justify-between gap-3">
-          <span className="text-sm text-muted-foreground">
-            {apps.length} 个应用
-          </span>
+        <header className="flex justify-end">
           <Button
             variant="outline"
             size="sm"
