@@ -89,3 +89,5 @@ Android Chrome 的原生地址栏元素定位和按键操作在本轮出现无�
 - 七张截图采用无损 WebP，压缩后逐像素对比通过；不提交原始 PNG。检查中英文文档的本地链接、图片加载、折叠状态和个人信息字符串。
 - 从已发布 v0.4.0 的 `SHA256SUMS` 生成本仓库 `Formula/awsl-webadb.rb`；Ruby 语法检查通过。发布与 Formula 更新 workflow 通过 actionlint 检查。
 - 后续发布在本仓库默认分支更新 Formula，使用内置 `GITHUB_TOKEN` 和 `contents: write`，不再依赖跨仓库 secret。首次添加 Tap 需显式指定本仓库 Git URL。
+- push 后从远端实际执行 `brew tap awsl-project/webadb https://github.com/awsl-project/awsl-webadb.git` 成功；`brew info` 解析到 v0.4.0、macOS arm64 下载地址、FFmpeg 依赖和服务命令。`brew fetch` 下载并验证 SHA256，临时副本执行 `--version` 返回 `0.4.0`。未安装程序或启动系统服务，检查后移除本次测试 Tap 和临时副本。
+- 手动触发 [同仓库 Formula 更新 workflow](https://github.com/awsl-project/awsl-webadb/actions/runs/39201680532) 成功：从已发布 Release 生成的 Formula 与仓库一致，无需新 token，也没有产生重复提交。
