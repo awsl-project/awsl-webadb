@@ -1,0 +1,21 @@
+name: Build Android helper
+description: Compile the Android helper with pinned Android 16 and R8 tools
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-java@v4
+      with:
+        distribution: temurin
+        java-version: "21"
+    - uses: actions/cache@v4
+      with:
+        path: .release/camera-tools
+        key: camera-android16-13921718-r8-9.5.26
+    - name: Compile helper
+      shell: bash
+      run: |
+        bash scripts/fetch-camera-tools.sh "$PWD/.release/camera-tools"
+        CAMERA_JAVA_HOME="$JAVA_HOME" \
+        CAMERA_ANDROID_JAR="$PWD/.release/camera-tools/android-all.jar" \
+        CAMERA_R8_JAR="$PWD/.release/camera-tools/r8.jar" \
+        bash scripts/build-camera.sh

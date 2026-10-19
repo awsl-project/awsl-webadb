@@ -34,7 +34,9 @@ furnished to do so, subject to the following conditions:
 ## 本地字体与图标
 
 - IBM Plex Sans / IBM Plex Mono：IBM，SIL Open Font License 1.1；许可证位于 `public/fonts/LICENSE-ibm-plex.txt`。
-- Android 资源表读取实现依据 [AOSP ResourceTypes.h](https://android.googlesource.com/platform/frameworks/base/+/refs/heads/main/libs/androidfw/include/androidfw/ResourceTypes.h) 的格式定义，支持稀疏索引、16 位偏移与 compact 条目。
+- Android 资源表和二进制 XML 读取实现依据 [AOSP ResourceTypes.h](https://android.googlesource.com/platform/frameworks/base/+/refs/heads/main/libs/androidfw/include/androidfw/ResourceTypes.h) 的格式定义，支持稀疏索引、16 位偏移与 compact 条目。
+
+测试使用 node-apk 的多命名空间 Android manifest 样本，MIT 许可证见 `tests/fixtures/LICENSE.node-apk`；来源见 `tests/fixtures/README.md`。
 
 ## Android 摄像头 helper 构建工具
 

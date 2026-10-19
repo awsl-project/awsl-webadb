@@ -50,6 +50,11 @@ jobs:
       - name: Run regression tests
         run: bun test
 
+      - uses: ./.github/actions/build-camera
+
+      - name: Audit dependencies
+        run: bun audit
+
       - name: Build frontend
         run: bun run build
 

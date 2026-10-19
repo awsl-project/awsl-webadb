@@ -3,6 +3,7 @@ import { spawn, spawnSync } from "node:child_process";
 import { once } from "node:events";
 import { mkdtemp, readFile, readdir, rm } from "node:fs/promises";
 import { createServer } from "node:net";
+import { request as httpRequest } from "node:http";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
@@ -60,6 +61,16 @@ try {
   assert.equal(run("serve", "--port", String(port)).status, 1);
   const origin = await fetch(`${url}/api/app-state`, { headers: { Origin: "https://untrusted.example" } });
   assert.equal(origin.status, 403);
+  for (const sendOrigin of [false, true]) {
+    const status = await new Promise((resolve, reject) => {
+      const request = httpRequest(url + "/api/app-state", {
+        headers: { Host: `untrusted.example:${port}`, ...(sendOrigin ? { Origin: `http://untrusted.example:${port}` } : {}) },
+      }, response => { response.resume(); resolve(response.statusCode); });
+      request.on("error", reject);
+      request.end();
+    });
+    assert.equal(status, 403, "forged Host must be rejected even without Origin");
+  }
   const index = await fetch(url);
   assert.equal(index.status, 200, output);
   assert.deepEqual(Buffer.from(await index.arrayBuffer()), await readFile(join(dist, "index.html")));

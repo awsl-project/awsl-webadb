@@ -61,7 +61,14 @@
   right: 12px;
   display: flex;
   justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
   pointer-events: none;
+}
+
+.mirror-status button {
+  pointer-events: auto;
 }
 
 .mirror-status span,

@@ -489,7 +489,12 @@ export function MirrorDisplay({
       />
       {mirrorNotice && (mirrorPending || mirrorRunning) ? (
         <div className={`mirror-status ${mirrorRunning ? "inline" : "empty"}`}>
-          <span>{mirrorNotice}</span>
+          <span role={onRetry ? "alert" : "status"}>{mirrorNotice}</span>
+          {onRetry && !mirrorPending ? (
+            <Button variant="outline" size="sm" onClick={onRetry} type="button">
+              重试
+            </Button>
+          ) : null}
         </div>
       ) : null}
       {!mirrorRunning && !mirrorPending ? (

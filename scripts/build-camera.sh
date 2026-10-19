@@ -13,7 +13,9 @@ trap 'rm -rf "$build_dir"' EXIT
 mkdir -p "$build_dir/classes" "$build_dir/dex" "$project_dir/public/camera"
 find "$project_dir/android/camera/src" -name '*.java' -print > "$build_dir/sources"
 "$camera_javac" --release 17 -cp "$CAMERA_ANDROID_JAR" -d "$build_dir/classes" @"$build_dir/sources"
-"$camera_jar" cf "$build_dir/classes.jar" -C "$build_dir/classes" .
+"$camera_jar" --create --file "$build_dir/classes.jar" --no-manifest --date=2020-01-01T00:00:00Z -C "$build_dir/classes" .
+jdk_lib=()
+if [[ -n "$CAMERA_JAVA_HOME" ]]; then jdk_lib=(--lib "$CAMERA_JAVA_HOME"); fi
 "$camera_java" -cp "$CAMERA_R8_JAR" com.android.tools.r8.D8 --min-api 33 \
-  --lib "$CAMERA_ANDROID_JAR" --output "$build_dir/dex" "$build_dir/classes.jar"
-"$camera_jar" cf "$project_dir/public/camera/webadb-camera.jar" -C "$build_dir/dex" .
+  --lib "$CAMERA_ANDROID_JAR" "${jdk_lib[@]}" --output "$build_dir/dex" "$build_dir/classes.jar"
+"$camera_jar" --create --file "$project_dir/public/camera/webadb-camera.jar" --no-manifest --date=2020-01-01T00:00:00Z -C "$build_dir/dex" .

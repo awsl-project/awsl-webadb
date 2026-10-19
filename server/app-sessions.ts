@@ -17,6 +17,7 @@ import {
   type FileCameraSession,
 } from "../src/lib/file-camera";
 import type { AdbConnection } from "../src/types";
+import { createTaskQueue } from "./task-queue";
 import { PACKAGE_PATTERN } from "../shared/apps";
 import {
   CAMERA_HEIGHT,
@@ -43,6 +44,7 @@ export function installAppSessions(
   client: AdbServerClient,
   helperPath: string,
   publicPort = 3000,
+  dependencies = { createFileCamera, openCameraFile, openCameraUrl },
 ) {
   type Device = { adb: AdbConnection; helper: FileCameraSession };
   type Session = AppSessionState & {
@@ -62,22 +64,27 @@ export function installAppSessions(
     const active = sources.get(transportId);
     sources.delete(transportId);
     if (!active) return;
-    await active.source.close();
-    await active.cleanup();
+    try {
+      await active.source.close();
+    } finally {
+      await active.cleanup();
+    }
   };
-  let stateQueue = Promise.resolve();
+  const deviceQueue = createTaskQueue();
+  const actionQueue = createTaskQueue();
   let shuttingDown = false;
+  let openingSessions = 0;
   let lastFrameEvent = 0;
   let lastFocus = 0;
   const focusStamp = () => (lastFocus = Math.max(Date.now(), lastFocus + 1));
-  const enqueue = <T>(work: () => Promise<T>) => {
-    const next = stateQueue.then(work);
-    stateQueue = next.then(
-      () => undefined,
-      () => undefined,
+  const enqueue = deviceQueue.run;
+  const control = <T>(transportId: string, work: () => Promise<T>) =>
+    actionQueue.run(transportId, () =>
+      enqueue(transportId, async () => {
+        if (shuttingDown) throw new Error("服务正在关闭");
+        return work();
+      }),
     );
-    return next;
-  };
   const sessionInfo = ({
     lastUsed: _lastUsed,
     reverseAddress: _reverse,
@@ -139,7 +146,7 @@ export function installAppSessions(
       const adb = await client.createAdb({ transportId: BigInt(transportId) });
       try {
         const bytes = await readFile(helperPath);
-        const helper = await createFileCamera(
+        const helper = await dependencies.createFileCamera(
           adb,
           1080,
           1920,
@@ -153,7 +160,7 @@ export function installAppSessions(
         );
         void helper.disconnected
           .then(() =>
-            enqueue(async () => {
+            enqueue(transportId, async () => {
               if (devices.get(transportId) !== pending) return;
               for (const session of [...sessions.values()])
                 if (session.transportId === transportId)
@@ -189,8 +196,11 @@ export function installAppSessions(
     devices.delete(transportId);
     const current = await pending?.catch(() => undefined);
     if (!current) return;
-    await current.helper.close();
-    await current.adb.close().catch(() => undefined);
+    try {
+      await current.helper.close();
+    } finally {
+      await current.adb.close().catch(() => undefined);
+    }
   };
   const run = (args: string[], adb: AdbConnection) =>
     adb.subprocess.noneProtocol.spawn(args.map(quote)).wait().toString();
@@ -320,13 +330,14 @@ export function installAppSessions(
     },
   ) => {
     const camera = cameraFor(transportId);
-    if (!enabled) await stopSource(transportId);
     if (
       camera.enabled === enabled &&
       camera.width === size.width &&
       camera.height === size.height
-    )
+    ) {
+      if (!enabled) await stopSource(transportId);
       return;
+    }
     const open = [...sessions.values()].filter(
       (item) => item.transportId === transportId,
     );
@@ -359,11 +370,15 @@ export function installAppSessions(
       } catch {
         for (const item of open) sessions.delete(item.id);
         camera.enabled = false;
+        camera.error = "摄像头恢复失败，请重新推流";
+        await stopSource(transportId);
+        await closeDevice(transportId);
       }
       emit();
       throw error;
     }
     if (!enabled) {
+      await stopSource(transportId);
       camera.paused = false;
       camera.producerId = "";
       camera.sourceName = "";
@@ -393,8 +408,8 @@ export function installAppSessions(
     source: CameraUrlSource,
     cleanup: () => Promise<void>,
   ) => {
-    await stopSource(transportId);
     await setCamera(transportId, true, source);
+    await stopSource(transportId);
     const camera = cameraFor(transportId);
     camera.aspect = source.aspect;
     camera.preview = undefined;
@@ -411,8 +426,9 @@ export function installAppSessions(
     sources.set(transportId, entry);
     source.start(
       (bytes) =>
-        enqueue(async () => {
+        enqueue(transportId, async () => {
           if (
+            shuttingDown ||
             sources.get(transportId) !== entry ||
             !camera.enabled ||
             camera.paused
@@ -421,7 +437,7 @@ export function installAppSessions(
           await receiveFrame(transportId, bytes);
         }),
       (error) => {
-        void enqueue(async () => {
+        void enqueue(transportId, async () => {
           if (sources.get(transportId) !== entry) return;
           camera.error = error.message;
           await setCamera(transportId, false);
@@ -432,6 +448,13 @@ export function installAppSessions(
     emit();
   };
 
+  app.use(["/api/app-sessions", "/api/system-camera"], (_req, res, next) => {
+    if (shuttingDown) {
+      res.status(503).json({ message: "服务正在关闭" });
+      return;
+    }
+    next();
+  });
   app.get("/api/app-state", (_req, res) => res.json(snapshot()));
   app.get("/api/app-events", (_req, res) => {
     res.set({
@@ -487,7 +510,7 @@ export function installAppSessions(
         let accepted = false;
         try {
           if (operation === "url")
-            source = await openCameraUrl(
+            source = await dependencies.openCameraUrl(
               req.body?.url,
               req.body?.kind,
               req.body?.aspect,
@@ -520,10 +543,14 @@ export function installAppSessions(
             const name = basename(
               String(req.query.name || "本地媒体").replaceAll("\\", "/"),
             ).slice(0, 200);
-            source = await openCameraFile(file, kind, name, req.query.aspect);
+            source = await dependencies.openCameraFile(
+              file,
+              kind,
+              name,
+              req.query.aspect,
+            );
           }
-          await enqueue(async () => {
-            if (shuttingDown) throw new Error("服务正在关闭");
+          await control(transportId, async () => {
             await startSource(transportId, source!, cleanup);
             accepted = true;
             res.json(
@@ -541,7 +568,7 @@ export function installAppSessions(
         return;
       }
       if (operation === "pause" && req.method === "POST") {
-        await enqueue(async () => {
+        await enqueue(transportId, async () => {
           const entry = sources.get(transportId);
           if (!entry || typeof req.body?.paused !== "boolean")
             throw new Error("没有可暂停的后台来源");
@@ -555,7 +582,7 @@ export function installAppSessions(
         return;
       }
       if (operation === "frame" && req.method === "POST") {
-        await enqueue(async () => {
+        await enqueue(transportId, async () => {
           if (
             !camera.enabled ||
             camera.managedBy !== "browser" ||
@@ -580,7 +607,7 @@ export function installAppSessions(
         res.json({ enabled: camera.enabled });
         return;
       }
-      await enqueue(async () => {
+      await control(transportId, async () => {
         if (req.method === "DELETE") {
           if (
             req.body?.producerId &&
@@ -599,12 +626,11 @@ export function installAppSessions(
         }
         if (!/^[a-f0-9-]{36}$/.test(String(req.body.producerId)))
           throw new Error("视频源标识无效");
-        await stopSource(transportId);
-        camera.lastSeen = Date.now();
         await setCamera(transportId, true, {
           width: CAMERA_WIDTH,
           height: CAMERA_HEIGHT,
         });
+        await stopSource(transportId);
         camera.aspect = "3:4";
         camera.managedBy = "browser";
         camera.paused = false;
@@ -646,11 +672,11 @@ export function installAppSessions(
         return;
       }
       if (!id && req.method === "POST") {
-        await enqueue(async () => {
+        const transportId = await selectTransport(req.body.transportId);
+        await control(transportId, async () => {
           const packageName = String(req.body.packageName ?? "");
           if (!PACKAGE_PATTERN.test(packageName))
             throw new Error("无效的应用包名");
-          const transportId = await selectTransport(req.body.transportId);
           const existing = [...sessions.values()].find(
             (item) =>
               item.packageName === packageName &&
@@ -675,7 +701,7 @@ export function installAppSessions(
             res.json(sessionInfo(existing));
             return;
           }
-          if (sessions.size >= 16)
+          if (sessions.size + openingSessions >= 16)
             throw new Error("应用会话上限为 16，请先关闭不用的会话");
           if (req.body.cameraTest && packageName !== "com.android.chrome")
             throw new Error("扫码验收需要 Chrome");
@@ -693,12 +719,14 @@ export function installAppSessions(
             cameraTest: req.body.cameraTest === true,
             lastUsed: Date.now(),
           };
-          const current = await device(transportId);
+          openingSessions++;
+          let current: Device | undefined;
           try {
+            current = await device(transportId);
             await createDisplay(session, current);
           } catch (error) {
             if (session.reverseAddress)
-              await current.adb.reverse
+              await current?.adb.reverse
                 .remove(session.reverseAddress)
                 .catch(() => undefined);
             if (
@@ -709,6 +737,8 @@ export function installAppSessions(
             )
               await closeDevice(transportId);
             throw error;
+          } finally {
+            openingSessions--;
           }
           sessions.set(session.id, session);
           emit();
@@ -723,12 +753,12 @@ export function installAppSessions(
       }
       session.lastUsed = Date.now();
       if (!operation && req.method === "DELETE") {
-        await enqueue(() => closeSession(session.id));
+        await control(session.transportId, () => closeSession(session.id));
         res.json({ ok: true });
         return;
       }
       if (!operation && req.method === "PATCH") {
-        await enqueue(async () => {
+        await control(session.transportId, async () => {
           if (sessions.get(session.id) !== session)
             throw new Error("应用会话已关闭");
           const current = await device(session.transportId);
@@ -761,7 +791,7 @@ export function installAppSessions(
       if (operation === "screenshot" && req.method === "GET") {
         let jpeg = "";
         for (let attempt = 0; attempt < 20 && !jpeg; attempt++) {
-          const frame = await enqueue(async () => {
+          const frame = await enqueue(session.transportId, async () => {
             if (sessions.get(session.id) !== session)
               throw new Error("应用会话已关闭");
             return (await device(session.transportId)).helper.request({
@@ -781,7 +811,7 @@ export function installAppSessions(
         return;
       }
       if (operation === "elements" && req.method === "GET") {
-        const result = await enqueue(async () => {
+        const result = await enqueue(session.transportId, async () => {
           if (sessions.get(session.id) !== session)
             throw new Error("应用会话已关闭");
           return (await device(session.transportId)).helper.request({
@@ -798,10 +828,19 @@ export function installAppSessions(
         next();
         return;
       }
-      await enqueue(async () => {
-        if (sessions.get(session.id) !== session)
-          throw new Error("应用会话已关闭");
-        const current = await device(session.transportId);
+      await actionQueue.run(session.transportId, async () => {
+        const revision = session.revision;
+        const dispatch = <T>(work: (current: Device) => Promise<T>) =>
+          enqueue(session.transportId, async () => {
+            if (
+              shuttingDown ||
+              sessions.get(session.id) !== session ||
+              session.revision !== revision
+            )
+              throw new Error("应用会话已关闭或重建");
+            return work(await device(session.transportId));
+          });
+        await dispatch(async () => undefined);
         const latestFocus = Math.max(
           ...[...sessions.values()]
             .filter((item) => item.transportId === session.transportId)
@@ -819,7 +858,9 @@ export function installAppSessions(
             integer(y, 0, session.height - 1),
           ] as const;
         const touch = (type: number, x: number, y: number) =>
-          current.helper.touch(session.displayId, type, x, y);
+          dispatch((current) =>
+            current.helper.touch(session.displayId, type, x, y),
+          );
         if (action.type === "touch") {
           const [x, y] = point(action.x, action.y);
           await touch(integer(action.action, 0, 3), x, y);
@@ -847,12 +888,14 @@ export function installAppSessions(
             await touch(1, endX, endY);
           }
         } else if (action.type === "key") {
-          await current.helper.request({
-            type: "key",
-            displayId: session.displayId,
-            keyCode: integer(action.keyCode, 0, 400),
-            metaState: integer(action.metaState ?? 0, 0, 1),
-          });
+          await dispatch((current) =>
+            current.helper.request({
+              type: "key",
+              displayId: session.displayId,
+              keyCode: integer(action.keyCode, 0, 400),
+              metaState: integer(action.metaState ?? 0, 0, 1),
+            }),
+          );
         } else if (
           action.type === "clickElement" ||
           action.type === "setText" ||
@@ -875,12 +918,16 @@ export function installAppSessions(
             (typeof action.value !== "string" || action.value.length > 4096)
           )
             throw new Error("输入文字须为 4096 字以内");
-          await current.helper.request({
-            type: action.type,
-            displayId: session.displayId,
-            ...selector,
-            ...(action.type !== "clickElement" ? { value: action.value } : {}),
-          });
+          await dispatch((current) =>
+            current.helper.request({
+              type: action.type,
+              displayId: session.displayId,
+              ...selector,
+              ...(action.type !== "clickElement"
+                ? { value: action.value }
+                : {}),
+            }),
+          );
         } else throw new Error("不支持此操作");
         res.json({ ok: true });
       });
@@ -898,7 +945,7 @@ export function installAppSessions(
         camera.managedBy === "browser" &&
         Date.now() - camera.lastSeen > 10_000
       )
-        void enqueue(async () => {
+        void enqueue(camera.transportId, async () => {
           if (
             camera.enabled &&
             camera.managedBy === "browser" &&
@@ -908,25 +955,67 @@ export function installAppSessions(
         }).catch(() => undefined);
     for (const session of sessions.values())
       if (Date.now() - session.lastUsed > 15 * 60_000)
-        void enqueue(async () => {
+        void enqueue(session.transportId, async () => {
           if (Date.now() - session.lastUsed > 15 * 60_000)
             await closeSession(session.id);
         }).catch(() => undefined);
   }, 2000);
   expiration.unref();
-  const shutdown = () => {
-    if (shuttingDown) return;
+  let disposal: Promise<void> | undefined;
+  const dispose = () => {
+    if (disposal) return disposal;
     shuttingDown = true;
     clearInterval(expiration);
+    process.removeListener("SIGINT", shutdown);
+    process.removeListener("SIGTERM", shutdown);
     for (const response of listeners) response.end();
-    void enqueue(async () => {
-      for (const id of [...sources.keys()]) await stopSource(id);
-      for (const camera of cameras.values()) camera.enabled = false;
-      for (const id of [...sessions.keys()]) await closeSession(id);
-      for (const id of [...devices.keys()]) await closeDevice(id);
-    }).finally(() => process.exit(0));
-    setTimeout(() => process.exit(0), 6000).unref();
+    const ids = new Set([
+      ...devices.keys(),
+      ...sources.keys(),
+      ...cameras.keys(),
+      ...[...sessions.values()].map((item) => item.transportId),
+    ]);
+    disposal = Promise.allSettled(
+      [...ids].map(async (id) => {
+        await actionQueue.drain(id);
+        await enqueue(id, async () => {
+          try {
+            await stopSource(id);
+          } finally {
+            cameraFor(id).enabled = false;
+            for (const session of [...sessions.values()])
+              if (session.transportId === id) await closeSession(session.id);
+            await closeDevice(id);
+          }
+        });
+      }),
+    ).then((results) => {
+      const errors = results
+        .filter((result) => result.status === "rejected")
+        .map((result) => result.reason);
+      if (errors.length) throw new AggregateError(errors, "设备资源清理失败");
+    });
+    return disposal;
+  };
+  const shutdown = () => {
+    if (shuttingDown) return;
+    const deadline = setTimeout(() => {
+      console.error("设备资源清理超时");
+      process.exit(1);
+    }, 12_000);
+    void dispose().then(
+      () => {
+        clearTimeout(deadline);
+        process.exit(0);
+      },
+      (error) => {
+        console.error(error);
+        clearTimeout(deadline);
+        process.exit(1);
+      },
+    );
   };
   process.once("SIGINT", shutdown);
   process.once("SIGTERM", shutdown);
+  return dispose;
 }

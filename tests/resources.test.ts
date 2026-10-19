@@ -75,3 +75,16 @@ test("rejects truncated and zero-length resource chunks", () => {
     () => new AndroidResources(fixture(0, false).subarray(0, 45)),
   ).toThrow();
 });
+
+test("decodes packed numeric Android locale regions", () => {
+  const data = fixture(0, false);
+  // Packed region '419' from Android ResTable_config's three-character format.
+  const type = 12 + data.readUInt32LE(12 + 4) + 288;
+  data.write("es", type + 28);
+  data[type + 30] = 0x80 | (9 << 2);
+  data[type + 31] = 4 | (1 << 5);
+  expect(new AndroidResources(data).resolve(0x7f010001)[0].locale).toEqual({
+    language: "es",
+    country: "419",
+  });
+});

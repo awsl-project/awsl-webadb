@@ -1,3 +1,5 @@
+import { createOriginGuard } from "./request-origin";
+import { normalizeLocale } from "../shared/locale";
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { createServer } from "node:http";
@@ -8,10 +10,9 @@ import net from "node:net";
 import { AdbServerClient } from "@yume-chan/adb";
 import { AdbServerNodeTcpConnector } from "@yume-chan/adb-server-node-tcp";
 import express from "express";
-import { Manifest, XmlElement } from "node-apk";
+import { AndroidXml, readManifest } from "./android-xml";
 import { installAppSessions } from "./app-sessions";
 import { AndroidResources } from "./android-resources";
-import SourceModule from "node-apk/build/lib/source.js";
 import { WebSocketServer } from "ws";
 
 import { PACKAGE_PATTERN, parseLauncherApps } from "../shared/apps";
@@ -23,9 +24,6 @@ import {
   type AppMetadata,
 } from "./app-cache";
 
-const Source =
-  (SourceModule as typeof SourceModule & { default?: typeof SourceModule })
-    .default ?? SourceModule;
 const app = express();
 const server = createServer(app);
 
@@ -114,26 +112,10 @@ function closeWithReason(
   socket.terminate();
 }
 
-function isAllowedWebSocketOrigin(
-  request: import("node:http").IncomingMessage,
-) {
-  const origin = request.headers.origin;
-  const host = request.headers.host;
-  if (!origin || !host) {
-    return false;
-  }
-  if (allowedOrigins.has(origin)) {
-    return true;
-  }
-  try {
-    return new URL(origin).host === host;
-  } catch {
-    return false;
-  }
-}
+const acceptsOrigin = createOriginGuard(webHost, webPort, allowedOrigins);
 
 app.use("/api", (request, response, next) => {
-  if (request.headers.origin && !isAllowedWebSocketOrigin(request)) {
+  if (!acceptsOrigin(request.headers)) {
     response.status(403).json({ message: "不允许此来源访问设备" });
     return;
   }
@@ -270,7 +252,7 @@ app.get("/api/apps", async (request, response) => {
       );
     }
     response.setHeader("Cache-Control", "no-store");
-    const language = locale.trim() || "zh-CN";
+    const language = normalizeLocale(locale.trim()) ?? "zh-CN";
     const serial = await deviceSerial(transportId);
     const hydrated = await Promise.all(
       apps.map(async (app) => {
@@ -337,11 +319,11 @@ app.all(
 app.get(["/api/app-metadata", "/api/app-icon"], async (request, response) => {
   const packageName = String(request.query.package ?? "");
   const transportId = String(request.query.transportId ?? "");
-  const locale = String(request.query.locale ?? "zh-CN");
+  const locale = normalizeLocale(String(request.query.locale ?? "zh-CN"));
   if (
     !PACKAGE_PATTERN.test(packageName) ||
     !/^\d{1,20}$/.test(transportId) ||
-    !/^[a-zA-Z-]{2,20}$/.test(locale)
+    !locale
   ) {
     response.status(400).json({ message: "应用参数无效" });
     return;
@@ -487,7 +469,7 @@ async function extractDeviceAppMetadata(
       return {};
     }
 
-    const manifest = new Manifest(new XmlElement(new Source(manifestData)));
+    const manifest = readManifest(manifestData);
     const resources = new AndroidResources(resourcesData);
     const labels =
       typeof manifest.applicationLabel === "string"
@@ -572,7 +554,7 @@ async function readResourceIcon(
     if (contentType) return { data, contentType };
     if (data.length > 128 * 1024 || data.readUInt16LE(0) !== 3) continue;
     try {
-      const xml = new XmlElement(new Source(data));
+      const xml = new AndroidXml(data).root;
       const adaptive = xml.children["adaptive-icon"]?.[0];
       const drawable =
         adaptive?.children.foreground?.[0]?.attributes.drawable ??
@@ -737,7 +719,7 @@ bridge.on("connection", (webSocket) => {
 
 server.on("upgrade", (request, socket, head) => {
   const url = new URL(request.url ?? "/", "http://localhost");
-  if (url.pathname !== "/ws/adb" || !isAllowedWebSocketOrigin(request)) {
+  if (url.pathname !== "/ws/adb" || !acceptsOrigin(request.headers, true)) {
     socket.destroy();
     return;
   }

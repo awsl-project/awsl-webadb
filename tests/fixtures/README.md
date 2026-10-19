@@ -1,0 +1,1 @@
+`multiple-namespaces.xml.gz` is the gzip-compressed binary Android manifest from [xdevl/node-apk/test/resources/AndroidManifest.xml](https://github.com/xdevl/node-apk/blob/master/test/resources/AndroidManifest.xml), used to verify namespaced XML and resource references. Copyright 2019 XdevL, MIT; see [LICENSE.node-apk](LICENSE.node-apk).

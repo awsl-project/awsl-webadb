@@ -201,16 +201,6 @@ export function useFiles(
         onMessage("文件名无效");
         return;
       }
-      const conflicts = files.filter((file) =>
-        filesEntries.some((entry) => entry.name === file.name),
-      );
-      if (
-        conflicts.length &&
-        !window.confirm(
-          `目标目录已有 ${conflicts.length} 个同名文件。覆盖这些文件？`,
-        )
-      )
-        return;
       busyRef.current = true;
       const id = ++operationRef.current;
       const current = () =>
@@ -220,8 +210,21 @@ export function useFiles(
       let sent = 0;
       let completed = 0;
       setTransferProgress(0);
+      setFilesPending("正在检查目标目录");
       try {
-        await withDevice(async (adb) => {
+        const uploaded = await withDevice(async (adb) => {
+          const entries = await adb.sync.readdir(filesPath);
+          if (!current()) return false;
+          const conflicts = files.filter((file) =>
+            entries.some((entry) => entry.name === file.name),
+          );
+          if (
+            conflicts.length &&
+            !window.confirm(
+              `目标目录已有 ${conflicts.length} 个同名文件。覆盖这些文件？`,
+            )
+          )
+            return false;
           for (const file of files) {
             if (!current()) return;
             setFilesPending(
@@ -243,8 +246,9 @@ export function useFiles(
             });
             completed += 1;
           }
+          return true;
         });
-        if (!current()) return;
+        if (!current() || !uploaded) return;
         busyRef.current = false;
         setFileUploadDialogOpen(false);
         setTransferProgress(null);
@@ -265,14 +269,7 @@ export function useFiles(
         }
       }
     },
-    [
-      filesEntries,
-      filesPath,
-      selectedTransportId,
-      withDevice,
-      onMessage,
-      refreshFiles,
-    ],
+    [filesPath, selectedTransportId, withDevice, onMessage, refreshFiles],
   );
 
   useEffect(() => {

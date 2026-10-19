@@ -1,25 +1,19 @@
-interface Chunk {
-  start: number;
-  headerSize: number;
-  size: number;
-  type: number;
-}
+import { AndroidBinary, type Chunk } from "./android-binary";
 interface ResourceValue {
   value: string;
   locale?: { language?: string; country?: string };
 }
 
 // Android ResourceTypes.h: supports sparse/16-bit offsets and compact entries.
-export class AndroidResources {
+export class AndroidResources extends AndroidBinary {
   private readonly types: {
     chunk: Chunk;
     packageId: number;
     typeOffset: number;
   }[] = [];
-  private pool?: Chunk;
-  private readonly strings = new Map<number, string>();
 
-  constructor(private readonly data: Buffer) {
+  constructor(data: Buffer) {
+    super(data);
     const root = this.chunk(0, data.length);
     if (root.type !== 2) throw new Error("Invalid Android resource table");
     for (const chunk of this.children(root)) {
@@ -88,14 +82,8 @@ export class AndroidResources {
       if (valueAt < entry || valueAt + 8 > end) continue;
       const type = compact ? entryFlags >>> 8 : this.data[valueAt + 3];
       const value = this.data.readUInt32LE(valueAt + 4);
-      const language = this.data
-        .subarray(chunk.start + 28, chunk.start + 30)
-        .toString("ascii")
-        .replaceAll("\0", "");
-      const country = this.data
-        .subarray(chunk.start + 30, chunk.start + 32)
-        .toString("ascii")
-        .replaceAll("\0", "");
+      const language = unpackLocale(this.data, chunk.start + 28, 97);
+      const country = unpackLocale(this.data, chunk.start + 30, 48);
       const locale = language || country ? { language, country } : undefined;
       if (type === 3) result.push({ value: this.string(value), locale });
       if (type === 1)
@@ -108,71 +96,16 @@ export class AndroidResources {
     }
     return result;
   }
+}
 
-  private chunk(start: number, end: number): Chunk {
-    if (start + 8 > end) throw new Error("Truncated Android resource chunk");
-    const type = this.data.readUInt16LE(start);
-    const headerSize = this.data.readUInt16LE(start + 2);
-    const size = this.data.readUInt32LE(start + 4);
-    if (headerSize < 8 || size < headerSize || start + size > end)
-      throw new Error("Invalid Android resource chunk size");
-    return { start, type, headerSize, size };
-  }
-
-  private *children(parent: Chunk) {
-    const end = parent.start + parent.size;
-    let start = parent.start + parent.headerSize;
-    while (start < end) {
-      const child = this.chunk(start, end);
-      yield child;
-      start += child.size;
-    }
-  }
-
-  private string(index: number) {
-    const cached = this.strings.get(index);
-    if (cached !== undefined) return cached;
-    const pool = this.pool;
-    if (
-      !pool ||
-      pool.headerSize < 28 ||
-      index >= this.data.readUInt32LE(pool.start + 8)
-    )
-      return "";
-    const end = pool.start + pool.size;
-    const offsetAt = pool.start + pool.headerSize + index * 4;
-    if (offsetAt + 4 > end) return "";
-    let cursor =
-      pool.start +
-      this.data.readUInt32LE(pool.start + 20) +
-      this.data.readUInt32LE(offsetAt);
-    const utf8 = Boolean(this.data.readUInt32LE(pool.start + 16) & 0x100);
-    const length = () => {
-      const width = utf8 ? 1 : 2;
-      if (cursor + width > end) throw new Error("Truncated Android string");
-      let value = utf8 ? this.data[cursor] : this.data.readUInt16LE(cursor);
-      cursor += width;
-      const mask = utf8 ? 0x80 : 0x8000;
-      if (value & mask) {
-        if (cursor + width > end)
-          throw new Error("Truncated Android string length");
-        value =
-          (value & (mask - 1)) * (utf8 ? 256 : 65536) +
-          (utf8 ? this.data[cursor] : this.data.readUInt16LE(cursor));
-        cursor += width;
-      }
-      return value;
-    };
-    let size = length();
-    size = utf8 ? length() : size * 2;
-    if (cursor < pool.start || cursor + size > end)
-      throw new Error("Invalid Android string size");
-    const value = this.data.toString(
-      utf8 ? "utf8" : "utf16le",
-      cursor,
-      cursor + size,
-    );
-    this.strings.set(index, value);
-    return value;
-  }
+function unpackLocale(data: Buffer, at: number, base: number) {
+  const first = data[at],
+    second = data[at + 1];
+  if (!(first & 0x80))
+    return data.toString("ascii", at, at + 2).replaceAll("\0", "");
+  return String.fromCharCode(
+    base + (second & 31),
+    base + ((second & 224) >> 5) + ((first & 3) << 3),
+    base + ((first & 124) >> 2),
+  );
 }

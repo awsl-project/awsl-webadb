@@ -843,9 +843,8 @@ export default function App() {
           mirrorRunning={appWindow.running}
           mirrorPending={appWindow.pending}
           message={
-            appWindow.running
-              ? "应用已连接"
-              : appWindow.error || appWindow.pending
+            appWindow.error ||
+            (appWindow.running ? "应用已连接" : appWindow.pending)
           }
           pendingLabel={`正在启动 ${appWindow.app.name} 的独立窗口…`}
           emptyLabel={appWindow.error || `${appWindow.app.name} 尚未启动`}

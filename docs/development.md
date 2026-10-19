@@ -27,7 +27,7 @@ bun run start
 
 原屏镜像使用 scrcpy 4.1。独立应用会话通过 Android VirtualDevice、VirtualTouchscreen、ImageReader 和 UiAutomation 提供黑屏手机上的画面与操作，当前真机验收环境为 Android 16。独立窗口和文件摄像头需要 ROM 实现相应系统接口并允许 ADB shell 创建虚拟设备；不支持时返回错误，不尝试 root。应用本身也可能限制多屏、截图或音频捕获。
 
-可配置 `PORT`、`HOST`、`ADB_SERVER_HOST`、`ADB_SERVER_PORT`、`STATIC_DIR` 与 `ALLOWED_ORIGINS`。默认仅监听本机；需要可信局域网访问时显式设置 `HOST=0.0.0.0`。生产反向代理请配置允许的完整来源，例如 `ALLOWED_ORIGINS=https://webadb.example.com`；多个来源用逗号分隔。本服务提供完整 ADB 控制能力，远程访问应使用具备身份验证的 HTTPS 代理。
+可配置 `PORT`、`HOST`、`ADB_SERVER_HOST`、`ADB_SERVER_PORT`、`STATIC_DIR` 与 `ALLOWED_ORIGINS`。默认仅监听本机；需要可信局域网访问时显式设置 `HOST=0.0.0.0`。局域网使用本机 IP 或主机名访问；自定义域名和生产反向代理请配置允许的完整来源，例如 `ALLOWED_ORIGINS=https://webadb.example.com`；多个来源用逗号分隔。本服务提供完整 ADB 控制能力，远程访问应使用具备身份验证的 HTTPS 代理。
 
 ## 构建独立程序
 
@@ -60,7 +60,17 @@ node scripts/smoke-binary.mjs bin/awsl-webadb
 
 手机主屏可保持黑屏。应用预览最多约 8 FPS、宽度 720 像素；保存的截图使用应用原始分辨率。虚拟相机声明 30 FPS，后台视频按最高 12 FPS 处理，实际送帧速率受媒体和 ADB 通道影响。`camera-clock.html` 是额外的浏览器画布验收工具，显示当前时间和二维码，用于观察画面变化；该工具依赖页面保持打开，不属于正式后台媒体来源。
 
-重建手机 helper：
+重建手机 helper（Java 21）：
+
+```bash
+bash scripts/fetch-camera-tools.sh .release/camera-tools
+CAMERA_JAVA_HOME=/path/to/jdk-21 \
+CAMERA_ANDROID_JAR="$PWD/.release/camera-tools/android-all.jar" \
+CAMERA_R8_JAR="$PWD/.release/camera-tools/r8.jar" \
+bash scripts/build-camera.sh
+```
+
+也可指定已有工具：
 
 ```bash
 CAMERA_JAVA_HOME=/path/to/jdk-21 \
@@ -83,7 +93,7 @@ docker run --rm \
 
 容器自动启动 ADB server，使用 Wi-Fi 设备，不支持 USB 直通。持久化目录保存 ADB 授权密钥与配对缓存。也可以用 `docker compose up --build`。镜像与独立发行版使用同一个程序，可通过 `docker exec CONTAINER /app/awsl-webadb devices` 调用客户端；保留 `/app/webadb` 兼容软链接。
 
-发布流水线运行类型检查、回归测试和前端构建，然后生成 CLI、构建 Linux amd64 / arm64 镜像并发布 GitHub Release。字体本地提供，更新字体使用 `scripts/fetch-fonts.py`；界面图标直接引用 Lucide SVG。PWA 离线只提供页面，设备操作仍需后端连接。
+主分支 push 和 PR 自动运行类型检查、回归测试、依赖审计、Android helper 编译、独立程序构建与冒烟测试。helper 工具版本和 SHA-256 校验固定在 `scripts/fetch-camera-tools.sh`。发布流水线执行同样的检查，然后生成 CLI、构建 Linux amd64 / arm64 镜像并发布 GitHub Release。字体本地提供，更新字体使用 `scripts/fetch-fonts.py`；界面图标直接引用 Lucide SVG。PWA 离线只提供页面，设备操作仍需后端连接。
 
 开源依赖与构建工具说明见 [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md)。
 

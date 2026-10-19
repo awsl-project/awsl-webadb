@@ -91,3 +91,12 @@ Android Chrome 的原生地址栏元素定位和按键操作在本轮出现无�
 - 后续发布在本仓库默认分支更新 Formula，使用内置 `GITHUB_TOKEN` 和 `contents: write`，不再依赖跨仓库 secret。首次添加 Tap 需显式指定本仓库 Git URL。
 - push 后从远端实际执行 `brew tap awsl-project/webadb https://github.com/awsl-project/awsl-webadb.git` 成功；`brew info` 解析到 v0.4.0、macOS arm64 下载地址、FFmpeg 依赖和服务命令。`brew fetch` 下载并验证 SHA256，临时副本执行 `--version` 返回 `0.4.0`。未安装程序或启动系统服务，检查后移除本次测试 Tap 和临时副本。
 - 手动触发 [同仓库 Formula 更新 workflow](https://github.com/awsl-project/awsl-webadb/actions/runs/39201680532) 成功：从已发布 Release 生成的 Formula 与仓库一致，无需新 token，也没有产生重复提交。
+
+## 2026-10-19 项目检查修复
+
+- 隔离设备回归覆盖上传前重新读取目录、拒绝覆盖、目录读取失败、摄像头切换失败后的旧来源恢复及恢复失败清理。
+- 同设备滑动时相机帧和截图继续；另一设备操作独立执行，同设备手势保持顺序。两台各需 4 秒关闭的模拟设备并行清理完成。
+- HTTP API 与 WebSocket 共用 Host / Origin 校验；二进制冒烟检查确认伪造匹配的 Host / Origin、无 Origin 的伪造 Host 均被拒绝。
+- 支持 `es-419` 等数字地区语言标签，并解析 Android 打包地区编码。使用含多命名空间的公开 manifest 样本验证应用名称和图标引用解析。
+- 截图错误提示与重试按钮通过浏览器桌面和 390 × 844 手机视口点击检查；无需连接手机。
+- 52 项测试、类型检查、独立程序构建及空目录冒烟检查通过，依赖审计无已知告警。Android helper 使用固定 Android 16 / R8 工具重新编译，两次产物 SHA-256 相同；CI 增加主分支 push、PR 检查与 helper 编译。
