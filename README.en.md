@@ -4,15 +4,27 @@
 
 [CLI app control](#control-apps-from-the-cli) · [CLI streaming](#stream-to-the-camera-from-the-cli) · [Install](#install-and-run) · [Features](#features)
 
-Open, inspect and control Android apps from your browser or terminal. Feed images, videos and live streams into an app's virtual camera. **One `awsl-webadb` binary contains the server, web interface and CLI client. No root required.**
+Control Android apps from your browser or CLI, and feed images, videos or live streams into their virtual cameras. **One binary serves as both server and client. No root required.**
 
-![WebADB desktop home, 16:9](docs/images/desktop.webp)
+![WebADB desktop home](docs/images/desktop.webp)
 
-*Screenshots use an isolated Demo Phone, generic apps and sample media, without personal device data. UI screenshots show the existing interface; CLI images contain actual output excerpts from a demo API. See the [verification log](docs/verification.md) for physical-device test coverage.*
+<details>
+<summary>More screenshots: mobile, virtual camera, CLI</summary>
+
+<table>
+<tr><th>Mobile home</th><th>Image → virtual camera</th></tr>
+<tr><td align="center"><img src="docs/images/mobile.webp" alt="Mobile portrait layout" width="230"></td><td><img src="docs/images/camera-image.webp" alt="Background image streaming with the original aspect ratio" width="640"></td></tr>
+<tr><th>Looping video → virtual camera</th><th>Media URL → virtual camera</th></tr>
+<tr><td><img src="docs/images/camera-video.webp" alt="Looping video with 3:4 output" width="640"></td><td><img src="docs/images/camera-link.webp" alt="Explicit live-stream type with 16:9 output" width="640"></td></tr>
+<tr><th>CLI app control</th><th>CLI background streaming</th></tr>
+<tr><td><img src="docs/images/cli-app.webp" alt="Demo CLI output: open an app, read XML and click an element" width="640"></td><td><img src="docs/images/cli-camera.webp" alt="Demo CLI output: start, inspect and pause background streaming" width="640"></td></tr>
+</table>
+
+</details>
 
 ## Control apps from the CLI
 
-**No browser required.** The CLI and web interface share backend sessions: apps opened from the CLI appear on the desktop, while web actions, focus, minimize and close changes are reflected in the CLI.
+The CLI works without a browser. App sessions, actions, focus, minimize and close state stay synchronized with the web interface.
 
 ```bash
 awsl-webadb devices
@@ -38,9 +50,11 @@ awsl-webadb key SESSION BACK
 awsl-webadb close SESSION
 ```
 
-`--device` takes the transport ID returned by `devices`; omit it when only one device is connected. Set display dimensions with `open --width 1080 --height 1920`. Opening the same app again reuses its session. Select a backend with `--url http://127.0.0.1:3000` or `WEBADB_URL`. Control commands return JSON for scripts; `xml` emits XML directly when no output file is specified.
+`SESSION` is the ID returned by `open`. `--device` takes a device transport ID and is optional for a single device. Set display dimensions with `open --width 1080 --height 1920`; reopening an app reuses its session.
 
-Screenshots and input coordinates use the app's original display dimensions. XML / JSON comes from Android's accessibility tree and includes parent relationships. Read elements again after the page changes before reusing node IDs. Without a selector, `text` writes to the focused input. The web interface's page and element inspector provides the same controls.
+Set the server with `--url` or `WEBADB_URL`; the default is `http://127.0.0.1:3000`. Control commands return JSON; `xml` emits XML directly without `--output`.
+
+Screenshots and coordinates use the app's original resolution. XML / JSON comes from the accessibility tree; read node IDs again after the page changes. Without a selector, `text` writes to the focused input. The web page and element inspector offers the same controls.
 
 ## Stream to the camera from the CLI
 
@@ -64,13 +78,13 @@ awsl-webadb camera resume
 awsl-webadb camera stop
 ```
 
-Replace the example domains with your own sources. Supports direct HTTP(S) images / videos and HLS, RTSP and RTMP streams. **Ordinary webpage URLs are not media sources.** Use `--device` to select among multiple devices.
+Supports direct HTTP(S) images / videos and HLS, RTSP and RTMP streams, **not ordinary webpage URLs**. URLs require `--kind image|video|stream`; select a device with `--device`.
 
-`camera start` returns immediately after success. **The backend keeps streaming when the CLI, browser or app window closes.** Other clients can inspect, switch, pause, resume or stop the source; the server must stay running. Images repeat, videos loop, and pausing a live stream freezes the delivered frame; resuming reads the latest frames. Local files are streamed to temporary storage on the backend host and removed on stop or replacement. Source files are never copied to phone storage.
+`camera start` returns while the server keeps streaming. **Closing the CLI, browser or app window does not stop streaming.** Web and CLI clients can inspect, switch, pause or stop the source.
+
+Images repeat and videos loop. Pausing a live stream freezes the frame; resuming reads the latest frames. Local files are uploaded only to the backend and removed on stop or replacement, without being saved to phone storage.
 
 ## Install and run
-
-Four options: **standalone binary, Homebrew, Docker, or source**.
 
 ### 1. Standalone binary
 
@@ -87,20 +101,18 @@ For example, on macOS Apple Silicon, run from your download directory:
 
 ```bash
 chmod +x awsl-webadb-macos-arm64
-mv awsl-webadb-macos-arm64 awsl-webadb
-# Optional: move into PATH
 mkdir -p ~/.local/bin
-mv awsl-webadb ~/.local/bin/
+mv awsl-webadb-macos-arm64 ~/.local/bin/awsl-webadb
 export PATH="$HOME/.local/bin:$PATH"
 adb start-server
 awsl-webadb serve
 ```
 
-Open **http://127.0.0.1:3000**. Keep the server running and use another terminal for CLI commands. The web interface, fonts, scrcpy server and Android helper are embedded; Bun, Node.js and `node_modules` are unnecessary.
+Open **http://127.0.0.1:3000** and use another terminal for CLI commands. The web interface and Android service components are embedded; Bun and Node.js are not required.
 
-The server host needs [Android Platform Tools / ADB](https://developer.android.com/tools/releases/platform-tools). Enable USB debugging on the phone and authorize the host. Wi-Fi pairing and connections also use the server's ADB instance. Virtual-camera streaming additionally requires [FFmpeg](https://ffmpeg.org/download.html); set its executable with `--ffmpeg PATH`. On macOS, install dependencies with `brew install --cask android-platform-tools` and `brew install ffmpeg`; on Linux, install `adb` and `ffmpeg` through your distribution.
+The server needs [ADB](https://developer.android.com/tools/releases/platform-tools), with USB debugging enabled and authorized on the phone. Camera streaming also requires [FFmpeg](https://ffmpeg.org/download.html); set its path with `--ffmpeg PATH`. On macOS, use `brew install --cask android-platform-tools` and `brew install ffmpeg`; on Linux, use your distribution package manager.
 
-### 2. Homebrew (this repository is the Tap)
+### 2. Homebrew
 
 ```bash
 brew tap awsl-project/webadb https://github.com/awsl-project/awsl-webadb.git
@@ -113,7 +125,7 @@ awsl-webadb serve
 # brew services start awsl-project/webadb/awsl-webadb
 ```
 
-The Formula downloads the release binary for your OS and architecture and installs FFmpeg; install ADB separately. Upgrade with `brew update` and `brew upgrade awsl-project/webadb/awsl-webadb`. The source repository doubles as the Tap, so no cross-repository token is needed. Releases automatically update `Formula/awsl-webadb.rb`. [Homebrew supports an explicit Git URL for a Tap](https://docs.brew.sh/Taps.html).
+FFmpeg is installed automatically; install ADB separately. Upgrade with `brew update && brew upgrade awsl-project/webadb/awsl-webadb`.
 
 ### 3. Docker
 
@@ -125,7 +137,7 @@ docker run --rm \
   ghcr.io/awsl-project/awsl-webadb:latest
 ```
 
-The image supports Linux amd64 / arm64, includes ADB and FFmpeg, and connects to Wi-Fi devices. **USB passthrough is unsupported.** Open http://127.0.0.1:3000. The volume persists ADB authorization, pairing, favorites and cache. Use the CLI on your host or run `docker exec CONTAINER /app/awsl-webadb devices`.
+Supports Linux amd64 / arm64 with ADB and FFmpeg included. **Wi-Fi devices only; USB passthrough is unsupported.** The volume stores authorization, pairing, favorites and cache. Run the CLI in the container with `docker exec CONTAINER /app/awsl-webadb devices`.
 
 ### 4. Run from source
 
@@ -139,8 +151,7 @@ adb start-server
 bun run dev
 ```
 
-The development UI runs at http://127.0.0.1:5173 and the backend at http://127.0.0.1:3000. Use `bun run cli …` for CLI commands. See the [development guide](docs/development.md) for production and standalone builds and configuration.
-
+The development UI runs at http://127.0.0.1:5173 and the backend at http://127.0.0.1:3000. Use `bun run cli …` for CLI commands. See the [development guide](docs/development.md) for builds and configuration.
 
 ## Features
 
@@ -148,42 +159,26 @@ The development UI runs at http://127.0.0.1:5173 and the backend at http://127.0
 | --- | --- |
 | Web desktop | Multiple windows on desktop, touch and full-screen apps on mobile; One Half light / dark themes, system theme, PWA installation and update prompts |
 | Connections | USB / Wi-Fi, debugging authorization state, wireless pairing and connection, device switching; all through the backend ADB server |
-| Status and control | Device details, battery and charging status; navigation, volume, media, power / wake / sleep, notifications, quick settings and device PNG screenshots; control is available by default without a read-only mode switch |
+| Status and control | Device details, battery and charging status; navigation, volume, media, power / wake / sleep, notifications, quick settings and device PNG screenshots |
 | App windows | Favorites and app catalog, independent displays, orientation and resolution changes, touch / drag / wheel / keyboard input |
 | Page inspection | Per-app JPEG screenshots, XML / JSON accessibility elements, element selection and clicks, coordinate input; shared web / CLI sessions |
-| Screen mirroring | scrcpy 4.1; independent apps and screen mirroring use their respective displays |
+| Screen mirroring | View and control the phone's main screen with scrcpy 4.1 |
 | File management | Directory navigation, search, sorting, upload / download progress and overwrite confirmation; streaming downloads in supported browsers |
 | Virtual camera | Images, looping videos and media URLs; explicit URL types, background streaming and state shared across clients |
 | Aspect ratios | Original, 3:4, 4:3, 9:16, 16:9 and 1:1; preview and Android virtual camera share output dimensions |
-| Audio | Manually play phone audio output; **microphone streaming is not implemented and the computer microphone is not captured** |
+| Audio | Play phone audio output; microphone streaming is unsupported |
 | Server storage | App names and icons cached for 7 days; per-device favorites persist without expiration |
 | Deployment | One binary as server or client; two architectures each for Linux / macOS, plus a dual-architecture container |
 
-## More screenshots
+## Camera and sessions
 
-<details>
-<summary>Show mobile, virtual-camera and CLI screenshots</summary>
+Virtual-camera input requires the **Android 16 VirtualCamera API**. Independent windows require ROM support for VirtualDevice with ADB shell access. Camera input applies only to WebADB app windows, leaving the main-screen camera unchanged. Front and rear cameras share one source, and the phone screen can stay off. Apps may restrict multiple displays, screenshots or audio capture.
 
-<table>
-<tr><th>Mobile home</th><th>Image → virtual camera</th></tr>
-<tr><td align="center"><img src="docs/images/mobile.webp" alt="Mobile portrait layout" width="230"></td><td><img src="docs/images/camera-image.webp" alt="Background image streaming with the original aspect ratio" width="640"></td></tr>
-<tr><th>Looping video → virtual camera</th><th>Media URL → virtual camera</th></tr>
-<tr><td><img src="docs/images/camera-video.webp" alt="Looping video with 3:4 output" width="640"></td><td><img src="docs/images/camera-link.webp" alt="Explicit live-stream type with 16:9 output" width="640"></td></tr>
-<tr><th>CLI app control</th><th>CLI background streaming</th></tr>
-<tr><td><img src="docs/images/cli-app.webp" alt="Demo CLI output: open an app, read XML and click an element" width="640"></td><td><img src="docs/images/cli-camera.webp" alt="Demo CLI output: start, inspect and pause background streaming" width="640"></td></tr>
-</table>
-
-</details>
-
-## Camera compatibility and lifecycle
-
-Virtual-camera input requires the **Android 16 VirtualCamera API**. Independent windows require a ROM implementing VirtualDevice and related interfaces with access for ADB shell. **No root is used, and the phone's main-screen camera is not globally replaced.** Apps inside WebADB's virtual device share front and rear virtual cameras using the same source. The phone's main screen can remain off. Apps may impose their own multi-display, screenshot or audio-capture restrictions.
-
-Opening an app or selecting a file does not start camera streaming: start it manually. System camera privacy switches, ROM privacy modes and app permissions remain in effect; the service does not change them automatically. Streaming has no audio track.
+Start streaming manually. Streams have no audio track; system privacy switches and app camera permissions remain in effect.
 
 | Aspect ratio | Output dimensions |
 | --- | --- |
-| `original` (default) | Preserves source ratio, longest edge at most 1280, no upscaling of small images; even dimensions with at most one-pixel rounding |
+| `original` (default) | Preserves source ratio, longest edge ≤ 1280, no upscaling; even dimensions |
 | `3:4` | 960 × 1280 |
 | `4:3` | 1280 × 960 |
 | `9:16` | 720 × 1280 |
@@ -192,7 +187,7 @@ Opening an app or selecting a file does not start camera streaming: start it man
 
 Fixed ratios fit the source proportionally with centered black padding, without cropping or stretching. `--aspect` or the web ratio selection applies on the next start / switch. Dimension changes recreate the virtual camera and app displays; apps may need to reopen the camera. Restart streaming if a live source changes dimensions.
 
-Closing the browser does not end backend app sessions. Sessions expire after 15 minutes without reads or actions; closing a window or using `close` releases them immediately. Camera streaming runs independently and releases its resources on stop, device disconnection or server exit. Server exit also cleans up displays, temporary JARs, companion associations and port forwarding created by the service.
+App sessions expire after 15 minutes without reads or actions; closing a window or using `close` releases them immediately. Camera streaming runs independently until stopped, the device disconnects or the server exits.
 
 ## Configuration and documentation
 
