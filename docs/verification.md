@@ -80,4 +80,12 @@ Android Chrome 的原生地址栏元素定位和按键操作在本轮出现无�
 - macOS arm64 二进制从空目录启动服务端，再用同一文件的客户端查询会话；核对全部 23 个内置文件与构建目录字节一致，包括网页、脚本、字体、scrcpy server 与手机 helper。非允许来源返回 403。
 - 从临时空目录用统一程序连接 USB 手机，打开计算器成功；读取 159 个元素，保存 45,119 字节 JPEG 与 44,178 字节 XML，关闭会话和服务后伴生关联、临时 JAR 已释放，隐身模式保持开启。
 - Homebrew Formula 使用四个平台的 SHA256SUMS 生成，Ruby 语法通过；临时放入本机现有 tap 后，Homebrew 元数据解析选中了 macOS arm64 地址、校验和、FFmpeg 依赖及正确的后台服务命令。测试后移除临时 Formula，未更改已安装应用或启动新的系统服务。
-- 自动更新 tap 参考同组织 maxx 的流程，使用 `HOMEBREW_TAP_TOKEN`；尚未配置令牌时明确跳过并提供手动重跑入口，不能将其描述成已发布到 tap。
+- 当时自动更新独立 Tap 的流程使用 `HOMEBREW_TAP_TOKEN`，未配置时跳过。这是旧方案，现已改为下文的同仓库 Tap。
+
+## 双语介绍、截图与同仓库 Tap
+
+- 中文 / 英文 README 覆盖四种安装方式、现有功能、CLI App 操作和后台摄像头推流，功能示例不折叠；主页为 1440 × 810（16:9），另外六张截图置于折叠表格。
+- 文档截图来自隔离演示后端及模拟 ADB 适配器，只使用 Demo Phone、通用应用和示例媒体；未连接实际 ADB。CLI 图片展示真实 CLI 对演示 API 的返回片段，不作为新增真机验证证据。
+- 七张截图采用无损 WebP，压缩后逐像素对比通过；不提交原始 PNG。检查中英文文档的本地链接、图片加载、折叠状态和个人信息字符串。
+- 从已发布 v0.4.0 的 `SHA256SUMS` 生成本仓库 `Formula/awsl-webadb.rb`；Ruby 语法检查通过。发布与 Formula 更新 workflow 通过 actionlint 检查。
+- 后续发布在本仓库默认分支更新 Formula，使用内置 `GITHUB_TOKEN` 和 `contents: write`，不再依赖跨仓库 secret。首次添加 Tap 需显式指定本仓库 Git URL。

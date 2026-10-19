@@ -12,67 +12,43 @@ on:
       tag:
         required: true
         type: string
-    secrets:
-      HOMEBREW_TAP_TOKEN:
-        required: false
 
 permissions:
-  contents: read
+  contents: write
+
+concurrency:
+  group: update-homebrew
+  cancel-in-progress: false
 
 jobs:
   update-homebrew:
     runs-on: ubuntu-latest
     steps:
-      - name: Validate release and token
-        id: configuration
-        env:
-          RELEASE_TAG: ${{ inputs.tag }}
-          TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
-        run: |
-          set -euo pipefail
-          [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "Invalid release tag"; exit 1; }
-          if [[ -z "$TAP_TOKEN" ]]; then
-            echo "enabled=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::Set HOMEBREW_TAP_TOKEN with write access to awsl-project/homebrew-awsl to enable Formula updates."
-            echo "Homebrew update skipped: HOMEBREW_TAP_TOKEN is not configured. Run this workflow again after configuring it." >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "enabled=true" >> "$GITHUB_OUTPUT"
-          fi
-
       - uses: actions/checkout@v4
-        if: steps.configuration.outputs.enabled == 'true'
+        with:
+          ref: ${{ github.event.repository.default_branch }}
 
       - name: Generate Formula from released checksums
-        if: steps.configuration.outputs.enabled == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ inputs.tag }}
         run: |
-          mkdir -p .release
+          set -euo pipefail
+          [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "Invalid release tag"; exit 1; }
+          node -e 'const {version} = require("./package.json"); if (process.env.RELEASE_TAG !== `v${version}`) throw new Error("Release tag does not match the default branch version");'
+          mkdir -p .release Formula
           gh release download "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --pattern SHA256SUMS --dir .release
-          node scripts/homebrew-formula.mjs "$RELEASE_TAG" .release/SHA256SUMS > .release/awsl-webadb.rb
-          ruby -c .release/awsl-webadb.rb
+          node scripts/homebrew-formula.mjs "$RELEASE_TAG" .release/SHA256SUMS > Formula/awsl-webadb.rb
+          ruby -c Formula/awsl-webadb.rb
 
-      - name: Check out Homebrew tap
-        if: steps.configuration.outputs.enabled == 'true'
-        uses: actions/checkout@v4
-        with:
-          repository: awsl-project/homebrew-awsl
-          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
-          path: homebrew-awsl
-
-      - name: Update Formula
-        if: steps.configuration.outputs.enabled == 'true'
+      - name: Update Formula in this repository
         env:
           RELEASE_TAG: ${{ inputs.tag }}
         run: |
           set -euo pipefail
-          mkdir -p homebrew-awsl/Formula
-          cp .release/awsl-webadb.rb homebrew-awsl/Formula/awsl-webadb.rb
-          cd homebrew-awsl
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add Formula/awsl-webadb.rb
           if git diff --cached --quiet; then exit 0; fi
-          git commit -m "Update awsl-webadb to $RELEASE_TAG"
+          git commit -m "chore: update Homebrew Formula to $RELEASE_TAG"
           git push

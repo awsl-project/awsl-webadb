@@ -1,143 +1,121 @@
 # WebADB Desk
 
-通过网页桌面或 CLI 管理、打开并操作 Android 应用。两者使用同一个后端应用会话：CLI 打开的应用会出现在网页，网页中的点击、输入、最小化与关闭也会反映到 CLI。USB 和 Wi-Fi 连接统一由服务端的 ADB 管理。
+**[简体中文](README.md) · [English](README.en.md)**
 
-## 功能
+[CLI 操作 App](#cli-操作-app) · [CLI 后台推流](#cli-后台推流) · [安装](#安装与启动) · [功能](#功能)
 
-- One Half 明暗主题、跟随系统、本地字体与图标、桌面收藏和 PWA 更新提示。电脑使用多窗口工作台，手机采用双列工具、全屏应用和触控布局。
-- 设备发现、授权状态、Wi-Fi 配对与连接、设备信息、电池状态及原屏镜像。
-- 独立应用窗口、横竖屏、调整分辨率、触摸、拖动、滚轮、按键与文字输入。
-- 单应用 JPEG 截图、无障碍 XML / JSON 元素树、元素点击及坐标操作，网页与 CLI 都可使用。
-- 文件目录导航、搜索、排序、上传下载、进度显示；覆盖文件前确认。大文件在支持 File System Access 的浏览器中流式保存。
-- 图片、视频、媒体链接三种来源作为系统虚拟摄像头输入，网页和 CLI 均支持后台推流。
+在浏览器和命令行中打开、查看并操作 Android 应用，也可以把图片、视频和视频流送进应用的虚拟摄像头。**一个 `awsl-webadb` 二进制，同时提供服务端、网页和 CLI 客户端。无需 root。**
 
-默认即可控制，没有只读模式或模式切换确认。打开应用不会启动文件摄像头；选择文件也不会开始推流。必须手动点击“开始推流”，点击“停止推流”后释放相机。标题栏的声音按钮用于手动播放手机音频输出；目前没有麦克风推流功能，不会采集电脑麦克风。
+![WebADB 桌面主页，16:9](docs/images/desktop.webp)
 
-## 本机运行
+*截图使用隔离的 Demo Phone、通用应用和示例素材，不包含个人手机信息。界面截图展示现有 UI，CLI 图片为演示 API 的实际返回片段；真机测试范围见[验证记录](docs/verification.md)。*
 
-电脑和手机浏览器使用同一个服务。首页分为工具区和收藏应用区；系统摄像头在电脑上并排显示配置与预览，在手机上可独立滚动，底部推流操作始终可见。收起面板不会停止后台推流。
+## CLI 操作 App
 
-需要 Bun 1.4.3 或更新版本、Android Platform Tools，以及已允许 USB 调试的手机。文件摄像头还需要后端安装 FFmpeg（可用 `FFMPEG_PATH` 指定可执行文件）；容器已包含 FFmpeg：
-
-```bash
-bun install
-adb start-server
-bun run dev
-```
-
-- 开发网页：`http://127.0.0.1:5173`
-- 后端 / CLI 服务：`http://127.0.0.1:3000`
-- ADB Server：`127.0.0.1:5037`
-
-生产运行：
-
-```bash
-bun run check
-bun test
-bun run build
-bun run start
-```
-
-原屏镜像使用 scrcpy 4.1。独立应用会话通过 Android VirtualDevice、VirtualTouchscreen、ImageReader 和 UiAutomation 提供黑屏手机上的画面与操作，当前真机验收环境为 Android 16。独立窗口和文件摄像头需要 ROM 实现相应系统接口并允许 ADB shell 创建虚拟设备；不支持时返回错误，不尝试 root。应用本身也可能限制多屏、截图或音频捕获。
-
-可配置 `PORT`、`HOST`、`ADB_SERVER_HOST`、`ADB_SERVER_PORT`、`STATIC_DIR` 与 `ALLOWED_ORIGINS`。默认仅监听本机；需要可信局域网访问时显式设置 `HOST=0.0.0.0`。生产反向代理请配置允许的完整来源，例如 `ALLOWED_ORIGINS=https://webadb.example.com`；多个来源用逗号分隔。本服务提供完整 ADB 控制能力，远程访问应使用具备身份验证的 HTTPS 代理。
-
-## CLI
-
-`awsl-webadb` 是同时包含服务端和客户端的单个可执行文件，不需要额外安装 Bun、Node.js 或 `node_modules`。网页、字体、scrcpy server 与手机 helper 均内置，复制二进制后可从任意目录启动。运行服务端的电脑仍需 ADB server；媒体推流需要 FFmpeg。
-
-```bash
-# 终端一：启动服务端，提供网页、API 与后台推流
-adb start-server
-awsl-webadb serve --host 127.0.0.1 --port 3000
-
-# 终端二：同一个可执行文件作为客户端
-awsl-webadb devices
-awsl-webadb --url http://127.0.0.1:3000 sessions
-
-# 查看帮助和版本
-awsl-webadb --help
-awsl-webadb --version
-```
-
-`serve` 还接受 `--adb-host`、`--adb-port`、`--ffmpeg`、`--static-dir` 和 `--data-dir`；也兼容原来的环境变量。网页地址默认为 `http://127.0.0.1:3000`。服务端需要持续运行，客户端命令执行完就退出；远程客户端通过 `--url` 或 `WEBADB_URL` 连接同一服务。源码开发也可用 `bun run serve` 和 `bun run cli …`。
+**无需打开网页。** CLI 与网页使用同一个后端会话：CLI 打开的应用出现在网页，网页中的操作、焦点、最小化和关闭也同步到 CLI。
 
 ```bash
 awsl-webadb devices
-awsl-webadb open com.miui.calculator --device 1
+awsl-webadb open com.android.chrome --device 1
 awsl-webadb sessions
+
+# 把 SESSION 替换成 open 返回的 id
 awsl-webadb screenshot SESSION --output app.jpg
 awsl-webadb xml SESSION --output app.xml
 awsl-webadb elements SESSION
-awsl-webadb click SESSION --text "1"
+
+# 根据文字、资源 ID、无障碍描述或最近读取的元素 ID 操作
+awsl-webadb click SESSION --text "确定"
 awsl-webadb click SESSION --resource-id com.example:id/button
-awsl-webadb click SESSION --description "确定"
+awsl-webadb click SESSION --description "搜索"
 awsl-webadb click SESSION --node e12
+awsl-webadb text SESSION "hello" --resource-id com.example:id/input
+
+# 不提供元素树的页面也可通过截图坐标操作
 awsl-webadb tap SESSION 100 200
 awsl-webadb swipe SESSION 100 800 100 200 --duration 300
-awsl-webadb text SESSION "你好" --resource-id com.example:id/input
 awsl-webadb key SESSION BACK
 awsl-webadb close SESSION
 ```
 
-`SESSION` 是 `open` 返回的会话 ID，`--device` 使用 `devices` 返回的 transport ID。只有一台设备时可省略。通过 `--url http://host:3000` 或 `WEBADB_URL` 指定服务。`open --width 1080 --height 1920` 可设置显示尺寸；再次打开同一设备上的同一应用会复用会话并同步焦点。
+`--device` 是 `devices` 返回的 transport ID，仅有一台设备时可省略。`open --width 1080 --height 1920` 设置显示尺寸，重复打开同一应用会复用会话。通过 `--url http://127.0.0.1:3000` 或 `WEBADB_URL` 指定服务端；控制命令返回 JSON，方便脚本使用；`xml` 未指定输出文件时直接输出 XML。
 
-坐标以会话的原始显示尺寸为准。XML 为带 `parentId` 的元素列表；元素 ID 只代表最近一次读取结果，页面变化后应重新读取。未指定元素的 `text` 写入当前焦点输入框；游戏、Canvas 或不提供无障碍节点的页面可通过截图坐标操作。网页每个应用底部的“页面与元素”按钮提供同样的截图、XML、分辨率、元素、按键和坐标操作。
+截图使用应用原始分辨率，坐标也以原始显示尺寸为准。XML / JSON 来自 Android 无障碍树，包含父子关系；页面变化后应重新读取元素 ID。未指定元素的 `text` 写入当前焦点输入框。网页“页面与元素”面板提供同样的能力。
 
-浏览器关闭不会结束后端应用会话。没有读取或操作的应用会话在 15 分钟后自动释放；关闭窗口或 CLI `close` 会立即释放。服务器退出时清理本次创建的显示、临时 JAR、伴生关联和端口转发，不解锁或点亮手机主屏。
+## CLI 后台推流
 
-构建统一程序：`bun run build:binary`（`build:cli` 为兼容别名），输出 `bin/awsl-webadb`。GitHub Release 同时提供四份二进制及 `SHA256SUMS`：
-
-| 平台 | 文件 |
-| --- | --- |
-| Linux x64 | `awsl-webadb-linux-amd64` |
-| Linux arm64 | `awsl-webadb-linux-arm64` |
-| macOS Intel | `awsl-webadb-macos-amd64` |
-| macOS Apple Silicon | `awsl-webadb-macos-arm64` |
-
-下载对应文件后 `chmod +x` 并重命名为 `awsl-webadb`；每份文件都兼具服务端与客户端能力。构建冒烟检查：`node scripts/smoke-binary.mjs bin/awsl-webadb`，从空目录核对服务、客户端、参数、来源限制及所有内置资源。
-
-应用名称和图标按设备、包名、语言保存到服务端磁盘，读取时命中缓存就直接使用，超过 **7 天**再从手机读取。首页只加载常用图标，打开全部应用时再读取其他名称与图标。收藏列表按设备永久保存；首次使用会迁移该浏览器已有的收藏，其他浏览器在打开页面或重新聚焦时读取服务端收藏。默认目录是 `~/.local/share/awsl-webadb`，可用 `serve --data-dir PATH` 或 `WEBADB_DATA_DIR` 指定；`metadata/` 是可删除的缓存，`favorites/` 是不设有效期的收藏数据。
-
-## 文件摄像头
-
-在首页工具栏打开“摄像头”，选择“图片”“视频”或“媒体链接”，手动开始推流。媒体链接接受 HTTP(S) 图片 / 视频直链和 HLS、RTSP、RTMP 视频流，不接受普通网页地址。输入链接时必须选择“图片直链”“视频直链”或“实时视频流”，按明确类型处理。图片持续发送静止画面，视频循环播放，暂停时保留当前帧。输出默认使用**原始比例**：跟随媒体画面比例，最长边不超过 1280，不放大小图；编码尺寸取偶数，最多产生一个像素的取整差异。也可选择 **3:4（960 × 1280）、4:3（1280 × 960）、9:16（720 × 1280）、16:9（1280 × 720）、1:1（1280 × 1280）**；固定比例等比缩放、居中补黑，不拉伸、不裁剪。预览、后台 JPEG 和 Android 虚拟摄像头使用同一输出尺寸。比例选择在下一次开始或切换推流时生效；尺寸变化会重建虚拟摄像头及其应用显示，正在使用相机的应用可能需要重新打开相机。实时流在本次推流期间尺寸固定，来源尺寸变化时需重新开始。没有音轨，原始文件不复制到手机存储。
-
-同一设备的 WebADB 应用窗口共享前后虚拟摄像头，两者使用相同输入源；手机主屏应用保持原有摄像头行为。正式来源由后端 FFmpeg 解码并持有，关闭网页或 CLI、收起面板及关闭应用窗口后继续推流。其他客户端能看到共享来源、暂停状态和手机确认的帧数，可以切换、暂停或停止。后台服务必须持续运行；设备断开、停止推流或服务退出时释放本次资源。启停相机会重建虚拟设备中的应用显示，应用是否保留页面取决于其自身行为。
+将文件或媒体直链作为虚拟摄像头输入，供 **WebADB 独立应用窗口内的应用**读取。
 
 ```bash
+# 图片持续供帧；本地视频循环播放
 awsl-webadb camera start ./image.png
 awsl-webadb camera start ./video.mp4 --aspect original
 awsl-webadb camera start ./video.mp4 --aspect 9:16
-awsl-webadb camera start https://host/video.mp4 --kind video
-awsl-webadb camera start rtsp://host/live --kind stream
-awsl-webadb camera start https://host/live.m3u8 --kind stream
+
+# 链接必须明确类型：image、video 或 stream
+awsl-webadb camera start https://media.example.com/image.png --kind image
+awsl-webadb camera start https://media.example.com/video.mp4 --kind video
+awsl-webadb camera start rtsp://camera.example.com/live --kind stream
+awsl-webadb camera start https://media.example.com/live.m3u8 --kind stream
+
 awsl-webadb camera status
 awsl-webadb camera pause
 awsl-webadb camera resume
 awsl-webadb camera stop
 ```
 
-`camera start` 成功后立即返回，服务后台继续供帧。多设备用 `--device` 选择；CLI 链接必须用 `--kind image|video|stream` 明确指定类型；`--aspect original|3:4|4:3|9:16|16:9|1:1` 选择输出比例，默认 `original`。本地文件先流式上传到运行后端的电脑，停止或切换后删除临时副本；原文件不会写入手机。视频流暂停时冻结送往手机的画面，恢复后读取最新帧。
+以上域名仅作示例，请换成自己的媒体地址。支持 HTTP(S) 图片 / 视频直链以及 HLS、RTSP、RTMP 视频流，**普通网页 URL 不能作为媒体来源**。多设备用 `--device` 选择。
 
-内部联调页面 `camera-test.html` 用于在 Android Chrome 中检查相机画面，产品界面不提供该测试入口。开始推流后，在该页面打开摄像头并允许网站访问，使用真实 `getUserMedia()` 和 `BarcodeDetector` 核对画面与二维码。不会自动访问扫码链接。验收网页通过随机 ADB reverse 端口访问运行后端的电脑，要求 ADB server 与 WebADB 服务运行在同一台机器；远程容器需要自行保证该路径可达。
+`camera start` 成功后立即退出，**后端持续推流，关闭 CLI、网页或应用窗口都不会停止**。其他客户端可查看状态并切换、暂停、恢复或停止；服务端必须保持运行。图片重复送帧，视频循环播放；实时流暂停时冻结画面，恢复后读取最新帧。本地文件流式上传到后端电脑，停止或切换后删除临时副本，原文件不写入手机。
 
-需要 Android 16 的 VirtualCamera API，具体兼容性依 ROM 而定。小米隐身模式、系统相机隐私开关或 Chrome 权限可能阻止相机读取；服务不会修改这些系统隐私设置，也不会全局授予 Chrome 相机权限。扫码验收仅在本次虚拟设备上下文授权，并在结束时撤销。本机已完成 960 × 1280 视频扫码与实时时钟画面验收；详细验证范围见 [验证记录](docs/verification.md)。
+## 安装与启动
 
-手机主屏可保持黑屏。应用预览最多约 8 FPS、宽度 720 像素；保存的截图使用应用原始分辨率。虚拟相机声明 30 FPS，后台视频按最高 12 FPS 处理，实际送帧速率受媒体和 ADB 通道影响。`camera-clock.html` 是额外的浏览器画布验收工具，显示当前时间和二维码，用于观察画面变化；该工具依赖页面保持打开，不属于正式后台媒体来源。
+提供四种方式：**独立二进制、Homebrew、Docker、源码运行**。
 
-重建手机 helper：
+### 1. 独立二进制
+
+从 [GitHub Releases](https://github.com/awsl-project/awsl-webadb/releases/latest) 下载对应文件，并用同页 `SHA256SUMS` 校验。
+
+| 系统 | 架构 | 文件 |
+| --- | --- | --- |
+| Linux | x64 | `awsl-webadb-linux-amd64` |
+| Linux | arm64 | `awsl-webadb-linux-arm64` |
+| macOS | Intel | `awsl-webadb-macos-amd64` |
+| macOS | Apple Silicon | `awsl-webadb-macos-arm64` |
+
+以 macOS Apple Silicon 为例，在下载目录执行：
 
 ```bash
-CAMERA_JAVA_HOME=/path/to/jdk-21 \
-CAMERA_ANDROID_JAR=/path/to/android-16-system-api.jar \
-CAMERA_R8_JAR=/path/to/r8.jar \
-bash scripts/build-camera.sh
+chmod +x awsl-webadb-macos-arm64
+mv awsl-webadb-macos-arm64 awsl-webadb
+# 可选：移入 PATH
+mkdir -p ~/.local/bin
+mv awsl-webadb ~/.local/bin/
+export PATH="$HOME/.local/bin:$PATH"
+adb start-server
+awsl-webadb serve
 ```
 
-仓库内提供已编译的 `public/camera/webadb-camera.jar`。构建使用 Android 16 系统 API stubs 或对应 Robolectric `android-all.jar`、Java 21 与 R8 / D8，输出 Java 17 字节码及 DEX；构建工具不进入手机 helper。
+打开 **http://127.0.0.1:3000**。服务端须持续运行，另开终端使用 CLI。程序已内置网页、字体、scrcpy server 和手机 helper，不需要 Bun、Node.js 或 `node_modules`。
 
-## 容器
+运行服务端的电脑需要 [Android Platform Tools / ADB](https://developer.android.com/tools/releases/platform-tools)，手机须开启并授权 USB 调试。Wi-Fi 配对和连接也由服务端 ADB 管理。虚拟摄像头还需要 [FFmpeg](https://ffmpeg.org/download.html)，可用 `--ffmpeg PATH` 指定。macOS 可通过 `brew install --cask android-platform-tools` 和 `brew install ffmpeg` 安装依赖；Linux 使用发行版包管理器安装 `adb`、`ffmpeg`。
+
+### 2. Homebrew（本仓库即 Tap）
+
+```bash
+brew tap awsl-project/webadb https://github.com/awsl-project/awsl-webadb.git
+brew install awsl-project/webadb/awsl-webadb
+# macOS；Linux 请通过发行版安装 adb
+brew install --cask android-platform-tools
+adb start-server
+awsl-webadb serve
+# 或交给 Homebrew 后台管理：
+# brew services start awsl-project/webadb/awsl-webadb
+```
+
+Formula 按系统和架构下载 Release 二进制，自动安装 FFmpeg；ADB 单独安装。升级使用 `brew update` 和 `brew upgrade awsl-project/webadb/awsl-webadb`。Tap 与源码同仓库，不需要额外的跨仓库 token；发布后自动更新 `Formula/awsl-webadb.rb`。[Homebrew 支持显式指定 Tap 的 Git URL](https://docs.brew.sh/Taps.html)。
+
+### 3. Docker
 
 ```bash
 docker run --rm \
@@ -147,33 +125,82 @@ docker run --rm \
   ghcr.io/awsl-project/awsl-webadb:latest
 ```
 
-容器自动启动 ADB server，使用 Wi-Fi 设备，不支持 USB 直通。持久化目录保存 ADB 授权密钥与配对缓存。也可以用 `docker compose up --build`。镜像与独立发行版使用同一个程序，可通过 `docker exec CONTAINER /app/awsl-webadb devices` 调用客户端；保留 `/app/webadb` 兼容软链接。
+镜像支持 Linux amd64 / arm64，内置 ADB 和 FFmpeg，使用 Wi-Fi 设备，**不支持 USB 直通**。网页仍为 http://127.0.0.1:3000。数据卷保存 ADB 授权、配对、收藏与缓存。可从主机使用 CLI，或运行 `docker exec CONTAINER /app/awsl-webadb devices`。
 
-发布流水线运行类型检查、回归测试和前端构建，然后生成 CLI、构建 Linux amd64 / arm64 镜像并发布 GitHub Release。字体本地提供，更新字体使用 `scripts/fetch-fonts.py`；界面图标直接引用 Lucide SVG。PWA 离线只提供页面，设备操作仍需后端连接。
+### 4. 源码运行
 
-开源依赖与构建工具说明见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
-
-## 界面开发
-
-通用控件使用 shadcn/ui（Radix），布局使用 Tailwind CSS 4，图标统一使用 Lucide SVG。配置见 `components.json`，组件源码位于 `src/components/ui`；新增组件可运行 `bunx shadcn@latest add <组件名>`。主题色通过 `src/styles/ui.css` 映射 One Half 变量。原有窗口与设备画面样式放在 `legacy` CSS 层，组件样式和工具类在其后，避免反复覆盖。
-
-应用中心、连接、设置、控制、摄像头及元素面板按需加载。新增界面优先组合现有组件，不新增测试入口或复制按钮、弹层和焦点管理逻辑。
-
-## Homebrew 发布集成
-
-本项目使用 Formula 安装命令行程序；同组织的 maxx 为桌面应用，使用 Cask。发布流程按系统和 CPU 架构选择上述四份二进制，用 `SHA256SUMS` 生成 `awsl-webadb.rb`，随 Release 一起提供。Formula 安装 FFmpeg，并提供 `brew services` 服务定义；ADB 按平台单独安装。
-
-当 Formula 已更新到 `awsl-project/homebrew-awsl` 后，使用：
+需要 Bun 1.4.3 或更新版本，以及 ADB；摄像头推流需要 FFmpeg。
 
 ```bash
-brew install awsl-project/awsl/awsl-webadb
-# macOS 安装 ADB；Linux 使用发行版的软件包管理器安装 adb
-brew install --cask android-platform-tools
+git clone https://github.com/awsl-project/awsl-webadb.git
+cd awsl-webadb
+bun install
 adb start-server
-brew services start awsl-project/awsl/awsl-webadb
-awsl-webadb devices
+bun run dev
 ```
 
-仓库的 `HOMEBREW_TAP_TOKEN` secret 需要具备 `awsl-project/homebrew-awsl` 的 Contents 写入权限，才能在发布成功后自动更新 `Formula/awsl-webadb.rb`。可使用授予本仓库访问权限的同名组织 secret。未配置时明确跳过自动更新，不影响二进制与容器发布；配置后可手动运行 **Update Homebrew Formula** workflow，传入已发布版本补更新。不要将 token 写入源码或聊天。
+开发网页为 http://127.0.0.1:5173，后端为 http://127.0.0.1:3000。源码 CLI 使用 `bun run cli …`。生产构建、独立二进制构建及配置见[开发文档](docs/development.md)。
 
-参考：[maxx 的 Homebrew 更新流程](https://github.com/awsl-project/maxx/blob/main/.github/workflows/update-homebrew.yml)、[Homebrew Formula 与服务定义](https://docs.brew.sh/Formula-Cookbook#service-files)。
+
+## 功能
+
+| 能力 | 说明 |
+| --- | --- |
+| 网页桌面 | 电脑多窗口、手机触控与全屏应用；One Half 明暗主题、跟随系统、PWA 安装与更新提示 |
+| 设备连接 | USB / Wi-Fi、调试授权状态、无线配对与连接、多设备切换；通过后端 ADB server 连接 |
+| 状态与控制 | 设备信息、电量与充电状态；导航、音量、媒体、电源 / 唤醒 / 休眠、通知栏、快捷设置和设备 PNG 截图；默认即可控制，无只读模式切换 |
+| 应用窗口 | 收藏与全部应用、独立显示、横竖屏、分辨率调整、触摸 / 拖动 / 滚轮 / 键盘输入 |
+| 页面读取 | 单应用 JPEG 截图、XML / JSON 无障碍元素、元素选择与点击、截图坐标操作；网页与 CLI 共用会话 |
+| 原屏镜像 | 基于 scrcpy 4.1；独立应用窗口与原屏镜像分别使用对应显示 |
+| 文件管理 | 目录导航、搜索、排序、上传、下载和进度；覆盖确认，支持的浏览器可流式保存大文件 |
+| 虚拟摄像头 | 图片、循环视频、媒体链接三种来源；明确链接类型，后台推流与跨客户端状态同步 |
+| 画面比例 | 原始、3:4、4:3、9:16、16:9、1:1；预览与 Android 虚拟相机使用相同输出尺寸 |
+| 声音 | 手动播放手机音频输出；**尚无麦克风推流，不采集电脑麦克风** |
+| 服务端存储 | 名称与图标缓存 7 天；收藏按设备永久保存，不设有效期 |
+| 单程序部署 | 一个二进制作为服务端或客户端；Linux / macOS 各两种架构，另有双架构容器 |
+
+## 更多截图
+
+<details>
+<summary>展开手机、虚拟摄像头与 CLI 截图</summary>
+
+<table>
+<tr><th>手机主页</th><th>图片 → 虚拟摄像头</th></tr>
+<tr><td align="center"><img src="docs/images/mobile.webp" alt="手机竖屏布局" width="230"></td><td><img src="docs/images/camera-image.webp" alt="图片后台推流，原始比例" width="640"></td></tr>
+<tr><th>循环视频 → 虚拟摄像头</th><th>媒体链接 → 虚拟摄像头</th></tr>
+<tr><td><img src="docs/images/camera-video.webp" alt="循环视频推流，3:4 输出" width="640"></td><td><img src="docs/images/camera-link.webp" alt="明确选择实时视频流，16:9 输出" width="640"></td></tr>
+<tr><th>CLI 操作 App</th><th>CLI 后台推流</th></tr>
+<tr><td><img src="docs/images/cli-app.webp" alt="CLI 打开应用、读取 XML、点击元素的演示输出" width="640"></td><td><img src="docs/images/cli-camera.webp" alt="CLI 启动、查看和暂停后台推流的演示输出" width="640"></td></tr>
+</table>
+
+</details>
+
+## 摄像头兼容性与生命周期
+
+虚拟摄像头需要 **Android 16 VirtualCamera API**，独立窗口需要 ROM 实现 VirtualDevice 等系统接口并允许 ADB shell 使用。**不使用 root，也不会全局替换手机主屏应用的摄像头。** WebADB 虚拟设备中的应用共享前后虚拟摄像头，同一来源供帧；手机主屏可以保持黑屏。应用自身仍可能限制多屏、截图或音频捕获。
+
+打开应用、选择文件不会自动启动相机，必须手动开始推流。系统相机隐私开关、ROM 隐身模式和应用权限仍生效，服务不会自动修改。推流没有音轨。
+
+| 输出比例 | 输出尺寸 |
+| --- | --- |
+| `original`（默认） | 跟随来源，最长边不超过 1280，不放大小图；尺寸取偶数，最多一个像素取整差异 |
+| `3:4` | 960 × 1280 |
+| `4:3` | 1280 × 960 |
+| `9:16` | 720 × 1280 |
+| `16:9` | 1280 × 720 |
+| `1:1` | 1280 × 1280 |
+
+固定比例等比缩放、居中补黑，不裁剪、不拉伸。`--aspect` 或网页比例选择在下一次开始 / 切换时生效。尺寸变化会重建虚拟摄像头和应用显示，应用可能需要重新打开相机；实时流来源尺寸变化需重新开始推流。
+
+浏览器关闭不结束后端应用会话；应用会话无读取或操作 15 分钟后释放，关闭窗口或 `close` 立即释放。后台推流独立运行，停止推流、设备断开或服务退出时释放相应资源。服务退出也会清理本次创建的显示、临时 JAR、伴生关联及端口转发。
+
+## 配置与文档
+
+服务端默认仅监听本机。`serve` 支持 `--host`、`--port`、`--adb-host`、`--adb-port`、`--ffmpeg`、`--static-dir` 和 `--data-dir`，也兼容对应环境变量。默认数据目录为 `~/.local/share/awsl-webadb`：`metadata/` 缓存可删除，`favorites/` 是永久收藏。
+
+可信局域网访问需显式设置 `--host 0.0.0.0`；远程访问请使用带身份验证的 HTTPS 代理，并通过 `ALLOWED_ORIGINS` 配置允许的完整来源。PWA 离线仅提供页面，设备操作需要后端在线。
+
+- [开发、构建、配置和 Homebrew 集成](docs/development.md)
+- [真机与媒体验证记录](docs/verification.md)
+- [第三方依赖说明](THIRD_PARTY_NOTICES.md)
+- `awsl-webadb --help` / `awsl-webadb --version`
