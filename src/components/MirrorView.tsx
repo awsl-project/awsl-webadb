@@ -21,6 +21,9 @@ import { MIRROR_QUALITY_CONFIG } from "../types";
 import type { PointerEvent as ReactPointerEvent } from "react";
 
 interface MirrorSidebarProps {
+  fullscreen: boolean;
+  onToggleFullscreen: () => void;
+  menuContainer?: HTMLElement | null;
   mirrorPending: string;
   mirrorRunning: boolean;
   mirrorQuality: MirrorQuality;
@@ -41,6 +44,9 @@ interface MirrorSidebarProps {
 }
 
 export function MirrorSidebar({
+  fullscreen,
+  onToggleFullscreen,
+  menuContainer,
   mirrorPending,
   mirrorRunning,
   mirrorQuality,
@@ -65,6 +71,22 @@ export function MirrorSidebar({
     <>
       <div className="screen-sidebar-group">
         <div className="screen-icon-column">
+          <Button
+            variant="unstyled"
+            size="unstyled"
+            className="ghost-button screen-icon-button"
+            onClick={onToggleFullscreen}
+            aria-label={fullscreen ? "退出全屏" : "全屏镜像"}
+            aria-pressed={fullscreen}
+            title={fullscreen ? "退出全屏 (Esc)" : "全屏镜像"}
+            type="button"
+          >
+            <Icon
+              aria-hidden="true"
+              className="ui-icon"
+              name={fullscreen ? "close_fullscreen" : "open_in_full"}
+            />
+          </Button>
           <Button
             variant="unstyled"
             size="unstyled"
@@ -118,6 +140,7 @@ export function MirrorSidebar({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent
+              container={menuContainer}
               side="right"
               align="start"
               collisionPadding={8}

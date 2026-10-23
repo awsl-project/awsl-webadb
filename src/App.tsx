@@ -19,6 +19,7 @@ import type { InstalledApp, PanelView } from "./types";
 import { useToast } from "./hooks/useToast";
 import { useDevices } from "./hooks/useDevices";
 import { useMirror } from "./hooks/useMirror";
+import { useFullscreen } from "./hooks/useFullscreen";
 import { useFiles } from "./hooks/useFiles";
 import { useApps } from "./hooks/useApps";
 import { useDeviceControls } from "./hooks/useDeviceControls";
@@ -265,6 +266,9 @@ export default function App() {
       zIndex: 20,
     };
   });
+  const mirrorFullscreen = useFullscreen(
+    mirrorWindow.open && !mirrorWindow.minimized,
+  );
   const filesDeviceRef = useRef("");
   const topZIndexRef = useRef(100);
   const nextZIndex = useCallback(() => {
@@ -534,6 +538,11 @@ export default function App() {
     <div className="mirror-window-layout">
       <aside className="screen-sidebar">
         <MirrorSidebar
+          fullscreen={mirrorFullscreen.fullscreen}
+          onToggleFullscreen={() => void mirrorFullscreen.toggleFullscreen()}
+          menuContainer={
+            mirrorFullscreen.fullscreen ? mirrorFullscreen.ref.current : undefined
+          }
           mirrorPending={mirror.mirrorPending}
           mirrorRunning={mirror.mirrorRunning}
           mirrorQuality={mirror.mirrorQuality}
@@ -1081,6 +1090,7 @@ export default function App() {
         />
 
         <DesktopWindow
+          elementRef={mirrorFullscreen.ref}
           state={mirrorWindow}
           title="手机镜像"
           icon="phone_android"
@@ -1090,7 +1100,7 @@ export default function App() {
             panelView === "mirror" &&
             !appWindows.activeId
           }
-          className="mirror-manager-window"
+          className={`mirror-manager-window ${mirrorFullscreen.fullscreen ? "mirror-fullscreen" : ""}`}
           canMaximize={!isMobileLayout}
           onFocus={() => {
             appWindows.blur();

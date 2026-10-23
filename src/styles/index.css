@@ -13,3 +13,26 @@
 @import "./dex-theme.css" layer(legacy);
 @import "./one-half-theme.css" layer(legacy);
 @import "./workspace.css" layer(legacy);
+
+.ios-pwa-status-strip {
+  display: none;
+}
+
+@supports (-webkit-touch-callout: none) {
+  @media (display-mode: standalone) and (hover: none) and (pointer: coarse) {
+    .ios-pwa-status-strip {
+      --panel: var(--oh-panel);
+      display: block;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 11px;
+      z-index: 2147483647;
+      background-color: var(--panel);
+      -webkit-background-clip: text;
+      background-clip: text;
+      pointer-events: none;
+    }
+  }
+}

@@ -105,6 +105,10 @@ docker run --rm \
 
 PWA 与页头共用 `public/pwa-icon.svg`。修改后运行 `bun run icons:generate`，统一输出普通图标、192 / 512 / 1024 自适应图标、Apple 120 / 152 / 167 / 180 图标、16 / 32 / 48 PNG 与 ICO，以及 Safari 固定标签单色图标；`bun run icons:check` 验证生成资源未过期。自适应与 Apple 图标使用不透明方形底色，标志完整保留在自适应安全区内。
 
+`index.html` 的 `.ios-pwa-status-strip` 位于 React 根节点外，仅在触屏 WebKit 的独立 PWA 中显示。固定的 11 px 空条使用主题面板色和 `background-clip: text`，通过顶部颜色采样尝试抑制 iOS 27 模糊，不占布局或拦截点击；这是待 iOS 27 真机验证的临时兼容方案。原安全区和状态栏元数据保持不变；后续若修改状态栏元数据，应删除主屏入口后重新添加。
+
+镜像全屏复用原窗口和画布，优先调用 Fullscreen API，不支持或被拒绝时铺满网页；退出后恢复窗口位置和尺寸。画质菜单须挂载到全屏窗口内，避免浏览器全屏顶层隐藏菜单。兼容布局使用 `100dvh` 并保留四侧安全区。
+
 ## Homebrew 发布集成
 
 本仓库同时作为源码仓库和 Homebrew Tap，Formula 位于 `Formula/awsl-webadb.rb`。仓库名无需改成 `homebrew-*`：首次添加 Tap 时显式提供 Git URL，参见 [Homebrew Taps 文档](https://docs.brew.sh/Taps.html)。

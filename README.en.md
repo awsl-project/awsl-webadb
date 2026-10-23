@@ -177,7 +177,7 @@ On desktop, use the install entry in Chrome / Edge's address bar, or Safari's **
 | Status and control | Device details, battery and charging status; navigation, volume, media, power / wake / sleep, notifications, quick settings and device PNG screenshots |
 | App windows | Android users / cloned apps, independent favorites and running state, app catalog, independent displays, orientation and resolution changes, touch / drag / wheel / keyboard input |
 | Page inspection | Per-app JPEG screenshots, XML / JSON accessibility elements, element selection and clicks, coordinate input; shared web / CLI sessions |
-| Screen mirroring | View and control the phone's main screen with scrcpy 4.1 |
+| Screen mirroring | View and control the phone's main screen with scrcpy 4.1; quality controls, fullscreen toggle, and proportional portrait / landscape fitting; fills the page when browser fullscreen is unavailable |
 | File management | Directory navigation, search, sorting, upload / download progress and overwrite confirmation; streaming downloads in supported browsers |
 | Virtual camera | Images, looping videos and media URLs; explicit URL types, background streaming and state shared across clients |
 | Aspect ratios | Original, 3:4, 4:3, 9:16, 16:9 and 1:1; preview and Android virtual camera share output dimensions |
