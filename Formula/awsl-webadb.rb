@@ -1,29 +1,29 @@
 class AwslWebadb < Formula
   desc "Android app control, shared web sessions and background camera streaming"
   homepage "https://github.com/awsl-project/awsl-webadb"
-  version "0.4.0"
+  version "0.5.0"
 
   on_macos do
     on_arm do
       url "https://github.com/awsl-project/awsl-webadb/releases/download/v#{version}/awsl-webadb-macos-arm64", using: :nounzip
-      sha256 "c6b15d7cdb99fe77f8a39daf35e36aa355db4f26318f40d3c1bca9896282b989"
+      sha256 "1b88508925662091347690d36fd47fd8bf52d65213e628623eb59c8a3b393109"
     end
 
     on_intel do
       url "https://github.com/awsl-project/awsl-webadb/releases/download/v#{version}/awsl-webadb-macos-amd64", using: :nounzip
-      sha256 "075ca1cb306af04e1e9816d7b435e855a40c77d9684b34bdb013878e2979bdd4"
+      sha256 "e4730021349acdd6c421639b40621834164c250c9e5288f64860489a970f39fe"
     end
   end
 
   on_linux do
     on_arm do
       url "https://github.com/awsl-project/awsl-webadb/releases/download/v#{version}/awsl-webadb-linux-arm64", using: :nounzip
-      sha256 "3796479b6b405083639121d98ce9850edc56787d34af05247744a52d74b54dc6"
+      sha256 "08cd2ae4948a82b94a071ece482eb5e1a3e5b01f2241611bd523b4ba37be2b7b"
     end
 
     on_intel do
       url "https://github.com/awsl-project/awsl-webadb/releases/download/v#{version}/awsl-webadb-linux-amd64", using: :nounzip
-      sha256 "dd4dd1da54962c9f7443112e1da679576fab63ebdf9e3ae256f4b71b22e2d77a"
+      sha256 "6a9431962906f297358e510d2723c0de160dc63c7b590527d5084e5ad235bccb"
     end
   end
 
