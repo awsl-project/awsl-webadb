@@ -4,15 +4,6 @@
     position: relative;
   }
 
-  .screen-sidebar {
-    position: absolute;
-    inset: 0 auto 0 0;
-    z-index: 3;
-    width: var(--screen-sidebar-overlay-width);
-    max-width: var(--screen-sidebar-overlay-width);
-    padding: 8px 0;
-  }
-
   .screen-icon-button {
     min-height: 44px;
   }
@@ -36,7 +27,7 @@
 
   .mirror-display {
     --screen-side-gutter: 0px;
-    padding: 0 0 0 var(--screen-sidebar-overlay-width);
+    padding: 0;
   }
 
   .utility-page {

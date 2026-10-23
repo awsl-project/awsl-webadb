@@ -46,23 +46,18 @@ export function WorkspaceHome({
                   title={`${app.packageName} · 用户 ${app.userId}`}
                   aria-label={`打开${appLabel(app)}`}
                 >
-                  <AppIcon name={app.name} src={app.iconUrl} className={size} />
+                  <AppIcon
+                    name={app.name}
+                    src={app.iconUrl}
+                    className={size}
+                    userId={app.userId}
+                    running={runningPackages.has(appKey(app))}
+                  />
                   <span className="w-full truncate text-center text-xs font-normal">
                     {app.name === app.packageName
                       ? app.packageName.split(".").at(-1)
                       : app.name}
                   </span>
-                  {app.userId !== 0 && (
-                    <span className="text-[10px] font-normal text-muted-foreground">
-                      用户 {app.userId}
-                    </span>
-                  )}
-                  {runningPackages.has(appKey(app)) && (
-                    <span
-                      className="absolute bottom-1 size-1 rounded-full bg-primary"
-                      aria-label="运行中"
-                    />
-                  )}
                 </Button>
               ))}
             </div>

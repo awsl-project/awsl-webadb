@@ -367,25 +367,12 @@ export function MirrorDisplay({
       return;
     }
 
-    const updateSize = () => {
-      const rect = element.getBoundingClientRect();
-      const style = window.getComputedStyle(element);
-      const paddingX =
-        Number.parseFloat(style.paddingLeft) +
-        Number.parseFloat(style.paddingRight);
-      const paddingY =
-        Number.parseFloat(style.paddingTop) +
-        Number.parseFloat(style.paddingBottom);
-
+    const observer = new ResizeObserver(([entry]) => {
       setContainerSize({
-        width: Math.max(rect.width - paddingX, 0),
-        height: Math.max(rect.height - paddingY, 0),
+        width: entry.contentRect.width,
+        height: entry.contentRect.height,
       });
-    };
-
-    updateSize();
-
-    const observer = new ResizeObserver(() => updateSize());
+    });
     observer.observe(element);
 
     return () => observer.disconnect();

@@ -13,7 +13,6 @@ import type { InstalledApp } from "../types";
 import { AppIcon } from "./AppIconImage";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
-import { Badge } from "./ui/badge";
 import { ToggleGroup, ToggleGroupItem } from "./ui/toggle-group";
 
 interface AppsViewProps {
@@ -187,22 +186,14 @@ export function AppsView({
                             name={app.name}
                             src={app.iconUrl}
                             loading="lazy"
+                            userId={app.userId}
+                            running={runningPackages.has(appKey(app))}
                           />
                           <span className="w-full truncate text-xs font-normal">
                             {app.name === app.packageName
                               ? app.packageName.split(".").at(-1)
                               : app.name}
                           </span>
-                          {app.userId !== 0 && (
-                            <Badge variant="outline" className="text-[10px]">
-                              用户 {app.userId}
-                            </Badge>
-                          )}
-                          {runningPackages.has(appKey(app)) && (
-                            <Badge variant="secondary" className="text-[10px]">
-                              运行中
-                            </Badge>
-                          )}
                         </Button>
                         <Button
                           variant="ghost"
