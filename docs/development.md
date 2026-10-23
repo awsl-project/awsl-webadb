@@ -103,6 +103,8 @@ docker run --rm \
 
 应用中心、连接、设置、控制、摄像头及元素面板按需加载。新增界面优先组合现有组件，不新增测试入口或复制按钮、弹层和焦点管理逻辑。
 
+PWA 与页头共用 `public/pwa-icon.svg`。修改后运行 `bun run icons:generate`，统一输出普通图标、192 / 512 / 1024 自适应图标、Apple 120 / 152 / 167 / 180 图标、16 / 32 / 48 PNG 与 ICO，以及 Safari 固定标签单色图标；`bun run icons:check` 验证生成资源未过期。自适应与 Apple 图标使用不透明方形底色，标志完整保留在自适应安全区内。
+
 ## Homebrew 发布集成
 
 本仓库同时作为源码仓库和 Homebrew Tap，Formula 位于 `Formula/awsl-webadb.rb`。仓库名无需改成 `homebrew-*`：首次添加 Tap 时显式提供 Git URL，参见 [Homebrew Taps 文档](https://docs.brew.sh/Taps.html)。

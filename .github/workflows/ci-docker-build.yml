@@ -58,6 +58,9 @@ jobs:
       - name: Build frontend
         run: bun run build
 
+      - name: Verify PWA manifest, icons and offline assets
+        run: bun run pwa:check
+
       - name: Prepare release artifacts
         env:
           RELEASE_TAG: ${{ steps.image.outputs.tag }}

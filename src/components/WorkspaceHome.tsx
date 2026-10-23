@@ -30,7 +30,7 @@ export function WorkspaceHome({
   }[iconSize];
   return (
     <section
-      className="absolute inset-x-0 top-[124px] bottom-0 z-[2] overflow-y-auto overscroll-contain px-4 pt-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] min-[901px]:top-16 min-[901px]:px-8 min-[901px]:py-6"
+      className="absolute inset-x-0 top-[var(--workspace-topbar-height)] bottom-0 z-[2] overflow-y-auto overscroll-contain pt-5 pr-[max(1rem,env(safe-area-inset-right))] pb-[max(1.5rem,env(safe-area-inset-bottom))] pl-[max(1rem,env(safe-area-inset-left))] min-[901px]:px-8 min-[901px]:py-6"
       aria-label="Android 工作台"
     >
       <div className="mx-auto max-w-6xl space-y-8">

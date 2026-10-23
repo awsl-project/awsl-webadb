@@ -226,7 +226,7 @@ body,
 
 .app-stream-layout .mirror-display {
   --screen-side-gutter: 0px;
-  padding: 0 0 48px;
+  padding: 0 0 calc(48px + env(safe-area-inset-bottom));
   background: #050708;
 }
 
@@ -234,12 +234,12 @@ body,
   position: absolute;
   inset: auto 0 0;
   z-index: 3;
-  height: 48px;
+  height: calc(48px + env(safe-area-inset-bottom));
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
-  padding: 0 10px;
+  padding: 0 max(10px, env(safe-area-inset-right)) env(safe-area-inset-bottom) max(10px, env(safe-area-inset-left));
   background: rgba(4, 7, 9, 0.96);
   border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
@@ -309,6 +309,8 @@ body,
   .mobile-shell .desktop-window .window-titlebar {
     min-height: calc(48px + env(safe-area-inset-top));
     padding-top: env(safe-area-inset-top);
+    padding-left: max(12px, env(safe-area-inset-left));
+    padding-right: max(5px, env(safe-area-inset-right));
   }
 
   .mobile-shell .window-action {

@@ -13,7 +13,7 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: "prompt",
-      includeAssets: ["pwa-icon.svg", "pwa-icon-192.png", "pwa-icon-512.png"],
+      includeManifestIcons: false,
       manifest: {
         id: "/",
         name: "WebADB Desk",
@@ -23,7 +23,6 @@ export default defineConfig({
         theme_color: "#282c34",
         background_color: "#282c34",
         display: "standalone",
-        display_override: ["window-controls-overlay", "standalone"],
         orientation: "any",
         start_url: "/",
         scope: "/",
@@ -39,7 +38,19 @@ export default defineConfig({
             src: "/pwa-icon-512.png",
             sizes: "512x512",
             type: "image/png",
-            purpose: "any maskable",
+            purpose: "any",
+          },
+          ...[192, 512, 1024].map((size) => ({
+            src: `/pwa-maskable-${size}.png`,
+            sizes: `${size}x${size}`,
+            type: "image/png",
+            purpose: "maskable" as const,
+          })),
+          {
+            src: "/pwa-maskable-icon.svg",
+            sizes: "any",
+            type: "image/svg+xml",
+            purpose: "maskable",
           },
         ],
       },

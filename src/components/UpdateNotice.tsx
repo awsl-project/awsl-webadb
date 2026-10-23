@@ -7,8 +7,27 @@ export function UpdateNotice() {
   useEffect(() => {
     if (!import.meta.env.PROD) return;
     let mounted = true;
+    let removeUpdateChecks = () => {};
     const updateWorker = registerSW({
       immediate: true,
+      onRegisteredSW(_url, registration) {
+        if (!mounted || !registration) return;
+        const checkForUpdate = () => {
+          if (document.visibilityState !== "visible" || !navigator.onLine) return;
+          void registration.update().catch((error) => {
+            console.warn("离线缓存更新检查失败", error);
+          });
+        };
+        window.addEventListener("focus", checkForUpdate);
+        document.addEventListener("visibilitychange", checkForUpdate);
+        const timer = window.setInterval(checkForUpdate, 5 * 60 * 1000);
+        removeUpdateChecks = () => {
+          window.removeEventListener("focus", checkForUpdate);
+          document.removeEventListener("visibilitychange", checkForUpdate);
+          window.clearInterval(timer);
+        };
+        checkForUpdate();
+      },
       onNeedRefresh() {
         if (mounted) setUpdate(() => () => updateWorker(true));
       },
@@ -18,6 +37,7 @@ export function UpdateNotice() {
     });
     return () => {
       mounted = false;
+      removeUpdateChecks();
     };
   }, []);
   if (!update) return null;

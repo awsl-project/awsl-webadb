@@ -164,6 +164,10 @@ bun run dev
 
 开发网页为 http://127.0.0.1:5173，后端为 http://127.0.0.1:3000。源码 CLI 使用 `bun run cli …`。构建与配置见[开发文档](docs/development.md)。
 
+### 安装为 PWA
+
+电脑端通过 Chrome / Edge 地址栏的安装入口，或 Safari 的“添加到程序坞”安装；手机端通过浏览器菜单“安装应用”，iPhone / iPad 通过 Safari“分享 → 添加到主屏幕”。远程访问需要 HTTPS，本机可使用 `localhost` 或 `127.0.0.1`。PWA 复用已运行的服务端，离线时只能打开界面。
+
 ## 功能
 
 | 能力 | 说明 |

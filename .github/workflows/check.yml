@@ -27,4 +27,5 @@ jobs:
       - run: bun test
       - run: bun audit
       - run: bun run build:binary
+      - run: bun run pwa:check
       - run: node scripts/smoke-binary.mjs bin/awsl-webadb

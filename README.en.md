@@ -164,6 +164,10 @@ bun run dev
 
 The development UI runs at http://127.0.0.1:5173 and the backend at http://127.0.0.1:3000. Use `bun run cli …` for CLI commands. See the [development guide](docs/development.md) for builds and configuration.
 
+### Install as a PWA
+
+On desktop, use the install entry in Chrome / Edge's address bar, or Safari's **Add to Dock**. On Android, use **Install app** in the browser menu; on iPhone / iPad, use Safari's **Share → Add to Home Screen**. Remote access requires HTTPS; `localhost` and `127.0.0.1` work locally. The PWA uses the running backend; only the interface is available offline.
+
 ## Features
 
 | Capability | Details |

@@ -48,6 +48,7 @@ furnished to do so, subject to the following conditions:
 - Radix UI：Copyright (c) 2022 WorkOS，MIT，许可证位于 `public/licenses/radix-ui.txt`。
 - Lucide：Lucide Icons and Contributors，ISC；包含的 Feather 来源图标另遵循 MIT，完整声明位于 `public/licenses/lucide.txt`。
 - Tailwind CSS、class-variance-authority、clsx、tailwind-merge 与 tw-animate-css：通过公开 npm 包使用，许可证随各包提供。
+- resvg-js：MPL-2.0；仅用于开发时将本项目 SVG 标志生成各平台 PNG 图标，不包含在运行时程序中。
 
 ## FFmpeg
 

@@ -4,6 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "icons:generate": "node scripts/generate-icons.mjs",
+    "icons:check": "node scripts/generate-icons.mjs --check",
+    "pwa:check": "node scripts/check-pwa.mjs",
     "postinstall": "fetch-scrcpy-server 4.1",
     "dev": "concurrently -k \"bun --watch server/index.ts\" \"vite\"",
     "build": "vite build",
@@ -35,6 +38,7 @@
     "ws": "^8.21.3"
   },
   "devDependencies": {
+    "@resvg/resvg-js": "2.6.2",
     "@tailwindcss/vite": "^4.3.3",
     "@types/express": "^5.0.3",
     "@types/node": "^24.13.3",

@@ -1008,7 +1008,7 @@ export default function App() {
       }}
     >
       <section className="desktop-workspace dex-desktop">
-        <header className="dex-topbar inset-x-0 top-0 grid h-[124px] grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-2 px-4 py-2 min-[901px]:h-16 min-[901px]:grid-cols-[auto_1fr_auto] min-[901px]:gap-x-6 min-[901px]:px-8 min-[901px]:py-0">
+        <header className="dex-topbar inset-x-0 top-0 grid h-[var(--workspace-topbar-height)] grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-2 pt-[calc(0.5rem+env(safe-area-inset-top))] pr-[max(1rem,env(safe-area-inset-right))] pb-2 pl-[max(1rem,env(safe-area-inset-left))] min-[901px]:grid-cols-[auto_1fr_auto] min-[901px]:gap-x-6 min-[901px]:px-8 min-[901px]:pt-[env(safe-area-inset-top)] min-[901px]:pb-0">
           <Button
             variant="unstyled"
             size="unstyled"
@@ -1023,9 +1023,7 @@ export default function App() {
             type="button"
             aria-label="显示桌面"
           >
-            <span className="brand-mark">
-              W<span>↗</span>
-            </span>
+            <img className="brand-mark" src="/brand-mark.svg" alt="" width="32" height="32" />
             <strong className="hidden min-[500px]:block">
               WebADB<span className="hidden sm:inline">Desk</span>
             </strong>
@@ -1056,7 +1054,7 @@ export default function App() {
         </header>
         {devicesHook.connectionError ? (
           <div
-            className="connection-banner top-[132px] min-[901px]:top-[72px]"
+            className="connection-banner top-[calc(var(--workspace-topbar-height)+8px)]"
             role="status"
           >
             <Icon aria-hidden="true" className="ui-icon" name="cloud_off" />
