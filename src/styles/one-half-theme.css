@@ -448,12 +448,6 @@ textarea:focus-visible {
   border-color: rgba(171, 178, 191, 0.14);
 }
 
-.screen-menu-popup {
-  color: #dcdfe4;
-  border-color: rgba(171, 178, 191, 0.18);
-  background: #2c313c;
-}
-
 .screen-icon-button:hover:not(:disabled),
 .app-stream-navigation button:hover {
   color: #dcdfe4;

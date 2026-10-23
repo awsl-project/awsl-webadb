@@ -1,6 +1,13 @@
 import { Icon } from "@/components/Icon";
 import { Button } from "@/components/ui/button";
 import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+} from "@/components/ui/dropdown-menu";
+import {
   useEffect,
   useRef,
   useState,
@@ -52,43 +59,7 @@ export function MirrorSidebar({
   onControlCommand,
   onScreenshot,
 }: MirrorSidebarProps) {
-  const mirrorQualityMenuRef = useRef<HTMLDivElement | null>(null);
   const mirrorQualityConfig = MIRROR_QUALITY_CONFIG[mirrorQuality];
-
-  // Close quality menu on outside click / Escape
-  useEffect(() => {
-    if (!mirrorQualityMenuOpen) {
-      return;
-    }
-
-    const handlePointerDown = (event: PointerEvent) => {
-      const target = event.target;
-      if (!(target instanceof Node)) {
-        setMirrorQualityMenuOpen(false);
-        return;
-      }
-
-      if (mirrorQualityMenuRef.current?.contains(target)) {
-        return;
-      }
-
-      setMirrorQualityMenuOpen(false);
-    };
-
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setMirrorQualityMenuOpen(false);
-      }
-    };
-
-    document.addEventListener("pointerdown", handlePointerDown);
-    document.addEventListener("keydown", handleEscape);
-
-    return () => {
-      document.removeEventListener("pointerdown", handlePointerDown);
-      document.removeEventListener("keydown", handleEscape);
-    };
-  }, [mirrorQualityMenuOpen, setMirrorQualityMenuOpen]);
 
   return (
     <>
@@ -124,26 +95,40 @@ export function MirrorSidebar({
           >
             <Icon aria-hidden="true" className="ui-icon" name="stop" />
           </Button>
-          <div ref={mirrorQualityMenuRef} className="screen-menu-anchor">
-            <Button
-              variant="unstyled"
-              size="unstyled"
-              className={`ghost-button screen-icon-button ${
-                mirrorQualityMenuOpen ? "active" : ""
-              }`}
-              onClick={() => setMirrorQualityMenuOpen(!mirrorQualityMenuOpen)}
-              disabled={Boolean(mirrorPending)}
-              aria-label={`画质 ${mirrorQualityConfig.label}`}
-              title={`画质 ${mirrorQualityConfig.label}`}
+          <DropdownMenu
+            open={mirrorQualityMenuOpen}
+            onOpenChange={setMirrorQualityMenuOpen}
+          >
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="unstyled"
+                size="unstyled"
+                className={`ghost-button screen-icon-button ${
+                  mirrorQualityMenuOpen ? "active" : ""
+                }`}
+                disabled={Boolean(mirrorPending)}
+                aria-label={`画质 ${mirrorQualityConfig.label}`}
+                title={`画质 ${mirrorQualityConfig.label}`}
+              >
+                <Icon
+                  aria-hidden="true"
+                  className="ui-icon"
+                  name={mirrorQualityConfig.icon}
+                />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              side="right"
+              align="start"
+              collisionPadding={8}
+              aria-label="镜像画质"
             >
-              <Icon
-                aria-hidden="true"
-                className="ui-icon"
-                name={mirrorQualityConfig.icon}
-              />
-            </Button>
-            {mirrorQualityMenuOpen ? (
-              <div className="screen-menu-popup">
+              <DropdownMenuRadioGroup
+                value={mirrorQuality}
+                onValueChange={(quality) =>
+                  onUpdateQuality(quality as MirrorQuality)
+                }
+              >
                 {(
                   Object.entries(MIRROR_QUALITY_CONFIG) as Array<
                     [
@@ -152,14 +137,9 @@ export function MirrorSidebar({
                     ]
                   >
                 ).map(([quality, config]) => (
-                  <Button
-                    variant="unstyled"
-                    size="unstyled"
+                  <DropdownMenuRadioItem
                     key={quality}
-                    className={`ghost-button screen-menu-item ${
-                      mirrorQuality === quality ? "active" : ""
-                    }`}
-                    onClick={() => onUpdateQuality(quality)}
+                    value={quality}
                     disabled={Boolean(mirrorPending)}
                   >
                     <Icon
@@ -168,11 +148,11 @@ export function MirrorSidebar({
                       name={config.icon}
                     />
                     <span>{config.label}</span>
-                  </Button>
+                  </DropdownMenuRadioItem>
                 ))}
-              </div>
-            ) : null}
-          </div>
+              </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 

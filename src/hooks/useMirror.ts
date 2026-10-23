@@ -49,7 +49,9 @@ export function useMirror(
   const [mirrorPending, setMirrorPending] = useState("");
   const [mirrorRunning, setMirrorRunning] = useState(false);
   const [mirrorStartRequested, setMirrorStartRequested] = useState(false);
-  const [mirrorQuality, setMirrorQuality] = useState<MirrorQuality>("sharp");
+  const [mirrorQuality, setMirrorQuality] = useState<MirrorQuality>(
+    isCompactViewport ? "smooth" : "sharp",
+  );
   const [mirrorQualityMenuOpen, setMirrorQualityMenuOpen] = useState(false);
   const [mirrorViewport, setMirrorViewport] = useState<MirrorViewport | null>(
     null,
@@ -218,13 +220,6 @@ export function useMirror(
           transportId: BigInt(selectedTransportId),
         });
         assertCurrent();
-        const videoBitRate = isCompactViewport
-          ? Math.min(mirrorQualityConfig.videoBitRate, 3_000_000)
-          : mirrorQualityConfig.videoBitRate;
-        const maxSize = isCompactViewport
-          ? Math.min(mirrorQualityConfig.maxSize || 840, 840)
-          : mirrorQualityConfig.maxSize;
-
         const options = new AdbScrcpyOptionsLatest(
           {
             video: true,
@@ -235,8 +230,8 @@ export function useMirror(
             clipboardAutosync: true,
             powerOn: true,
             cleanup: true,
-            maxSize,
-            videoBitRate,
+            maxSize: mirrorQualityConfig.maxSize,
+            videoBitRate: mirrorQualityConfig.videoBitRate,
           },
           { version: scrcpyServerVersion },
         );
@@ -310,7 +305,6 @@ export function useMirror(
     },
     [
       selectedTransportId,
-      isCompactViewport,
       mirrorQualityConfig,
       onMessage,
       stopMirrorSession,

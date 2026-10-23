@@ -44,11 +44,6 @@
   font-weight: 700;
 }
 
-.screen-menu-item.active {
-  color: var(--primary-strong);
-  background: rgba(53, 95, 189, 0.14);
-}
-
 .tonal-button {
   color: var(--primary-strong);
   background: rgba(53, 95, 189, 0.12);

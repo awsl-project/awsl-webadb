@@ -13,18 +13,6 @@
     padding-top: 10px;
   }
 
-  .screen-menu-popup {
-    left: calc(100% + 6px);
-    min-width: 108px;
-    padding: 4px;
-  }
-
-  .screen-menu-item {
-    min-height: 32px;
-    padding: 0 10px;
-    gap: 8px;
-  }
-
   .mirror-display {
     --screen-side-gutter: 0px;
     padding: 0;
