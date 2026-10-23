@@ -538,11 +538,10 @@ export default function App() {
     <div className="mirror-window-layout">
       <aside className="screen-sidebar">
         <MirrorSidebar
-          fullscreen={mirrorFullscreen.fullscreen}
-          onToggleFullscreen={() => void mirrorFullscreen.toggleFullscreen()}
-          menuContainer={
-            mirrorFullscreen.fullscreen ? mirrorFullscreen.ref.current : undefined
-          }
+          onEnterFullscreen={() => {
+            mirror.setMirrorQualityMenuOpen(false);
+            mirrorFullscreen.toggleFullscreen();
+          }}
           mirrorPending={mirror.mirrorPending}
           mirrorRunning={mirror.mirrorRunning}
           mirrorQuality={mirror.mirrorQuality}
@@ -580,6 +579,9 @@ export default function App() {
         onPointerMove={(event) => void mirror.handlePointerMove(event)}
         onPointerUp={(event) => void mirror.handlePointerUp(event)}
         onWheel={mirror.handleWheel}
+        onExitFullscreen={
+          mirrorFullscreen.fullscreen ? mirrorFullscreen.exitFullscreen : undefined
+        }
       />
     </div>
   );
@@ -1090,7 +1092,6 @@ export default function App() {
         />
 
         <DesktopWindow
-          elementRef={mirrorFullscreen.ref}
           state={mirrorWindow}
           title="手机镜像"
           icon="phone_android"

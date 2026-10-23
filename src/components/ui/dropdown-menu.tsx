@@ -10,13 +10,10 @@ const DropdownMenuRadioGroup = DropdownMenuPrimitive.RadioGroup;
 function DropdownMenuContent({
   className,
   sideOffset = 8,
-  container,
   ...props
-}: React.ComponentProps<typeof DropdownMenuPrimitive.Content> & {
-  container?: React.ComponentProps<typeof DropdownMenuPrimitive.Portal>["container"];
-}) {
+}: React.ComponentProps<typeof DropdownMenuPrimitive.Content>) {
   return (
-    <DropdownMenuPrimitive.Portal container={container}>
+    <DropdownMenuPrimitive.Portal>
       <DropdownMenuPrimitive.Content
         data-slot="dropdown-menu-content"
         sideOffset={sideOffset}

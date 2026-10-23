@@ -7,7 +7,6 @@ import {
   type CSSProperties,
   type PointerEvent,
   type ReactNode,
-  type RefObject,
 } from "react";
 import { AppIconImage } from "./AppIconImage";
 
@@ -24,7 +23,6 @@ export interface DesktopWindowState {
 }
 
 interface DesktopWindowProps {
-  elementRef?: RefObject<HTMLElement | null>;
   state: DesktopWindowState;
   title: string;
   icon: string;
@@ -50,7 +48,6 @@ interface DesktopWindowProps {
 }
 
 export function DesktopWindow({
-  elementRef,
   state,
   title,
   icon,
@@ -74,8 +71,7 @@ export function DesktopWindow({
   onToggleAudio,
   onStopApp,
 }: DesktopWindowProps) {
-  const localWindowRef = useRef<HTMLElement | null>(null);
-  const windowRef = elementRef ?? localWindowRef;
+  const windowRef = useRef<HTMLElement | null>(null);
   const resizeRef = useRef(onResize);
   resizeRef.current = onResize;
   const dragRef = useRef<{

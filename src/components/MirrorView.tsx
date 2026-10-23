@@ -21,9 +21,7 @@ import { MIRROR_QUALITY_CONFIG } from "../types";
 import type { PointerEvent as ReactPointerEvent } from "react";
 
 interface MirrorSidebarProps {
-  fullscreen: boolean;
-  onToggleFullscreen: () => void;
-  menuContainer?: HTMLElement | null;
+  onEnterFullscreen: () => void;
   mirrorPending: string;
   mirrorRunning: boolean;
   mirrorQuality: MirrorQuality;
@@ -44,9 +42,7 @@ interface MirrorSidebarProps {
 }
 
 export function MirrorSidebar({
-  fullscreen,
-  onToggleFullscreen,
-  menuContainer,
+  onEnterFullscreen,
   mirrorPending,
   mirrorRunning,
   mirrorQuality,
@@ -75,16 +71,15 @@ export function MirrorSidebar({
             variant="unstyled"
             size="unstyled"
             className="ghost-button screen-icon-button"
-            onClick={onToggleFullscreen}
-            aria-label={fullscreen ? "退出全屏" : "全屏镜像"}
-            aria-pressed={fullscreen}
-            title={fullscreen ? "退出全屏 (Esc)" : "全屏镜像"}
+            onClick={onEnterFullscreen}
+            aria-label="全屏镜像"
+            title="全屏镜像"
             type="button"
           >
             <Icon
               aria-hidden="true"
               className="ui-icon"
-              name={fullscreen ? "close_fullscreen" : "open_in_full"}
+              name="open_in_full"
             />
           </Button>
           <Button
@@ -140,7 +135,6 @@ export function MirrorSidebar({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent
-              container={menuContainer}
               side="right"
               align="start"
               collisionPadding={8}
@@ -315,6 +309,7 @@ interface MirrorDisplayProps {
   onKeyDown?: (event: ReactKeyboardEvent<HTMLCanvasElement>) => void;
   onPaste?: (event: ReactClipboardEvent<HTMLCanvasElement>) => void;
   onRetry?: () => void;
+  onExitFullscreen?: () => void;
   pendingLabel?: string;
   emptyLabel?: string;
   connectedMessage?: string;
@@ -333,6 +328,7 @@ export function MirrorDisplay({
   onKeyDown,
   onPaste,
   onRetry,
+  onExitFullscreen,
   pendingLabel = "正在启动 Screen Mirror…",
   emptyLabel = "Screen Mirror 未启动",
   connectedMessage = "Screen Mirror 已连接。",
@@ -477,6 +473,19 @@ export function MirrorDisplay({
         onKeyDown={onKeyDown}
         onPaste={onPaste}
       />
+      {onExitFullscreen ? (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="absolute top-2 right-2 z-10 size-10 rounded-full border border-white/15 bg-black/50 text-white shadow-sm backdrop-blur-sm hover:bg-black/70 hover:text-white max-[900px]:size-11"
+          onClick={onExitFullscreen}
+          aria-label="退出全屏"
+          title="退出全屏 (Esc)"
+          type="button"
+        >
+          <Icon aria-hidden="true" name="close_fullscreen" />
+        </Button>
+      ) : null}
       {mirrorNotice && (mirrorPending || mirrorRunning) ? (
         <div className={`mirror-status ${mirrorRunning ? "inline" : "empty"}`}>
           <span role={onRetry ? "alert" : "status"}>{mirrorNotice}</span>

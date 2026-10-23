@@ -668,6 +668,17 @@ button:disabled {
 }
 
 .mirror-fullscreen .mirror-window-layout {
+  grid-template-columns: minmax(0, 1fr);
+  background: #000;
   padding: env(safe-area-inset-top) env(safe-area-inset-right)
     env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+.mirror-fullscreen .screen-sidebar {
+  display: none;
+}
+
+.mirror-fullscreen .mirror-display {
+  --screen-side-gutter: 0px;
+  padding: 0;
 }
