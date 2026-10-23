@@ -50,7 +50,7 @@ node scripts/smoke-binary.mjs bin/awsl-webadb
 | `ALLOWED_ORIGINS` | 允许的完整网页来源，多个以逗号分隔 |
 | `WEBADB_URL` | CLI 服务地址，默认 `http://127.0.0.1:3000` |
 
-名称和图标按设备、包名、语言缓存 7 天，命中时直接使用；首页按需读取图标，全部应用按需加载其他名称和图标。收藏按设备永久保存，首次使用会迁移浏览器旧收藏；其他浏览器在打开或重新聚焦时读取服务端收藏。`metadata/` 可删除，`favorites/` 不设有效期。可通过 `serve --data-dir PATH` 覆盖目录。
+名称和图标按设备、Android 用户、包名、语言缓存 7 天，命中时直接使用；首页按需读取图标，全部应用按需加载其他名称和图标。收藏按设备永久保存，首次使用会迁移浏览器旧收藏；其他浏览器在打开或重新聚焦时读取服务端收藏。`metadata/` 可删除，`favorites/` 不设有效期。可通过 `serve --data-dir PATH` 覆盖目录。
 
 ## 验证与限制
 
@@ -131,3 +131,11 @@ ruby -c Formula/awsl-webadb.rb
 ```
 
 同组织 maxx 的桌面程序采用 Cask；本项目是命令行服务，使用 Formula。[Formula 服务定义](https://docs.brew.sh/Formula-Cookbook#service-files)。
+
+## Android 用户与应用分身
+
+`GET /api/users?transportId=1` 返回用户 ID 与当前用户标记；`GET /api/apps?transportId=1` 读取所有可访问用户，支持 `userId=999` 筛选，受限用户的读取错误放在 `warnings`。未读取到用户列表时直接报错。
+
+应用和会话包含数值 `userId`。`POST /api/app-sessions` 接收 `userId`，默认 `0`；启动、解析入口与结束应用均明确指定用户。会话按设备、用户和包名复用，截图、元素和输入沿用会话自己的显示 ID；SSE 同步完整用户身份。
+
+`app-metadata`、`app-icon` 同样接受 `userId`；缓存按用户隔离。收藏中的主用户仍保存裸包名，其他用户保存 `用户ID:包名`，兼容旧收藏且互不覆盖。资料锁定、工作策略或 ROM 对跨用户虚拟显示的限制由系统决定，不自动解除；内部 Chrome 相机验收入口仅针对主用户。

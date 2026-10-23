@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { AdbConnection, InstalledApp } from "../types";
-import { PACKAGE_PATTERN } from "../../shared/apps";
+import { PACKAGE_PATTERN, appKey } from "../../shared/apps";
 import { formatError } from "../utils";
 
 export function useApps(
@@ -47,6 +47,7 @@ export function useApps(
         localeRef.current = data.locale;
         metadataRequests.current.clear();
         setApps(nextApps);
+        setAppsError((data.warnings ?? []).join("；"));
         if (current() && !silent)
           onMessage(`已读取 ${nextApps.length} 个可启动应用`);
       } catch (error) {
@@ -69,11 +70,11 @@ export function useApps(
       const requested = new Set(packages);
       const pending = appsRef.current.filter(
         (app) =>
-          requested.has(app.packageName) &&
+          requested.has(appKey(app)) &&
           !app.metadataReady &&
-          !metadataRequests.current.has(app.packageName),
+          !metadataRequests.current.has(appKey(app)),
       );
-      for (const app of pending) metadataRequests.current.add(app.packageName);
+      for (const app of pending) metadataRequests.current.add(appKey(app));
       let index = 0;
       const current = () =>
         !controller.signal.aborted && deviceRef.current === selectedTransportId;
@@ -84,6 +85,7 @@ export function useApps(
             const params = new URLSearchParams({
               transportId: selectedTransportId,
               package: app.packageName,
+              userId: String(app.userId),
               locale: localeRef.current,
             });
             try {
@@ -99,7 +101,7 @@ export function useApps(
               params.set("v", String(metadata.version));
               setApps((previous) =>
                 previous.map((item) =>
-                  item.packageName === app.packageName
+                  appKey(item) === appKey(app)
                     ? {
                         ...item,
                         name: metadata.name || item.name,
@@ -122,14 +124,20 @@ export function useApps(
   );
 
   const stopApp = useCallback(
-    async (packageName: string) => {
-      if (actionRef.current || !PACKAGE_PATTERN.test(packageName)) return;
+    async (app: InstalledApp) => {
+      if (actionRef.current || !PACKAGE_PATTERN.test(app.packageName)) return;
       actionRef.current = true;
       try {
         await withDevice(
           async (adb) =>
             await adb.subprocess.noneProtocol
-              .spawn(["am", "force-stop", packageName])
+              .spawn([
+                "am",
+                "force-stop",
+                "--user",
+                String(app.userId),
+                app.packageName,
+              ])
               .wait(),
         );
         if (deviceRef.current === selectedTransportId) onMessage("已结束应用");

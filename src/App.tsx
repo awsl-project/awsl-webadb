@@ -1,3 +1,4 @@
+import { appKey, appLabel } from "../shared/apps";
 import { Icon } from "@/components/Icon";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -508,9 +509,9 @@ export default function App() {
   );
 
   const handleStopApp = useCallback(
-    (packageName: string) => {
-      appWindows.closePackage(packageName);
-      void apps.stopApp(packageName);
+    (app: InstalledApp) => {
+      appWindows.closePackage(appKey(app));
+      void apps.stopApp(app);
     },
     [appWindows.closePackage, apps.stopApp],
   );
@@ -521,13 +522,11 @@ export default function App() {
     devicesHook.selectedDevice?.model ?? devicesHook.selectedDevice?.serial;
   const defaultDesktopApps = getDefaultDesktopApps(apps.apps);
   const currentDesktopPackages = new Set(
-    desktopPackages ?? defaultDesktopApps.map((app) => app.packageName),
+    desktopPackages ?? defaultDesktopApps.map(appKey),
   );
   useEffect(() => {
     void apps.loadMetadata(
-      launcherOpen
-        ? apps.apps.map((app) => app.packageName)
-        : [...currentDesktopPackages],
+      launcherOpen ? apps.apps.map(appKey) : [...currentDesktopPackages],
     );
   }, [apps.apps, apps.loadMetadata, launcherOpen, desktopPackages]);
 
@@ -594,11 +593,9 @@ export default function App() {
             showMessage("请先连接 Android 设备");
             return;
           }
-          const defaults = defaultDesktopApps.map((app) => app.packageName);
+          const defaults = defaultDesktopApps.map(appKey);
           const current = desktopPackages ?? defaults;
-          const app = apps.apps.find(
-            (item) => item.packageName === packageName,
-          );
+          const app = apps.apps.find((item) => appKey(item) === packageName);
           if (
             !current.includes(packageName) &&
             current.length >= MAX_DESKTOP_APPS
@@ -630,7 +627,7 @@ export default function App() {
             favoritesSaving.current = false;
           }
           showMessage(
-            `${app?.name ?? packageName}${next.includes(packageName) ? " 已添加到桌面" : " 已从桌面移除"}`,
+            `${app ? appLabel(app) : packageName}${next.includes(packageName) ? " 已添加到桌面" : " 已从桌面移除"}`,
           );
         }}
       />
@@ -800,7 +797,7 @@ export default function App() {
     <DesktopWindow
       key={appWindow.id}
       state={appWindow}
-      title={appWindow.app.name}
+      title={appLabel(appWindow.app)}
       icon={appWindow.app.icon}
       active={appWindows.activeId === appWindow.id}
       className={`android-app-stream-window ${appWindow.wideCapable ? "freeform" : "fixed-aspect"} ${appWindow.landscape ? "landscape" : "portrait"}`}
@@ -831,7 +828,7 @@ export default function App() {
           maximized: !appWindow.maximized,
         })
       }
-      onStopApp={() => handleStopApp(appWindow.app.packageName)}
+      onStopApp={() => handleStopApp(appWindow.app)}
       onClose={() => appWindows.closeWindow(appWindow.id)}
     >
       <div
@@ -989,7 +986,7 @@ export default function App() {
   const desktopApps = desktopPackages
     ? desktopPackages
         .map((packageName) =>
-          apps.apps.find((app) => app.packageName === packageName),
+          apps.apps.find((app) => appKey(app) === packageName),
         )
         .filter((app): app is InstalledApp => Boolean(app))
     : defaultDesktopApps;

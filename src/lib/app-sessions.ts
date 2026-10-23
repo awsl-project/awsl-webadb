@@ -29,6 +29,7 @@ export const appSessions = {
   snapshot: () => sessionRequest<SessionSnapshot>("/api/app-state"),
   open: (body: {
     packageName: string;
+    userId: number;
     transportId: string;
     cameraTest?: boolean;
   }) => sessionRequest<AppSessionState>("/api/app-sessions", "POST", body),

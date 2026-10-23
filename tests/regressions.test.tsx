@@ -155,3 +155,71 @@ test("upload never writes when remote conflict checking fails", async () => {
   expect(writes).toBe(0);
   expect(messages[0]).toContain("上传失败");
 });
+
+test("stopping a clone explicitly targets its Android user", async () => {
+  const { useApps } = await import("../src/hooks/useApps");
+  const commands: string[][] = [];
+  const adb = {
+    subprocess: {
+      noneProtocol: {
+        spawn: (args: string[]) => ({
+          wait: async () => {
+            commands.push(args);
+          },
+        }),
+      },
+    },
+  } as unknown as AdbConnection;
+  let apps!: ReturnType<typeof useApps>;
+  function Harness() {
+    apps = useApps(
+      "1",
+      (fn) => fn(adb),
+      () => {},
+    );
+    return null;
+  }
+  renderToStaticMarkup(<Harness />);
+  await apps.stopApp({
+    packageName: "com.tencent.mm",
+    userId: 999,
+    name: "微信",
+    icon: "apps",
+    hue: 0,
+    system: false,
+  });
+  expect(commands).toEqual([
+    ["am", "force-stop", "--user", "999", "com.tencent.mm"],
+  ]);
+});
+
+test("app list exposes distinct clone labels, running state and favorites", async () => {
+  const { AppsView } = await import("../src/components/AppsView");
+  const apps = [0, 999].map((userId) => ({
+    userId,
+    packageName: "com.tencent.mm",
+    name: "微信",
+    icon: "apps",
+    hue: 0,
+    system: false,
+  }));
+  const html = renderToStaticMarkup(
+    <AppsView
+      apps={apps}
+      error=""
+      pending=""
+      hasDevice
+      runningPackages={new Set(["999:com.tencent.mm"])}
+      desktopPackages={new Set(["999:com.tencent.mm"])}
+      onRefresh={() => {}}
+      onLaunch={() => {}}
+      onConnect={() => {}}
+      onToggleDesktop={() => {}}
+    />,
+  );
+  expect(html).toContain('aria-label="打开微信"');
+  expect(html).toContain('aria-label="打开微信 · 用户 999"');
+  expect(html).toContain('aria-label="固定到桌面微信"');
+  expect(html).toContain('aria-label="从桌面移除微信 · 用户 999"');
+  expect(html.match(/运行中/g)).toHaveLength(1);
+});

@@ -18,7 +18,7 @@ import {
 } from "../src/lib/file-camera";
 import type { AdbConnection } from "../src/types";
 import { createTaskQueue } from "./task-queue";
-import { PACKAGE_PATTERN } from "../shared/apps";
+import { PACKAGE_PATTERN, parseUserId } from "../shared/apps";
 import {
   CAMERA_HEIGHT,
   CAMERA_WIDTH,
@@ -211,6 +211,8 @@ export function installAppSessions(
         "package",
         "resolve-activity",
         "--brief",
+        "--user",
+        String(session.userId),
         "-a",
         "android.intent.action.MAIN",
         "-c",
@@ -225,7 +227,16 @@ export function installAppSessions(
       .find((line) => line.startsWith(session.packageName + "/"));
     if (!component) throw new Error("此应用没有可打开的 Launcher 页面");
     const launched = await run(
-      ["am", "start", "--display", String(session.displayId), "-n", component],
+      [
+        "am",
+        "start",
+        "--user",
+        String(session.userId),
+        "--display",
+        String(session.displayId),
+        "-n",
+        component,
+      ],
       current.adb,
     );
     if (/Error:|Exception|Permission Denial/.test(launched))
@@ -245,6 +256,8 @@ export function installAppSessions(
         [
           "am",
           "start",
+          "--user",
+          String(session.userId),
           "--display",
           String(session.displayId),
           "-a",
@@ -675,11 +688,17 @@ export function installAppSessions(
         const transportId = await selectTransport(req.body.transportId);
         await control(transportId, async () => {
           const packageName = String(req.body.packageName ?? "");
+          const userId = parseUserId(
+            req.body.userId === undefined ? 0 : req.body.userId,
+          );
+          if (req.body.cameraTest && userId !== 0)
+            throw new Error("内部相机验收仅支持主用户 Chrome");
           if (!PACKAGE_PATTERN.test(packageName))
             throw new Error("无效的应用包名");
           const existing = [...sessions.values()].find(
             (item) =>
               item.packageName === packageName &&
+              item.userId === userId &&
               item.transportId === transportId,
           );
           if (existing) {
@@ -709,6 +728,7 @@ export function installAppSessions(
             id: crypto.randomUUID(),
             transportId,
             packageName,
+            userId,
             displayId: 0,
             width: integer(req.body.width ?? 1080, 320, 2560),
             height: integer(req.body.height ?? 1920, 320, 2560),

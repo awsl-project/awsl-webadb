@@ -1,3 +1,4 @@
+import { appKey, appLabel } from "../../shared/apps";
 import { useMemo, useState } from "react";
 import {
   Check,
@@ -47,13 +48,13 @@ export function AppsView({
     return apps
       .filter(
         (app) =>
-          `${app.name} ${app.packageName}`
+          `${appLabel(app)} ${app.packageName}`
             .toLocaleLowerCase()
             .includes(normalized) &&
           (filter === "all" ||
             (filter === "user" && !app.system) ||
             (filter === "system" && app.system) ||
-            (filter === "pinned" && desktopPackages.has(app.packageName))),
+            (filter === "pinned" && desktopPackages.has(appKey(app)))),
       )
       .sort((left, right) => left.name.localeCompare(right.name, "zh-CN"));
   }, [apps, query, filter, desktopPackages]);
@@ -169,18 +170,18 @@ export function AppsView({
                 </h2>
                 <div className="grid grid-cols-3 gap-2 min-[600px]:grid-cols-[repeat(auto-fill,minmax(110px,1fr))]">
                   {group.apps.map((app) => {
-                    const pinned = desktopPackages.has(app.packageName);
+                    const pinned = desktopPackages.has(appKey(app));
                     return (
                       <article
-                        key={app.packageName}
+                        key={appKey(app)}
                         className="flex min-w-0 flex-col items-center rounded-xl border border-border p-1"
                       >
                         <Button
                           variant="ghost"
                           className="h-auto w-full min-w-0 flex-col gap-2 px-1 py-3"
                           onClick={() => onLaunch(app)}
-                          aria-label={`打开${app.name}`}
-                          title={app.packageName}
+                          aria-label={`打开${appLabel(app)}`}
+                          title={`${app.packageName} · 用户 ${app.userId}`}
                         >
                           <AppIcon
                             name={app.name}
@@ -192,7 +193,12 @@ export function AppsView({
                               ? app.packageName.split(".").at(-1)
                               : app.name}
                           </span>
-                          {runningPackages.has(app.packageName) && (
+                          {app.userId !== 0 && (
+                            <Badge variant="outline" className="text-[10px]">
+                              用户 {app.userId}
+                            </Badge>
+                          )}
+                          {runningPackages.has(appKey(app)) && (
                             <Badge variant="secondary" className="text-[10px]">
                               运行中
                             </Badge>
@@ -202,8 +208,8 @@ export function AppsView({
                           variant="ghost"
                           size="sm"
                           className="w-full min-w-0 gap-1 px-1 text-xs text-muted-foreground"
-                          onClick={() => onToggleDesktop(app.packageName)}
-                          aria-label={`${pinned ? "从桌面移除" : "固定到桌面"}${app.name}`}
+                          onClick={() => onToggleDesktop(appKey(app))}
+                          aria-label={`${pinned ? "从桌面移除" : "固定到桌面"}${appLabel(app)}`}
                           aria-pressed={pinned}
                         >
                           {pinned ? (

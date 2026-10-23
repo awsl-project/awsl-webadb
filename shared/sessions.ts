@@ -7,6 +7,7 @@ export interface AppSessionState {
   id: string;
   transportId: string;
   packageName: string;
+  userId: number;
   displayId: number;
   width: number;
   height: number;

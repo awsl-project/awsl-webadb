@@ -50,9 +50,20 @@ awsl-webadb key SESSION BACK
 awsl-webadb close SESSION
 ```
 
-`SESSION` is the ID returned by `open`. `--device` takes a device transport ID and is optional for a single device. Set display dimensions with `open --width 1080 --height 1920`; reopening an app reuses its session.
+`SESSION` is the ID returned by `open`. `--device` takes a device transport ID and is optional for a single device. Set display dimensions with `open --width 1080 --height 1920`; reopening an app for the same Android user reuses its session.
 
-Set the server with `--url` or `WEBADB_URL`; the default is `http://127.0.0.1:3000`. Control commands return JSON; `xml` emits XML directly without `--output`.
+Set the server with Cloned apps are distinguished by Android user. The web interface lists each copy separately, with independent windows, running state and favorites. Select a user with `--user` (default `0`):
+
+```bash
+awsl-webadb users
+awsl-webadb apps --user 999
+awsl-webadb open com.tencent.mm --user 0
+awsl-webadb open com.tencent.mm --user 999
+```
+
+Each `open` returns a separate `SESSION`; use that ID for screenshots, elements and actions. Use IDs reported by `users`. Locked or policy-restricted profiles report errors; the service does not unlock them or change their permissions.
+
+`--url` or `WEBADB_URL`; the default is `http://127.0.0.1:3000`. Control commands return JSON; `xml` emits XML directly without `--output`.
 
 Screenshots and coordinates use the app's original resolution. XML / JSON comes from the accessibility tree; read node IDs again after the page changes. Without a selector, `text` writes to the focused input. The web page and element inspector offers the same controls.
 
@@ -160,7 +171,7 @@ The development UI runs at http://127.0.0.1:5173 and the backend at http://127.0
 | Web desktop | Multiple windows on desktop, touch and full-screen apps on mobile; One Half light / dark themes, system theme, PWA installation and update prompts |
 | Connections | USB / Wi-Fi, debugging authorization state, wireless pairing and connection, device switching; all through the backend ADB server |
 | Status and control | Device details, battery and charging status; navigation, volume, media, power / wake / sleep, notifications, quick settings and device PNG screenshots |
-| App windows | Favorites and app catalog, independent displays, orientation and resolution changes, touch / drag / wheel / keyboard input |
+| App windows | Android users / cloned apps, independent favorites and running state, app catalog, independent displays, orientation and resolution changes, touch / drag / wheel / keyboard input |
 | Page inspection | Per-app JPEG screenshots, XML / JSON accessibility elements, element selection and clicks, coordinate input; shared web / CLI sessions |
 | Screen mirroring | View and control the phone's main screen with scrcpy 4.1 |
 | File management | Directory navigation, search, sorting, upload / download progress and overwrite confirmation; streaming downloads in supported browsers |

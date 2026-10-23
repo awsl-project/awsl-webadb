@@ -46,6 +46,7 @@ export type PanelView =
   | "files";
 
 export interface InstalledApp {
+  userId: number;
   packageName: string;
   component?: string;
   name: string;

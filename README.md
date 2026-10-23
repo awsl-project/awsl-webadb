@@ -50,7 +50,18 @@ awsl-webadb key SESSION BACK
 awsl-webadb close SESSION
 ```
 
-`SESSION` 为 `open` 返回的会话 ID。`--device` 使用设备 transport ID，单设备可省略。`open --width 1080 --height 1920` 设置显示尺寸，重复打开同一应用会复用会话。
+`SESSION` 为 `open` 返回的会话 ID。`--device` 使用设备 transport ID，单设备可省略。`open --width 1080 --height 1920` 设置显示尺寸，同一用户下重复打开同一应用会复用会话。
+
+应用分身按 Android 用户区分；网页会分别显示同包名的应用，窗口、运行状态和收藏独立。CLI 用 `--user` 选择用户，省略时为 `0`：
+
+```bash
+awsl-webadb users
+awsl-webadb apps --user 999
+awsl-webadb open com.tencent.mm --user 0
+awsl-webadb open com.tencent.mm --user 999
+```
+
+两个 `open` 返回不同的 `SESSION`，后续截图、元素和操作命令使用各自的 ID。用户 ID 以 `users` 输出为准；锁定或受策略限制的资料会返回错误，不会自动解锁或修改权限。
 
 `--url` 或 `WEBADB_URL` 指定服务端，默认 `http://127.0.0.1:3000`。控制命令返回 JSON；`xml` 不带 `--output` 时直接输出 XML。
 
@@ -160,7 +171,7 @@ bun run dev
 | 网页桌面 | 电脑多窗口、手机触控与全屏应用；One Half 明暗主题、跟随系统、PWA 安装与更新提示 |
 | 设备连接 | USB / Wi-Fi、调试授权状态、无线配对与连接、多设备切换；通过后端 ADB server 连接 |
 | 状态与控制 | 设备信息、电量与充电状态；导航、音量、媒体、电源 / 唤醒 / 休眠、通知栏、快捷设置和设备 PNG 截图 |
-| 应用窗口 | 收藏与全部应用、独立显示、横竖屏、分辨率调整、触摸 / 拖动 / 滚轮 / 键盘输入 |
+| 应用窗口 | 系统分身 / 多用户、独立收藏与运行状态、独立显示、横竖屏、分辨率调整、触摸 / 拖动 / 滚轮 / 键盘输入 |
 | 页面读取 | 单应用 JPEG 截图、XML / JSON 无障碍元素、元素选择与点击、截图坐标操作；网页与 CLI 共用会话 |
 | 原屏镜像 | 基于 scrcpy 4.1 查看并操作手机主屏 |
 | 文件管理 | 目录导航、搜索、排序、上传、下载和进度；覆盖确认，支持的浏览器可流式保存大文件 |

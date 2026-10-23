@@ -62,14 +62,17 @@ test("favorites are permanent, isolated by device and preserve an empty list", a
   process.env.WEBADB_DATA_DIR = folder;
   try {
     expect(await readFavorites("phone")).toBeNull();
-    await writeFavorites("phone", ["com.example.app"]);
+    await writeFavorites("phone", ["com.example.app", "999:com.example.app"]);
     const path = join(
       folder,
       "favorites",
       (await readdir(join(folder, "favorites")))[0]!,
     );
     await utimes(path, new Date(0), new Date(0));
-    expect(await readFavorites("phone")).toEqual(["com.example.app"]);
+    expect(await readFavorites("phone")).toEqual([
+      "com.example.app",
+      "999:com.example.app",
+    ]);
     expect(await readFavorites("other-phone")).toBeNull();
     await writeFavorites("phone", []);
     expect(await readFavorites("phone")).toEqual([]);

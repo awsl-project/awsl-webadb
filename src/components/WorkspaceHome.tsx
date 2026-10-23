@@ -1,3 +1,4 @@
+import { appKey, appLabel } from "../../shared/apps";
 import { Grid2X2 } from "lucide-react";
 import type { InstalledApp, PanelView } from "../types";
 import { AppIcon } from "./AppIconImage";
@@ -38,12 +39,12 @@ export function WorkspaceHome({
             <div className="grid grid-cols-4 gap-1 sm:grid-cols-[repeat(auto-fill,minmax(90px,1fr))] sm:gap-2">
               {apps.map((app) => (
                 <Button
-                  key={app.packageName}
+                  key={appKey(app)}
                   variant="ghost"
                   className="relative h-auto min-h-28 min-w-0 flex-col gap-2 px-1 py-3"
                   onClick={() => onLaunch(app)}
-                  title={app.packageName}
-                  aria-label={`打开${app.name}`}
+                  title={`${app.packageName} · 用户 ${app.userId}`}
+                  aria-label={`打开${appLabel(app)}`}
                 >
                   <AppIcon name={app.name} src={app.iconUrl} className={size} />
                   <span className="w-full truncate text-center text-xs font-normal">
@@ -51,7 +52,12 @@ export function WorkspaceHome({
                       ? app.packageName.split(".").at(-1)
                       : app.name}
                   </span>
-                  {runningPackages.has(app.packageName) && (
+                  {app.userId !== 0 && (
+                    <span className="text-[10px] font-normal text-muted-foreground">
+                      用户 {app.userId}
+                    </span>
+                  )}
+                  {runningPackages.has(appKey(app)) && (
                     <span
                       className="absolute bottom-1 size-1 rounded-full bg-primary"
                       aria-label="运行中"

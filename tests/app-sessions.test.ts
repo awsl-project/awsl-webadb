@@ -9,7 +9,9 @@ async function fixture() {
     displayId = 0,
     closeDelay = 0;
   const closed: string[] = [];
-  const touches: { id: string; action: number }[] = [];
+  const commands: string[][] = [];
+  const requests: { type: string; displayId?: number }[] = [];
+  const touches: { id: string; action: number; displayId: number }[] = [];
   const sources: (CameraUrlSource & { closed: boolean })[] = [];
   const client = {
     getDevices: async () =>
@@ -25,10 +27,12 @@ async function fixture() {
         noneProtocol: {
           spawn: (args: string[]) => ({
             wait: () => ({
-              toString: async () =>
-                args.join(" ").includes("resolve-activity")
+              toString: async () => {
+                commands.push(args.map((arg) => arg.replace(/^'|'$/g, "")));
+                return args.join(" ").includes("resolve-activity")
                   ? "com.example.app/.Main"
-                  : "",
+                  : "";
+              },
             }),
           }),
         },
@@ -54,10 +58,17 @@ async function fixture() {
         },
         createDisplay: async () => ++displayId,
         releaseDisplay: async () => {},
-        request: async () => ({ jpeg: "/9j/2Q==" }),
+        request: async (command: { type: string; displayId?: number }) => {
+          requests.push(command);
+          return {
+            jpeg: "/9j/2Q==",
+            xml: `<hierarchy display="${command.displayId}"/>`,
+            elements: [],
+          };
+        },
         sendFrame: async () => ++frames,
-        touch: async (_: number, action: number) => {
-          touches.push({ id: adb.id, action });
+        touch: async (displayId: number, action: number) => {
+          touches.push({ id: adb.id, action, displayId });
         },
       };
     },
@@ -143,6 +154,9 @@ async function fixture() {
     sources,
     touches,
     closed,
+    commands,
+    requests,
+    url,
     dispose,
     cleanup,
     fail: (count: number) => {
@@ -288,3 +302,89 @@ test("shutdown cleans slow devices in parallel and rejects new work", async () =
     await f.cleanup();
   }
 }, 8000);
+
+test("same package on two users opens independent sessions and controls only its own display", async () => {
+  const f = await fixture();
+  const cli = async (...args: string[]) => {
+    const child = Bun.spawn(
+      [process.execPath, "cli/index.ts", ...args, "--url", f.url],
+      { stdout: "pipe", stderr: "pipe" },
+    );
+    const [out, err, code] = await Promise.all([
+      new Response(child.stdout).text(),
+      new Response(child.stderr).text(),
+      child.exited,
+    ]);
+    expect(code, err).toBe(0);
+    return JSON.parse(out);
+  };
+  try {
+    const main = await cli(
+      "open",
+      "com.example.app",
+      "--device",
+      "1",
+      "--user",
+      "0",
+    );
+    const clone = await cli(
+      "open",
+      "com.example.app",
+      "--device",
+      "1",
+      "--user",
+      "999",
+    );
+    expect(main.userId).toBe(0);
+    expect(clone.userId).toBe(999);
+    expect(clone.id).not.toBe(main.id);
+    expect(clone.displayId).not.toBe(main.displayId);
+    expect(
+      (await cli("open", "com.example.app", "--device", "1", "--user", "999"))
+        .id,
+    ).toBe(clone.id);
+    expect(
+      (await cli("sessions")).map((item: { userId: number }) => item.userId),
+    ).toEqual([0, 999]);
+    await cli("tap", clone.id, "20", "30");
+    expect(f.touches.every((item) => item.displayId === clone.displayId)).toBe(
+      true,
+    );
+    await cli("elements", clone.id);
+    expect(f.requests.at(-1)).toMatchObject({
+      type: "elements",
+      displayId: clone.displayId,
+    });
+    const xml = await f.request(
+      `/api/app-sessions/${main.id}/elements?format=xml`,
+    );
+    expect(await xml.text()).toContain(`display="${main.displayId}"`);
+    const launches = f.commands.filter(
+      (args) => args[0] === "am" && args[1] === "start",
+    );
+    expect(launches.map((args) => args[args.indexOf("--user") + 1])).toEqual([
+      "0",
+      "999",
+      "999",
+    ]);
+    expect(
+      f.commands
+        .filter((args) => args.includes("resolve-activity"))
+        .every((args) => args.includes("--user")),
+    ).toBe(true);
+    await cli("close", clone.id);
+    expect(
+      (await f.state()).sessions.map((item: { id: string }) => item.id),
+    ).toEqual([main.id]);
+    for (const userId of [-1, "999;id", 21475, null]) {
+      const response = await f.request("/api/app-sessions", "POST", {
+        transportId: "1",
+        packageName: "com.example.app",
+        userId,
+      });
+      expect(response.status).toBe(400);
+    }
+  } finally {
+    await f.cleanup();
+  }
+});

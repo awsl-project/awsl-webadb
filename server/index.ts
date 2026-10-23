@@ -15,7 +15,13 @@ import { installAppSessions } from "./app-sessions";
 import { AndroidResources } from "./android-resources";
 import { WebSocketServer } from "ws";
 
-import { PACKAGE_PATTERN, parseLauncherApps } from "../shared/apps";
+import {
+  PACKAGE_PATTERN,
+  appKey,
+  parseAppKey,
+  parseUserId,
+} from "../shared/apps";
+import { readAndroidApps, readAndroidUsers } from "./android-apps";
 import {
   readAppMetadata,
   writeAppMetadata,
@@ -224,39 +230,30 @@ app.get("/api/apps", async (request, response) => {
     response.status(400).json({ message: "设备 ID 无效" });
     return;
   }
+  let userId: number | undefined;
+  try {
+    userId =
+      request.query.userId === undefined
+        ? undefined
+        : parseUserId(String(request.query.userId));
+  } catch {
+    response.status(400).json({ message: "Android 用户 ID 无效" });
+    return;
+  }
   const adb = await adbClient.createAdb({ transportId: BigInt(transportId) });
   try {
     const run = (args: string[]) =>
       adb.subprocess.noneProtocol.spawn(args).wait().toString();
-    const [output, systemOutput, locale] = await Promise.all([
-      run([
-        "cmd",
-        "package",
-        "query-activities",
-        "--brief",
-        "-a",
-        "android.intent.action.MAIN",
-        "-c",
-        "android.intent.category.LAUNCHER",
-      ]),
-      run(["pm", "list", "packages", "-s"]),
+    const [{ apps, users, warnings }, locale] = await Promise.all([
+      readAndroidApps(adb, userId),
       run(["getprop", "persist.sys.locale"]),
     ]);
-    const apps = parseLauncherApps(output, systemOutput);
-    if (
-      !apps.length &&
-      !/No activities found|0 activities found/i.test(output)
-    ) {
-      throw new Error(
-        `应用列表读取失败：${output.trim().slice(0, 160) || "设备未返回数据"}`,
-      );
-    }
     response.setHeader("Cache-Control", "no-store");
     const language = normalizeLocale(locale.trim()) ?? "zh-CN";
     const serial = await deviceSerial(transportId);
     const hydrated = await Promise.all(
       apps.map(async (app) => {
-        const key = `${serial}:${app.packageName}:${language}`;
+        const key = `${serial}:${appKey(app)}:${language}`;
         const metadata =
           deviceMetadataCache.get(key) ?? (await readAppMetadata(key));
         if (!metadata || metadata.expiresAt <= Date.now()) return app;
@@ -264,6 +261,7 @@ app.get("/api/apps", async (request, response) => {
         const params = new URLSearchParams({
           transportId,
           package: app.packageName,
+          userId: String(app.userId),
           locale: language,
           v: String(metadata.expiresAt),
         });
@@ -275,7 +273,21 @@ app.get("/api/apps", async (request, response) => {
         };
       }),
     );
-    response.json({ apps: hydrated, locale: language });
+    response.json({ apps: hydrated, users, warnings, locale: language });
+  } finally {
+    await adb.close().catch(() => undefined);
+  }
+});
+
+app.get("/api/users", async (request, response) => {
+  const transportId = String(request.query.transportId ?? "");
+  if (!/^\d{1,20}$/.test(transportId)) {
+    response.status(400).json({ message: "设备 ID 无效" });
+    return;
+  }
+  const adb = await adbClient.createAdb({ transportId: BigInt(transportId) });
+  try {
+    response.json({ users: await readAndroidUsers(adb) });
   } finally {
     await adb.close().catch(() => undefined);
   }
@@ -303,14 +315,14 @@ app.all(
     if (
       !Array.isArray(packages) ||
       packages.length > 12 ||
-      packages.some(
-        (value) => typeof value !== "string" || !PACKAGE_PATTERN.test(value),
-      )
+      packages.some((value) => typeof value !== "string" || !parseAppKey(value))
     ) {
-      response.status(400).json({ message: "收藏应为最多 12 个应用包名" });
+      response.status(400).json({ message: "收藏应为最多 12 个应用标识" });
       return;
     }
-    const saved = [...new Set<string>(packages)];
+    const saved = [
+      ...new Set<string>(packages.map((value) => appKey(parseAppKey(value)!))),
+    ];
     await writeFavorites(device, saved);
     response.json({ packages: saved });
   },
@@ -319,6 +331,13 @@ app.all(
 app.get(["/api/app-metadata", "/api/app-icon"], async (request, response) => {
   const packageName = String(request.query.package ?? "");
   const transportId = String(request.query.transportId ?? "");
+  let userId: number;
+  try {
+    userId = parseUserId(String(request.query.userId ?? "0"));
+  } catch {
+    response.status(400).json({ message: "Android 用户 ID 无效" });
+    return;
+  }
   const locale = normalizeLocale(String(request.query.locale ?? "zh-CN"));
   if (
     !PACKAGE_PATTERN.test(packageName) ||
@@ -328,7 +347,7 @@ app.get(["/api/app-metadata", "/api/app-icon"], async (request, response) => {
     response.status(400).json({ message: "应用参数无效" });
     return;
   }
-  const cacheKey = `${await deviceSerial(transportId)}:${packageName}:${locale}`;
+  const cacheKey = `${await deviceSerial(transportId)}:${appKey({ packageName, userId })}:${locale}`;
   let metadata =
     deviceMetadataCache.get(cacheKey) ?? (await readAppMetadata(cacheKey));
   if (!metadata || metadata.expiresAt <= Date.now()) {
@@ -342,7 +361,12 @@ app.get(["/api/app-metadata", "/api/app-icon"], async (request, response) => {
     let pending = deviceMetadataRequests.get(cacheKey);
     if (!pending) {
       pending = deviceMetadataQueue.then(() =>
-        extractDeviceAppMetadata(BigInt(transportId), packageName, locale),
+        extractDeviceAppMetadata(
+          BigInt(transportId),
+          packageName,
+          locale,
+          userId,
+        ),
       );
       deviceMetadataQueue = pending.then(
         () => undefined,
@@ -414,6 +438,7 @@ async function extractDeviceAppMetadata(
   transportId: bigint,
   packageName: string,
   locale: string,
+  userId: number,
 ): Promise<AppMetadata> {
   const adb = await adbClient.createAdb({ transportId });
   try {
@@ -421,7 +446,7 @@ async function extractDeviceAppMetadata(
     let apkPaths: string[] = [];
     try {
       const output = await adb.subprocess.noneProtocol
-        .spawn(["pm", "path", packageName])
+        .spawn(["pm", "path", "--user", String(userId), packageName])
         .wait()
         .toString();
       apkPaths = [...output.matchAll(/^package:(.+\.apk)\r?$/gm)].map((match) =>
@@ -432,7 +457,7 @@ async function extractDeviceAppMetadata(
         apkPaths[0] ??
         "";
     } catch {}
-    if (!apkPath) {
+    if (!apkPath && userId === 0) {
       const escapedPackage = packageName.replaceAll(".", "\\.");
       apkPath = (
         await adb.subprocess.noneProtocol

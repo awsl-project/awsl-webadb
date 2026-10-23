@@ -18,6 +18,7 @@ import type {
   SessionSnapshot,
 } from "../../shared/sessions";
 import { formatError } from "../utils";
+import { appKey, appLabel } from "../../shared/apps";
 import type { CameraAspect } from "../../shared/camera-formats";
 import { useDeviceAudio } from "./useDeviceAudio";
 
@@ -93,10 +94,11 @@ export function useAppWindows(
         sessions.map((session, index) => {
           const previous = current.find((item) => item.id === session.id);
           const app = appsRef.current.find(
-            (item) => item.packageName === session.packageName,
+            (item) => appKey(item) === appKey(session),
           ) ||
             previous?.app || {
               packageName: session.packageName,
+              userId: session.userId,
               name: session.packageName,
               icon: "android",
               hue: 150,
@@ -170,9 +172,7 @@ export function useAppWindows(
     setWindows((current) =>
       current.map((item) => ({
         ...item,
-        app:
-          apps.find((app) => app.packageName === item.app.packageName) ||
-          item.app,
+        app: apps.find((app) => appKey(app) === appKey(item.app)) || item.app,
       })),
     );
   }, [apps]);
@@ -283,9 +283,14 @@ export function useAppWindows(
         onMessage("请先连接设备");
         return;
       }
-      onMessage(`正在打开 ${app.name}`);
+      onMessage(`正在打开 ${appLabel(app)}`);
       void appSessions
-        .open({ transportId, packageName: app.packageName, cameraTest })
+        .open({
+          transportId,
+          packageName: app.packageName,
+          userId: app.userId,
+          cameraTest,
+        })
         .catch(report);
     },
     [transportId, onMessage, report],
@@ -299,7 +304,7 @@ export function useAppWindows(
   const closePackage = useCallback(
     (packageName: string) => {
       for (const item of windowsRef.current)
-        if (item.app.packageName === packageName) closeWindow(item.id);
+        if (appKey(item.app) === packageName) closeWindow(item.id);
     },
     [closeWindow],
   );
@@ -598,7 +603,7 @@ export function useAppWindows(
     resizeDisplay,
     rotateWindow,
     blur: () => setActiveId(""),
-    runningPackages: new Set(windows.map((item) => item.app.packageName)),
+    runningPackages: new Set(windows.map((item) => appKey(item.app))),
     retryWindow: (id: string) => update(id, { restart: true }),
     toggleNativeKeyboard: (id: string) => {
       const item = windowsRef.current.find((item) => item.id === id);

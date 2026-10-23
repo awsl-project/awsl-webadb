@@ -3,6 +3,7 @@ import { writeFile, stat } from "node:fs/promises";
 import { createReadStream } from "node:fs";
 import { resolve } from "node:path";
 import { version } from "../package.json";
+import { parseUserId } from "../shared/apps";
 import { cameraFormat } from "../shared/camera-formats";
 
 const args = process.argv.slice(2);
@@ -33,7 +34,9 @@ awsl-webadb serve [--host 127.0.0.1] [--port 3000]
 服务端提供网页、API 和后台推流；客户端不需要打开浏览器。
 
 awsl-webadb devices
-awsl-webadb open com.miui.calculator [--device 1] [--width 1080 --height 1920]
+awsl-webadb users [--device 1]
+awsl-webadb apps [--device 1] [--user 999]
+awsl-webadb open com.miui.calculator [--device 1] [--user 0] [--width 1080 --height 1920]
 awsl-webadb sessions
 awsl-webadb screenshot SESSION --output app.jpg
 awsl-webadb xml SESSION [--output app.xml]
@@ -139,6 +142,28 @@ async function main() {
     );
     process.exit(0);
   }
+  if (command === "apps" || command === "users") {
+    let transportId = options.get("device");
+    if (!transportId) {
+      const devices = (await (await request("/devices")).json()) as {
+        transportId: string;
+      }[];
+      if (devices.length !== 1)
+        throw new Error("请用 --device 指定设备 transport ID");
+      transportId = devices[0].transportId;
+    }
+    const params = new URLSearchParams({ transportId });
+    if (options.has("user"))
+      params.set("userId", String(parseUserId(options.get("user"))));
+    const response = await fetch(`${url}/api/${command}?${params}`, {
+      signal: AbortSignal.timeout(30_000),
+    });
+    const data = await response.json();
+    if (!response.ok)
+      throw new Error(data.message || `服务返回 ${response.status}`);
+    console.log(JSON.stringify(data, null, 2));
+    return;
+  }
   if (command === "sessions") {
     console.log(JSON.stringify(await (await request("")).json(), null, 2));
     process.exit(0);
@@ -147,6 +172,7 @@ async function main() {
     if (!id) throw new Error("open 需要应用包名");
     const body = {
       packageName: id,
+      userId: parseUserId(options.get("user") ?? 0),
       transportId: options.get("device"),
       width: options.has("width")
         ? numeric(options.get("width"), "width")
