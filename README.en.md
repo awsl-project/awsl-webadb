@@ -202,6 +202,8 @@ Start streaming manually. Streams have no audio track; system privacy switches a
 
 Fixed ratios fit the source proportionally with centered black padding, without cropping or stretching. `--aspect` or the web ratio selection applies on the next start / switch. Dimension changes recreate the virtual camera and app displays; apps may need to reopen the camera. Restart streaming if a live source changes dimensions.
 
+Outputs taller than 1080 pixels also expose a proportional compatibility preview size for legacy camera APIs, including WeChat's scanner. Background frames and the original output dimensions stay unchanged; apps choose their preview size.
+
 App sessions expire after 15 minutes without reads or actions; closing a window or using `close` releases them immediately. Camera streaming runs independently until stopped, the device disconnects or the server exits.
 
 ## Configuration and documentation

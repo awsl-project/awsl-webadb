@@ -60,6 +60,8 @@ node scripts/smoke-binary.mjs bin/awsl-webadb
 
 手机主屏可保持黑屏。应用预览最多约 8 FPS、宽度 720 像素；保存的截图使用应用原始分辨率。虚拟相机声明 30 FPS，后台视频按最高 12 FPS 处理，实际送帧速率受媒体和 ADB 通道影响。`camera-clock.html` 是额外的浏览器画布验收工具，显示当前时间和二维码，用于观察画面变化；该工具依赖页面保持打开，不属于正式后台媒体来源。
 
+Camera1 的初始预览要求宽高不超过 1920 × 1080，见 [AOSP Parameters](https://android.googlesource.com/platform/frameworks/av/+/refs/heads/android16-release/services/camera/libcameraservice/api1/client2/Parameters.h)。仅声明 960 × 1280 会导致旧接口初始化失败，即使 Camera2 页面正常。helper 保留原输入档，并在高度超过 1080 时增加等比、偶数尺寸的兼容档，例如 810 × 1080；`scripts/build-camera.sh` 在打包前执行八项预览尺寸回归检查。
+
 重建手机 helper（Java 21）：
 
 ```bash

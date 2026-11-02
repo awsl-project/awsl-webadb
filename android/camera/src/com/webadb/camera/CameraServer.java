@@ -196,9 +196,20 @@ public final class CameraServer implements AutoCloseable {
         }
     }
 
+    static int[] legacyPreviewSize(int width, int height) {
+        if (height <= 1080) return null;
+        int previewWidth = Math.max(2, (int) ((long) width * 1080 / height) / 2 * 2);
+        return new int[] { previewWidth, 1080 };
+    }
+
     private VirtualCamera createCamera(String name, int facing) {
-        return device.createVirtualCamera(new VirtualCameraConfig.Builder(name)
-                .addStreamConfig(cameraWidth, cameraHeight, PixelFormat.RGBA_8888, 30)
+        VirtualCameraConfig.Builder builder = new VirtualCameraConfig.Builder(name)
+                .addStreamConfig(cameraWidth, cameraHeight, PixelFormat.RGBA_8888, 30);
+        // Camera1 requires an initial preview size no larger than 1920 x 1080.
+        int[] preview = legacyPreviewSize(cameraWidth, cameraHeight);
+        if (preview != null)
+            builder.addStreamConfig(preview[0], preview[1], PixelFormat.RGBA_8888, 30);
+        return device.createVirtualCamera(builder
                 .setSensorOrientation(0).setLensFacing(facing)
                 .setVirtualCameraCallback(Runnable::run, new CameraStreams(name)).build());
     }
