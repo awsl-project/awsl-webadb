@@ -1,6 +1,6 @@
 {
   "name": "awsl-webadb",
-  "version": "0.5.5",
+  "version": "0.5.6",
   "private": true,
   "type": "module",
   "scripts": {
@@ -56,11 +56,16 @@
     "@babel/core": "7.29.7",
     "@babel/plugin-transform-modules-systemjs": "7.29.8",
     "@xhmikosr/decompress": "10.2.2",
-    "body-parser": "2.3.0",
+    "body-parser": "2.4.0",
     "brace-expansion": "5.0.12",
-    "fast-uri": "3.1.8",
+    "deepmerge": "npm:@stackline/deepmerge@1.1.0",
+    "fast-uri": "3.1.9",
     "file-type": "21.3.4",
-    "qs": "6.16.0",
+    "filelist": "2.0.2",
+    "glob": "14.0.3",
+    "minimatch": "11.0.4",
+    "qs": "6.17.1",
+    "serialize-javascript": "7.1.4",
     "shell-quote": "1.12.0"
   }
 }

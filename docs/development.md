@@ -97,6 +97,8 @@ docker run --rm \
 
 主分支 push 和 PR 自动运行类型检查、回归测试、依赖审计、Android helper 编译、独立程序构建与冒烟测试。helper 工具版本和 SHA-256 校验固定在 `scripts/fetch-camera-tools.sh`。发布流水线执行同样的检查，然后生成 CLI、构建 Linux amd64 / arm64 镜像并发布 GitHub Release。字体本地提供，更新字体使用 `scripts/fetch-fonts.py`；界面图标直接引用 Lucide SVG。PWA 离线只提供页面，设备操作仍需后端连接。
 
+依赖覆盖固定安全修复版本。构建依赖 `deepmerge` 因[上游原型污染问题](https://github.com/TehShrike/deepmerge/issues/273)尚无修复版本，暂用兼容其 API 的 [`@stackline/deepmerge` 1.1.0](https://github.com/alexandroit/stackline-deepmerge)；更新时需检查 CommonJS / ESM 导出、配置合并与 PWA 构建。`filelist` 同时升级到 2.0.2，以兼容新版 `minimatch` 的命名导出。
+
 开源依赖与构建工具说明见 [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md)。
 
 ## 界面开发
