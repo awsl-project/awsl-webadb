@@ -24,6 +24,7 @@ import android.view.Surface;
 import java.io.DataInputStream;
 import java.io.EOFException;
 import java.io.OutputStream;
+import java.lang.reflect.InvocationTargetException;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
@@ -141,7 +142,9 @@ public final class CameraServer implements AutoCloseable {
         } catch (NoSuchMethodException unsupported) {
             // Android 14 exposes virtual devices without this convenience method.
         } catch (ReflectiveOperationException error) {
-            throw new IllegalStateException("唤醒虚拟设备失败", error);
+            Throwable cause = error instanceof InvocationTargetException invocation
+                    && invocation.getCause() != null ? invocation.getCause() : error;
+            throw new IllegalStateException("唤醒虚拟设备失败: " + cause, cause);
         }
     }
 
