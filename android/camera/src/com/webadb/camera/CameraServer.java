@@ -103,7 +103,7 @@ public final class CameraServer implements AutoCloseable {
             front = createCamera("WebADB front", CameraMetadata.LENS_FACING_FRONT);
         }
         display = createDisplay(width, height);
-        device.wakeUp();
+        wakeUpIfSupported();
         return new JSONObject().put("type", "ready")
                 .put("associationMac", associationMac)
                 .put("displayId", display.getDisplay().getDisplayId())
@@ -133,6 +133,16 @@ public final class CameraServer implements AutoCloseable {
         displays.put(result.getDisplay().getDisplayId(), result);
         displayReaders.put(result.getDisplay().getDisplayId(), reader);
         return result;
+    }
+
+    private void wakeUpIfSupported() {
+        try {
+            device.getClass().getMethod("wakeUp").invoke(device);
+        } catch (NoSuchMethodException unsupported) {
+            // Android 14 exposes virtual devices without this convenience method.
+        } catch (ReflectiveOperationException error) {
+            throw new IllegalStateException("唤醒虚拟设备失败", error);
+        }
     }
 
     private android.media.ImageReader createReader(int width, int height) {
@@ -318,7 +328,7 @@ public final class CameraServer implements AutoCloseable {
                     JSONObject request = new JSONObject(new String(commandBytes, StandardCharsets.UTF_8));
                     if (request.getString("type").equals("createDisplay")) {
                         VirtualDisplay created = createDisplay(request.getInt("width"), request.getInt("height"));
-                        device.wakeUp();
+                        wakeUpIfSupported();
                         send(output, new JSONObject().put("type", "display").put("displayId", created.getDisplay().getDisplayId()));
                     } else if (request.getString("type").equals("resizeDisplay")) {
                         resizeDisplay(request.getInt("displayId"), request.getInt("width"), request.getInt("height"));
