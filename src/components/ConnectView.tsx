@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import type { DeviceRecord } from "../types";
 import { isNetworkDevice } from "../utils";
+import { reloginHref, type DeviceConnectionError } from "../lib/device-health";
 import { parseDeviceAddress } from "../../shared/address";
 
 interface ConnectViewProps {
@@ -13,7 +14,7 @@ interface ConnectViewProps {
   selectedTransportId: string;
   pendingAction: string;
   mirrorPending: string;
-  connectionError: string;
+  connectionError: DeviceConnectionError | null;
   refreshing: boolean;
   onRefresh: () => void;
   onSelectDevice: (device: DeviceRecord) => void;
@@ -74,7 +75,12 @@ export function ConnectView({
       {connectionError ? (
         <div className="inline-error" role="alert">
           <Icon aria-hidden="true" className="ui-icon" name="cloud_off" />
-          <span>无法连接本机服务：{connectionError}</span>
+          <span>{connectionError.message}</span>
+          {connectionError.kind === "login" ? (
+            <Button variant="link" size="xs" asChild>
+              <a href={reloginHref} target="_top">重新登录</a>
+            </Button>
+          ) : null}
         </div>
       ) : null}
       <Tabs
@@ -142,7 +148,7 @@ export function ConnectView({
                   </div>
                 </Button>
               ))}
-              {!devices.length ? (
+              {!devices.length && !connectionError ? (
                 <div className="feature-empty">
                   <Icon aria-hidden="true" className="ui-icon" name="devices" />
                   <strong>

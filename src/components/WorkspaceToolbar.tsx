@@ -12,12 +12,13 @@ import {
 } from "lucide-react";
 import type { DeviceSnapshot, PanelView } from "../types";
 import type { CameraState } from "../../shared/sessions";
+import type { DeviceConnectionError } from "../lib/device-health";
 import { Button } from "./ui/button";
 
 interface Props {
   deviceName?: string;
   snapshot: DeviceSnapshot;
-  connectionError: boolean;
+  connectionError?: DeviceConnectionError["kind"];
   camera?: CameraState;
   cameraOpen: boolean;
   activeView?: PanelView;
@@ -27,6 +28,12 @@ interface Props {
 
 const toolClass =
   "h-14 flex-col gap-1 rounded-lg px-1 text-[11px] font-medium text-muted-foreground hover:text-foreground aria-pressed:bg-accent aria-pressed:text-primary min-[901px]:h-10 min-[901px]:flex-row min-[901px]:gap-2 min-[901px]:px-3 min-[901px]:text-[13px]";
+
+const connectionLabels = {
+  login: "需要登录",
+  forbidden: "权限不足",
+  network: "连接失败",
+};
 
 const tools = [
   { title: "全部应用", icon: Grid2X2, view: "apps" },
@@ -120,7 +127,7 @@ export function WorkspaceToolbar({
           />
           <span className="grid min-w-0 gap-0.5 text-left">
             <span className="max-w-28 truncate min-[901px]:max-w-40 text-xs font-medium">
-              {connectionError ? "服务离线" : deviceName || "连接设备"}
+              {connectionError ? connectionLabels[connectionError] : deviceName || "连接设备"}
             </span>
             {online && snapshot.batteryLevel !== "—" ? (
               <span
@@ -130,11 +137,11 @@ export function WorkspaceToolbar({
                 {snapshot.batteryLevel}
                 <span>{snapshot.batteryStatus}</span>
               </span>
-            ) : (
+            ) : !connectionError ? (
               <span className="text-[11px] font-normal text-muted-foreground">
                 {online ? "正在读取状态" : "USB / 无线"}
               </span>
-            )}
+            ) : null}
           </span>
         </Button>
         <Button

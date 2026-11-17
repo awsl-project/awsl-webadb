@@ -32,6 +32,7 @@ import {
   DialogTitle,
 } from "./components/ui/dialog";
 import { cn } from "./lib/utils";
+import { reloginHref } from "./lib/device-health";
 import { formatError } from "./utils";
 
 import type { DesktopPreferences } from "./components/DesktopSettingsView";
@@ -305,6 +306,7 @@ export default function App() {
   );
 
   const devicesHook = useDevices(showMessage);
+  const connectionError = devicesHook.connectionError;
   const mirror = useMirror(
     devicesHook.selectedTransportId,
     isCompactViewport,
@@ -663,7 +665,7 @@ export default function App() {
     ),
     connect: (
       <ConnectView
-        connectionError={devicesHook.connectionError}
+        connectionError={connectionError}
         refreshing={devicesHook.refreshing}
         onRefresh={() => void devicesHook.refreshDevices()}
         devices={devicesHook.devices}
@@ -1042,7 +1044,7 @@ export default function App() {
           <WorkspaceToolbar
             deviceName={selectedDeviceName ?? undefined}
             snapshot={controls.snapshot}
-            connectionError={Boolean(devicesHook.connectionError)}
+            connectionError={connectionError?.kind}
             camera={appWindows.camera}
             onOpenCamera={openSystemCamera}
             cameraOpen={systemCameraOpen}
@@ -1063,21 +1065,32 @@ export default function App() {
             onOpen={focusWindow}
           />
         </header>
-        {devicesHook.connectionError ? (
+        {connectionError ? (
           <div
             className="connection-banner top-[calc(var(--workspace-topbar-height)+8px)]"
+            data-relogin={connectionError.kind === "login" ? "" : undefined}
             role="status"
           >
             <Icon aria-hidden="true" className="ui-icon" name="cloud_off" />
-            <span>连接服务不可用，正在自动重试</span>
-            <Button
-              variant="unstyled"
-              size="unstyled"
-              onClick={() => focusWindow("connect")}
-              type="button"
-            >
-              查看连接
-            </Button>
+            <span>
+              {connectionError.kind === "network"
+                ? "连接服务不可用，正在自动重试"
+                : connectionError.message}
+            </span>
+            {connectionError.kind === "login" ? (
+              <Button variant="link" size="xs" asChild>
+                <a href={reloginHref} target="_top">重新登录</a>
+              </Button>
+            ) : connectionError.kind === "network" ? (
+              <Button
+                variant="unstyled"
+                size="unstyled"
+                onClick={() => focusWindow("connect")}
+                type="button"
+              >
+                查看连接
+              </Button>
+            ) : null}
           </div>
         ) : null}
 

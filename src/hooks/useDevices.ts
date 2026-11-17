@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { AdbConnection, DeviceRecord } from "../types";
 import { TRACKED_STATES } from "../types";
 import { adbClient } from "../lib/adb-client";
+import { checkDeviceHealth, DeviceConnectionError } from "../lib/device-health";
 import { formatError } from "../utils";
 import { parseDeviceAddress } from "../../shared/address";
 
@@ -9,7 +10,7 @@ export function useDevices(onMessage: (msg: string) => void) {
   const [devices, setDevices] = useState<DeviceRecord[]>([]);
   const [selection, setSelection] = useState("");
   const [pendingAction, setPendingAction] = useState("");
-  const [connectionError, setConnectionError] = useState("");
+  const [connectionError, setConnectionError] = useState<DeviceConnectionError | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const refreshRef = useRef<Promise<void> | null>(null);
   const actionRef = useRef(false);
@@ -29,19 +30,11 @@ export function useDevices(onMessage: (msg: string) => void) {
       setRefreshing(true);
       const task = (async () => {
         try {
-          const response = await fetch("/api/health", {
-            signal: AbortSignal.timeout(8_000),
-          });
-          if (!response.ok) {
-            const data = await response.json().catch(() => ({}));
-            throw new Error(
-              data.message || "后端连接失败，请检查服务与 adb server",
-            );
-          }
+          await checkDeviceHealth();
           const next = await adbClient.getDevices(TRACKED_STATES);
           if (!mountedRef.current) return;
           setDevices(next);
-          setConnectionError("");
+          setConnectionError(null);
           setSelection((current) => {
             const device =
               next.find(
@@ -63,8 +56,11 @@ export function useDevices(onMessage: (msg: string) => void) {
           if (!mountedRef.current) return;
           setDevices([]);
           setSelection("");
-          setConnectionError(formatError(error));
-          if (!silent) onMessage(formatError(error));
+          const connectionError = error instanceof DeviceConnectionError
+            ? error
+            : new DeviceConnectionError("network", formatError(error));
+          setConnectionError(connectionError);
+          if (!silent) onMessage(connectionError.message);
         } finally {
           refreshRef.current = null;
           if (mountedRef.current) setRefreshing(false);
